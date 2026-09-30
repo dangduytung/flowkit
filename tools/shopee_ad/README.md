@@ -1,64 +1,105 @@
-# Shopee Video Ad Generator (Dynamic & Loosely-Coupled)
+# Shopee Video Ad Generator (Dynamic, Universal & Watermark-Free)
 
-Hệ thống tự động hóa sản xuất video quảng cáo sản phẩm Shopee dạng dọc 9:16 (chuẩn TikTok / Reels / Shopee Video). Tích hợp linh hoạt giữa tư liệu Shopee (video/ảnh), OmniVoice TTS và FlowKit.
-
----
-
-## 1. Cơ chế hoạt động (Không Hardcode)
-
-* **Nguồn lấy file ZIP**:
-  * Tự động quét thư mục `C:\Users\Tung\Downloads\Shopee Downloads\`.
-  * Có thể truyền file zip cụ thể qua cờ `--zip <đường_dẫn>`.
-  * Xem danh sách tất cả các zip có trong máy qua cờ `--list`.
-* **Phân tích sản phẩm tự động**:
-  * Đọc `description.txt` để trích xuất tên sản phẩm, link Shopee, số sao, lượt bán, tính năng chính.
-  * Tự động tạo thư mục output riêng theo slug sản phẩm: `output/shopee_ads/<product_slug>/`.
-* **Kịch bản linh hoạt (`storyboard.json`)**:
-  * Mỗi sản phẩm có 1 file kịch bản `storyboard.json` riêng trong thư mục của nó.
-  * Lần đầu chạy, hệ thống tự động sinh template 5 cảnh phù hợp với sản phẩm.
-  * Bạn có thể chỉnh sửa lại text, phụ đề, thời gian cắt clip trong file `storyboard.json` bất cứ lúc nào.
-* **Hỗ trợ cả sản phẩm CHỈ CÓ ẢNH**:
-  * Nếu sản phẩm không có clip video sẵn, hệ thống tự động tạo hiệu ứng chuyển động ảnh **Ken Burns (Pan & Zoom)** 9:16 trên nền mờ từ các ảnh chụp trong file zip.
+Hệ thống tự động hóa sản xuất video quảng cáo sản phẩm Shopee dạng dọc 9:16 (chuẩn TikTok / Reels / Shopee Video / Facebook Page). Hoạt động linh hoạt với **mọi ngành hàng** (Mỹ phẩm, Đồ gia dụng, Thời trang, Công nghệ, Thể thao, Đời sống), tự động tải ảnh làm tham chiếu lên Google Flow và **xóa sạch 100% logo Google Flow**.
 
 ---
 
-## 2. Các lệnh sử dụng
+## 1. Cơ Chế Thông Minh Đa Ngành Hàng (Universal Multi-Category)
 
-### Xem danh sách file zip đang có trong máy:
-```bash
-python -m tools.shopee_ad.orchestrator --list
-```
+Hệ thống **không bao giờ hardcode** theo một sản phẩm cụ thể. Khi đọc file ZIP của bất kỳ sản phẩm nào, hệ thống tự động:
+1. **Phân tích ngành hàng tự động (`detect_product_category`)**:
+   * 💄 **Mỹ phẩm & Chăm sóc da (`BEAUTY_SKINCARE`)**: Serum, kem dưỡng, son môi, kem chống nắng... -> Bối cảnh bàn trang điểm ngập tràn ánh nắng, thoa dưỡng chất thẩm thấu tức thì, ngắm làn da căng bóng rạng ngời, cất túi xách.
+   * 🍳 **Nhà bếp & Đồ gia dụng (`KITCHEN_HOME`)**: Chảo chống dính, nồi chiên, máy xay, bình giữ nhiệt... -> Bối cảnh gian bếp hiện đại mặt đá, nấu nướng lướt nhẹ chống dính, thành phẩm thơm ngon, lau sạch bóng trong chớp mắt.
+   * 👗 **Thời trang & Phụ kiện (`FASHION_APPAREL`)**: Áo thun, sơ mi, đầm váy, áo khoác, giày dép, túi xách... -> Cận cảnh chất vải mềm mát, đường may chuẩn form, chỉnh trang trước gương, sải bước tự tin dạo phố.
+   * ⚡ **Công nghệ & Phụ kiện số (`TECH_GADGETS`)**: USB, thẻ nhớ, pin sạc, tai nghe, chuột máy tính... -> Bối cảnh bàn làm việc tối giản, kết nối cắm là nhận ngay, truyền tải siêu tốc, gọn gàng bỏ túi/móc khóa.
+   * 🧘 **Sức khỏe & Thể thao (`HEALTH_FITNESS`)**: Súng massage, thảm yoga, dây kháng lực, đồ tập... -> Xung lực tác động sâu, cơ bắp thả lỏng nhẹ nhõm, nạp lại 100% năng lượng, gọn nhẹ mang theo.
+   * 🌟 **Tiện ích đời sống (`GENERAL_LIFESTYLE`)**: Đồ dùng thông minh, decor bàn học, quà tặng... -> Thao tác mở hộp trực quan, giải quyết rắc rối hàng ngày, nâng tầm chất lượng sống.
+2. **Quy tắc chống lệch khẩu hình (No Lip-Sync Glitch)**:
+   * Toàn bộ prompt video AI đều khóa chuẩn Voice-over TVC: `"Calm focused expression, subtle genuine smile, mouth closed, no speaking, no dialogue. NO text overlays, NO talking."`
+   * Nhân vật tương tác chân thật bằng hành động, cử chỉ và biểu cảm; giọng thuyết minh tiếng Việt do OmniVoice đảm nhiệm chuẩn xác từng giây.
+3. **Tự động xóa sạch logo Google Flow**:
+   * Tích hợp bộ lọc FFmpeg `delogo=x=568:y=1120:w=64:h=64`, xóa sạch watermark biểu tượng ngôi sao 4 cánh ở góc dưới màn hình mà không để lại vết mờ.
 
-### Chạy tự động file zip mới nhất:
+---
+
+## 2. Các Chế Độ Hoạt Động
+
+### 🌟 Chế độ 1: Google Flow AI Video (MẶC ĐỊNH)
+* Tự động tải ảnh sản phẩm từ ZIP lên Google Flow làm hình ảnh tham chiếu (`upload-image`).
+* Sinh 100% video AI sống động, nhân vật tương tác tự nhiên với sản phẩm theo đúng ngành hàng.
+* Tự động xóa sạch watermark Google Flow.
 ```bash
+# Chạy với sản phẩm mới nhất trong thư mục Shopee Downloads:
 python -m tools.shopee_ad.orchestrator
+
+# Chỉ định rõ chế độ Flow:
+python -m tools.shopee_ad.orchestrator --mode flow
 ```
 
-### Chạy cho một file zip cụ thể:
+### 📦 Chế độ 2: Chỉ dùng ảnh/video gốc từ file ZIP (Offline / Local)
+* Không cần mở Chrome Extension hay kết nối Google Flow.
+* Tự động cắt video gốc của shop (nếu có) hoặc tạo chuyển động ảnh Ken Burns 9:16 trên nền mờ nghệ thuật.
 ```bash
-python -m tools.shopee_ad.orchestrator --zip "C:\Users\Tung\Downloads\Shopee Downloads\ten_file.zip"
-```
-
-### Tùy chỉnh tốc độ đọc hoặc Profile giọng:
-```bash
-python -m tools.shopee_ad.orchestrator --speed 0.88 --profile 338d9ba2
+python -m tools.shopee_ad.orchestrator --mode local
+# hoặc:
+python -m tools.shopee_ad.orchestrator --mode zip
 ```
 
 ---
 
-## 3. Cấu trúc thư mục độc lập (Loose Coupling)
+## 3. Lựa Chọn Phong Cách & Ý Tưởng Sáng Tạo
+
+Bạn có thể thay đổi phong cách kịch bản và câu chuyện bằng các cờ CLI:
+
+### 🎬 Các phong cách kịch bản (`--style`):
+1. `--style flow_cinematic` *(Mặc định)*:
+   * 4 cảnh điện ảnh tập trung vào chiêm ngưỡng thiết kế, thao tác trải nghiệm trực tiếp, tính năng vượt trội và phong cách sống hàng ngày.
+2. `--style problem_solution`:
+   * Kịch bản Drama/Tình huống cấp bách theo ngành hàng (da khô sạm trước sự kiện, chảo dính cháy khét, không biết mặc gì mỗi sáng, đau mỏi vai gáy, đầy bộ nhớ...) -> Sản phẩm xuất hiện giải cứu ngoạn mục -> Nhẹ nhõm, thảnh thơi.
+3. `--style lifestyle_edc`:
+   * Phong cách sống năng động, du lịch, quán cafe, món đồ bỏ túi bất ly thân.
+4. `--style hybrid`:
+   * Kết hợp video AI cho cảnh con người/cảm xúc và chèn xen kẽ ảnh chụp thật từ shop Shopee.
+
+### 💡 Tự do thêm ý tưởng sáng tạo (`--idea`):
+```bash
+# Thêm bối cảnh hoặc phong cách nhân vật riêng:
+python -m tools.shopee_ad.orchestrator --style problem_solution --idea "một bạn sinh viên đang ở phòng trọ chuẩn bị đi phỏng vấn"
+
+# Hoặc:
+python -m tools.shopee_ad.orchestrator --style lifestyle_edc --idea "nữ vlogger du lịch Đà Lạt buổi sáng săn mây"
+```
+
+---
+
+## 4. Các Tùy Chọn CLI Khác
+
+| Cờ CLI | Ý nghĩa | Mặc định |
+|---|---|---|
+| `--mode {flow, local, zip}` | Chế độ tạo video (Google Flow AI hay Ảnh/Video gốc) | `flow` |
+| `--zip <đường_dẫn>` | Chỉ định đường dẫn tới file ZIP cụ thể | Mới nhất trong Downloads |
+| `--list` | Xem toàn bộ danh sách file ZIP đang có | - |
+| `--style {flow_cinematic, problem_solution, lifestyle_edc, hybrid}` | Phong cách kịch bản | `flow_cinematic` |
+| `--idea "..."` | Bổ sung ý tưởng / bối cảnh sáng tạo vào prompt | Không |
+| `--cta {none, follow, shopee}` | Lời kêu gọi hành động ở cảnh kết thúc | `none` (4 cảnh Fanpage) |
+| `--speed <float>` | Tốc độ đọc của OmniVoice | `0.86` |
+| `--profile <id>` | ID profile giọng đọc tiếng Việt OmniVoice | `338d9ba2` |
+| `--regen` | Bắt buộc sinh lại toàn bộ clip AI từ Google Flow | `False` |
+
+---
+
+## 5. Cấu Trúc Thư Mục Độc Lập
 
 ```
 tools/shopee_ad/
 ├── __init__.py
-├── config.py           # Quản lý đường dẫn và biến môi trường
-├── product_parser.py   # Phân tích file zip, đọc description.txt
-├── storyboard.py       # Quản lý và tự sinh storyboard.json theo sản phẩm
-├── omnivoice_client.py # Client gọi OmniVoice API riêng (kèm speed, auth)
-├── asset_extractor.py  # Cắt sub-clip 9:16 và tạo Ken Burns slide từ ảnh
-├── video_assembler.py  # Ghép audio, burn text overlay và concat ffmpeg
-├── orchestrator.py     # Bộ điều phối CLI trung tâm
+├── config.py             # Quản lý đường dẫn và cấu hình môi trường (.env)
+├── product_parser.py     # Phân tích file zip, trích xuất metadata và tính năng
+├── storyboard.py         # Nhận diện ngành hàng thông minh & tạo kịch bản 4 phân cảnh
+├── omnivoice_client.py   # Client sinh giọng đọc tiếng Việt OmniVoice
+├── asset_extractor.py    # Xử lý video/ảnh gốc (Ken Burns 9:16)
+├── video_assembler.py    # Xóa logo Flow (delogo), chèn text overlay UTF-8, đồng bộ 30fps
+├── flow_ad_generator.py  # Điều phối sinh video AI qua Google Flow Omni Flash
+├── orchestrator.py       # Bộ điều khiển CLI trung tâm
 └── README.md
 ```
-
-Tất cả code nằm trong `tools/shopee_ad/`, giữ nguyên 100% các file core của FlowKit (`agent/`, `skills/`, `extension/`).

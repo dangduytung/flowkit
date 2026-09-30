@@ -39,6 +39,7 @@ def run_pipeline(
     speed: Optional[float] = None,
     profile_id: Optional[str] = None,
     mode_9_16: str = "blur_bg",
+    cta_mode: str = "none",
 ) -> Path:
     """
     Execute the entire Shopee Ad production pipeline dynamically for ANY product zip.
@@ -93,12 +94,12 @@ def run_pipeline(
     raw_video = assets["video"]
     images = assets["images"]
 
-    # 5. Nạp hoặc tự động sinh Storyboard (kịch bản 5 cảnh)
+    # 5. Nạp hoặc tự động sinh Storyboard (kịch bản linh hoạt theo cta_mode)
     storyboard_file = product_dir / "storyboard.json"
-    scenes = load_or_create_storyboard(product, storyboard_file)
+    scenes = load_or_create_storyboard(product, storyboard_file, cta_mode=cta_mode)
 
     # 6. Sinh giọng đọc thuyết minh qua OmniVoice API cho từng phân cảnh
-    print("\n🎙️ [Bước 2/5] Sinh giọng đọc thuyết minh qua OmniVoice API...")
+    print(f"\n🎙️ [Bước 2/5] Sinh giọng đọc thuyết minh qua OmniVoice API cho {len(scenes)} phân cảnh...")
     audio_files = {}
     audio_durations = {}
 
@@ -176,9 +177,59 @@ def main():
     parser.add_argument("--list", action="store_true", help="Liệt kê danh sách các file zip Shopee đang có")
     parser.add_argument("--speed", type=float, default=None, help="Tốc độ đọc giọng nói OmniVoice (mặc định 0.86)")
     parser.add_argument("--profile", type=str, default=None, help="Profile ID giọng nói trên VoiceStudio")
-    parser.add_argument("--mode", type=str, default="blur_bg", choices=["blur_bg", "center_crop"], help="Chế độ crop 9:16")
-    parser.add_argument("--method", type=str, default="ken_burns", choices=["ken_burns", "flow"], help="Phương pháp sinh video: ken_burns (ảnh gốc + chuyển động) hoặc flow (Google Flow AI Video)")
-    parser.add_argument("--flow", action="store_true", help="Viết tắt cho --method flow (dùng Google Flow AI)")
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="flow",
+        choices=["flow", "local", "zip"],
+        help="Chế độ tạo video: 'flow' (MẶC ĐỊNH: qua Google Flow AI, có tham chiếu ảnh zip & luôn tự động xóa logo) hoặc 'local'/'zip' (chỉ dùng ảnh/video gốc trong file zip)",
+    )
+    parser.add_argument(
+        "--crop",
+        type=str,
+        default="blur_bg",
+        choices=["blur_bg", "center_crop"],
+        help="Chế độ crop 9:16 cho ảnh/video local (mặc định: blur_bg)",
+    )
+    parser.add_argument(
+        "--method",
+        type=str,
+        default=None,
+        choices=["flow", "local", "zip", "ken_burns"],
+        help="Alias cho --mode (tương thích ngược)",
+    )
+    parser.add_argument("--flow", action="store_true", help="Viết tắt cho --mode flow")
+    parser.add_argument(
+        "--cta",
+        type=str,
+        default="none",
+        choices=["none", "follow", "shopee"],
+        help="Chế độ kết thúc: 'none' (mặc định 4 cảnh không CTA, hợp Fanpage FB), 'follow' (kêu gọi follow page), 'shopee' (kêu gọi giỏ hàng)",
+    )
+    parser.add_argument(
+        "--style",
+        type=str,
+        default="flow_cinematic",
+        choices=["flow_cinematic", "problem_solution", "lifestyle_edc", "hybrid"],
+        help="Phong cách video: 'flow_cinematic' (công nghệ tối giản, tinh tế), 'problem_solution' (tình huống đầy bộ nhớ cứu nguy), 'lifestyle_edc' (năng động đời thường), hoặc 'hybrid' (AI + ảnh thật)",
+    )
+    parser.add_argument(
+        "--idea",
+        "--story",
+        type=str,
+        default=None,
+        help="Ý tưởng / tình huống kịch bản tùy chỉnh (ví dụ: 'laptop hết bộ nhớ trước giờ nộp báo cáo')",
+    )
+    parser.add_argument(
+        "--regen",
+        action="store_true",
+        help="Bắt buộc tạo lại video clip AI từ Google Flow (bỏ qua clip cũ)",
+    )
+    parser.add_argument(
+        "--force-storyboard",
+        action="store_true",
+        help="Bắt buộc tạo lại kịch bản storyboard.json mới",
+    )
 
     args = parser.parse_args()
 
@@ -192,13 +243,34 @@ def main():
         return
 
     target_zip = Path(args.zip) if args.zip else None
-    use_flow = args.flow or args.method == "flow"
 
-    if use_flow:
+    # Resolve mode: default is "flow"
+    selected_mode = args.mode
+    if args.method:
+        selected_mode = "local" if args.method in ("local", "zip", "ken_burns") else "flow"
+    if args.flow:
+        selected_mode = "flow"
+
+    if selected_mode == "flow":
         from tools.shopee_ad.flow_ad_generator import generate_flow_ad
-        generate_flow_ad(zip_path=target_zip, speed=args.speed, profile_id=args.profile)
+        generate_flow_ad(
+            zip_path=target_zip,
+            speed=args.speed,
+            profile_id=args.profile,
+            cta_mode=args.cta,
+            style=args.style,
+            regen=args.regen,
+            force_storyboard=args.force_storyboard or bool(args.idea),
+            custom_idea=args.idea,
+        )
     else:
-        run_pipeline(zip_path=target_zip, speed=args.speed, profile_id=args.profile, mode_9_16=args.mode)
+        run_pipeline(
+            zip_path=target_zip,
+            speed=args.speed,
+            profile_id=args.profile,
+            mode_9_16=args.crop,
+            cta_mode=args.cta,
+        )
 
 
 if __name__ == "__main__":

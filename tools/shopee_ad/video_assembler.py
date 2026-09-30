@@ -4,6 +4,14 @@ from pathlib import Path
 from typing import List, Optional
 
 
+def _format_ffmpeg_path(path: Path) -> str:
+    """Format a Path for FFmpeg filter argument (handling Windows drive colons and backslashes)."""
+    p = path.resolve().as_posix()
+    if len(p) >= 2 and p[1] == ":":
+        p = p[0] + r"\:" + p[2:]
+    return p
+
+
 def assemble_scene_clip(
     video_path: Path,
     audio_path: Path,
@@ -12,12 +20,15 @@ def assemble_scene_clip(
     subtitle_text: Optional[str] = None,
     audio_duration: Optional[float] = None,
     pad_tail: float = 0.4,
+    remove_watermark: bool = True,
 ) -> Path:
     """
     Combines video clip with audio, trims/loops video to fit audio, and burns text overlays.
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    scene_stem = output_path.stem
+    scene_dir = output_path.parent
 
     # Determine duration
     if audio_duration is None:
@@ -32,22 +43,42 @@ def assemble_scene_clip(
 
     # Filters for text overlays
     filters = []
-    # Loop video if shorter than audio
-    filters.append(f"loop=loop=-1:size=3000:start=0")
+    # Loop video if shorter than audio and standardize to 30fps
+    filters.append("loop=loop=-1:size=3000:start=0")
+    filters.append("fps=fps=30")
+
+    # Clean Google Flow watermark (sparkle icon at bottom right) if requested
+    if remove_watermark:
+        filters.append("delogo=x=568:y=1120:w=64:h=64")
+
     filters.append(f"trim=duration={total_duration:.2f}")
 
-    # Text overlays (Top badge & feature tag)
-    # Using Arial/Segoe UI with clean box styling
+    # Resolve fonts (Arial Bold for titles, Arial for subtitles)
+    font_title_path = Path("C:/Windows/Fonts/arialbd.ttf")
+    if not font_title_path.exists():
+        font_title_path = Path("C:/Windows/Fonts/segoeui.ttf")
+    font_sub_path = Path("C:/Windows/Fonts/arial.ttf")
+    if not font_sub_path.exists():
+        font_sub_path = Path("C:/Windows/Fonts/segoeui.ttf")
+
+    font_title_str = f"fontfile='{_format_ffmpeg_path(font_title_path)}'" if font_title_path.exists() else "font='Arial'"
+    font_sub_str = f"fontfile='{_format_ffmpeg_path(font_sub_path)}'" if font_sub_path.exists() else "font='Arial'"
+
+    # Text overlays (Using UTF-8 textfile to avoid Windows codepage / mojibake / tofu issues)
     if title_text:
-        safe_title = title_text.replace(":", "\\:").replace("'", "\\'")
+        title_file = scene_dir / f"{scene_stem}_title.txt"
+        title_file.write_text(title_text.strip(), encoding="utf-8")
+        title_ff = _format_ffmpeg_path(title_file)
         filters.append(
-            f"drawtext=text='{safe_title}':font='Segoe UI':fontsize=38:fontcolor=yellow:"
+            f"drawtext=textfile='{title_ff}':{font_title_str}:fontsize=38:fontcolor=yellow:"
             f"box=1:boxcolor=black@0.65:boxborderw=12:x=(w-text_w)/2:y=140"
         )
     if subtitle_text:
-        safe_sub = subtitle_text.replace(":", "\\:").replace("'", "\\'")
+        sub_file = scene_dir / f"{scene_stem}_sub.txt"
+        sub_file.write_text(subtitle_text.strip(), encoding="utf-8")
+        sub_ff = _format_ffmpeg_path(sub_file)
         filters.append(
-            f"drawtext=text='{safe_sub}':font='Segoe UI':fontsize=26:fontcolor=white:"
+            f"drawtext=textfile='{sub_ff}':{font_sub_str}:fontsize=26:fontcolor=white:"
             f"box=1:boxcolor=black@0.5:boxborderw=8:x=(w-text_w)/2:y=210"
         )
 
@@ -61,7 +92,7 @@ def assemble_scene_clip(
         "-map", "0:v:0",
         "-map", "1:a:0",
         "-t", f"{total_duration:.2f}",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-r", "30", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
         "-shortest",
         str(output_path)
@@ -90,7 +121,7 @@ def concat_scenes(clip_paths: List[Path], output_path: Path, bgm_path: Optional[
         "ffmpeg", "-y",
         "-f", "concat", "-safe", "0",
         "-i", str(concat_list_file),
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-r", "30", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
         str(temp_concat)
     ]

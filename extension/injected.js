@@ -60,6 +60,17 @@ function resolveSitekey() {
       if (c && c.sitekey) return c.sitekey;
     }
   } catch (e) { /* fall through to the constant */ }
+
+  try {
+    const script = document.querySelector('script[src*="recaptcha"][src*="render="]');
+    if (script) {
+      const m = script.src.match(/[?&]render=([^&]+)/);
+      if (m && m[1] && m[1] !== 'explicit') {
+        return decodeURIComponent(m[1]);
+      }
+    }
+  } catch (e) { /* fall through */ }
+
   return SITE_KEY;
 }
 
@@ -95,8 +106,12 @@ async function executeWithAssignNeuter(sitekey, action) {
 
   try {
     await waitReady(2500);
+    let target = sitekey;
+    try {
+      target = await ensureWidget(sitekey);
+    } catch (e) { /* ignore */ }
     const token = await Promise.race([
-      window.grecaptcha.enterprise.execute(sitekey, { action }),
+      window.grecaptcha.enterprise.execute(target, { action }),
       new Promise((_, rej) => setTimeout(() => rej(new Error('execute_hang')), 8000)),
     ]);
     return token ? String(token) : null;
@@ -110,8 +125,12 @@ async function executeWithAssignNeuter(sitekey, action) {
 async function executeWithPristine(sitekey, action) {
   const pristine = window.__fk_hijack?.pristine;
   if (typeof pristine !== 'function') return null;
+  let target = sitekey;
+  try {
+    target = await ensureWidget(sitekey);
+  } catch (e) { /* ignore */ }
   const token = await Promise.race([
-    pristine(sitekey, { action }),
+    pristine(target, { action }),
     new Promise((_, rej) => setTimeout(() => rej(new Error('execute_hang')), 8000)),
   ]);
   return token ? String(token) : null;

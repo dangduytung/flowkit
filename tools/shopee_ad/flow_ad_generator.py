@@ -110,6 +110,11 @@ def generate_flow_ad(
     zip_path: Optional[Path] = None,
     speed: Optional[float] = None,
     profile_id: Optional[str] = None,
+    cta_mode: str = "none",
+    style: str = "flow_cinematic",
+    regen: bool = False,
+    force_storyboard: bool = False,
+    custom_idea: Optional[str] = None,
 ) -> Path:
     """Execute Method 2 (Google Flow Omni 1.1 Flash AI Video + Real Product Photos)."""
     if not check_flow_ready():
@@ -149,17 +154,44 @@ def generate_flow_ad(
     assets = extract_zip(zip_path, assets_dir)
     images = assets["images"]
 
-    # 3. Create Flow Project
-    print("🌐 [Bước 1/5] Tạo Project trên Google Flow...")
+    # 3. Create Flow Project and Upload Product Reference Images
+    print("🌐 [Bước 1/5] Tạo Project & nạp ảnh tham chiếu lên Google Flow...")
     project_id = get_or_create_flow_project(product)
+
+    ref_media_ids = []
+    if images:
+        print("📸 [Tham Chiếu] Tải ảnh sản phẩm từ ZIP lên Google Flow làm hình ảnh tham chiếu...")
+        for img in images[:2]:
+            try:
+                res_up = http_json(
+                    f"{FLOWKIT_API_URL}/api/flow/upload-image",
+                    method="POST",
+                    data={
+                        "file_path": str(img.resolve()),
+                        "project_id": project_id,
+                    },
+                )
+                m_id = res_up.get("media_id")
+                if m_id:
+                    ref_media_ids.append(m_id)
+                    logger.info(f"Đã upload ảnh tham chiếu: {img.name} -> {m_id}")
+            except Exception as e:
+                logger.warning(f"Không thể upload ảnh tham chiếu {img.name}: {e}")
 
     # 4. Load or create dynamic storyboard
     print("\n📋 [Bước 2/5] Nạp hoặc tạo kịch bản động (storyboard.json)...")
     storyboard_file = product_dir / "storyboard.json"
-    scenes = load_or_create_storyboard(product, storyboard_file, style="hybrid")
+    scenes = load_or_create_storyboard(
+        product,
+        storyboard_file,
+        style=style,
+        cta_mode=cta_mode,
+        force=force_storyboard or regen,
+        custom_idea=custom_idea,
+    )
 
     # 5. Generate Voiceover via OmniVoice
-    print("\n🎙️ [Bước 3/5] Sinh giọng đọc OmniVoice cho 5 phân cảnh...")
+    print(f"\n🎙️ [Bước 3/5] Sinh giọng đọc OmniVoice cho {len(scenes)} phân cảnh...")
     audio_files = {}
     audio_durations = {}
     for sc in scenes:
@@ -184,14 +216,14 @@ def generate_flow_ad(
         if sc.kind in ("FLOW_AI", "AI"):
             idx = sc.id
             raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
-            if raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
+            if not regen and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
                 print(f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua gửi yêu cầu.")
                 continue
 
             print(f"  • Đang gửi Scene {idx} (AI): {sc.overlay_title}...")
             payload = {
                 "prompt": sc.prompt,
-                "project_id": project_id,
+                "project_id": "",  # Empty to bind to active Google Flow session project
                 "duration_s": 6,
                 "aspect_ratio": "VIDEO_ASPECT_RATIO_PORTRAIT",
                 "resolution": "720p",
@@ -208,7 +240,8 @@ def generate_flow_ad(
     ai_video_urls = {}
     if ai_workflows:
         print("\n⏳ Đang theo dõi tiến độ sinh video AI từ Google Cloud (~40-60s)...")
-        ai_video_urls = poll_omni_workflows(project_id, ai_workflows, poll_interval_s=6, timeout_s=300)
+        flow_pid = ai_workflows[0].get("project_id") or ""
+        ai_video_urls = poll_omni_workflows(flow_pid, ai_workflows, poll_interval_s=6, timeout_s=300)
 
     # 7. Prepare Clips & Assemble with Fixed Audio Mapping
     print("\n✨ [Bước 5/5] Ráp video, ghép giọng thuyết minh tiếng Việt và chèn Text Overlay...")
@@ -220,8 +253,10 @@ def generate_flow_ad(
         dur = audio_durations[idx] + 0.4
 
         if sc.kind in ("FLOW_AI", "AI"):
-            if not (raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000):
-                media_id = ai_scene_media_map[idx]
+            if regen or not (raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000):
+                media_id = ai_scene_media_map.get(idx)
+                if not media_id:
+                    raise RuntimeError(f"Scene {idx} chưa có media_id được submit!")
                 video_url = ai_video_urls.get(media_id)
                 if not video_url:
                     raise RuntimeError(f"Scene {idx} không tìm thấy video URL từ Google Flow!")
@@ -243,6 +278,7 @@ def generate_flow_ad(
             title_text=sc.overlay_title,
             subtitle_text=sc.overlay_subtitle,
             audio_duration=audio_durations[idx],
+            remove_watermark=(sc.kind in ("FLOW_AI", "AI")),
         )
         assembled_scenes.append(scene_out)
 
