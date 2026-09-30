@@ -4,10 +4,11 @@ Completely data-driven: loads or generates storyboard dynamically for ANY produc
 submits human lifestyle scenes to Google Flow Omni 1.1 Flash, and pairs them with
 authentic product photos from Shopee zip (Ken Burns 9:16).
 """
+import base64
 import json
 import logging
-import os
 import shutil
+import subprocess
 import sys
 import time
 import urllib.error
@@ -15,7 +16,13 @@ import urllib.request
 from pathlib import Path
 from typing import Optional
 
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from tools.shopee_ad.config import (
+    DEFAULT_CHANNEL_HANDLE,
+    DEFAULT_CHANNEL_NAME,
     FLOWKIT_API_URL,
     OUTPUT_ROOT,
     SHOPEE_DOWNLOADS_DIR,
@@ -25,7 +32,15 @@ from tools.shopee_ad.product_parser import ProductInfo, parse_product_zip
 from tools.shopee_ad.storyboard import SceneDefinition, load_or_create_storyboard
 from tools.shopee_ad.omnivoice_client import generate_speech
 from tools.shopee_ad.asset_extractor import extract_zip, create_image_slide_clip
-from tools.shopee_ad.video_assembler import assemble_scene_clip, concat_scenes
+from tools.shopee_ad.video_assembler import (
+    assemble_scene_clip,
+    concat_scenes,
+    concat_audio_files,
+    export_voiceover_script,
+)
+from tools.shopee_ad.caption_generator import generate_all_platform_captions
+from tools.shopee_ad.cover_generator import create_cover_image
+from tools.shopee_ad.publish_guide import create_publish_guide
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -61,6 +76,119 @@ def get_or_create_flow_project(product: ProductInfo) -> str:
     project_id = res["id"]
     logger.info(f"FlowKit project ready: {project_id} ('{res['name']}')")
     return project_id
+
+
+def upload_image_to_flow(image_path: Path, project_id: str = "") -> str:
+    """Upload a local image file to Google Flow via Base64 and return its media_id (UUID)."""
+    image_bytes = image_path.read_bytes()
+    b64 = base64.b64encode(image_bytes).decode("utf-8")
+    payload = {
+        "image_base64": b64,
+        "file_name": image_path.name,
+        "project_id": project_id,
+    }
+    res = http_json(f"{FLOWKIT_API_URL}/api/flow/upload-image", method="POST", data=payload)
+    media_id = res.get("media_id")
+    if not media_id:
+        raise RuntimeError(f"Upload ảnh thất bại, không nhận được media_id: {res}")
+    return media_id
+
+
+def extract_character_anchor(video_path: Path, output_image: Path, time_sec: float = 1.2) -> Path:
+    """Extract a sharp, stable anchor portrait frame of the character from the first video clip."""
+    output_image.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "ffmpeg", "-y",
+        "-ss", str(time_sec),
+        "-i", str(video_path),
+        "-frames:v", "1",
+        "-update", "1",
+        str(output_image),
+    ]
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    return output_image
+
+
+def poll_omni_jobs(
+    jobs: list[dict],
+    poll_interval_s: int = 5,
+    timeout_s: int = 360,
+) -> dict[int, str]:
+    """Poll both workflow jobs (text-to-video) and operation jobs (ref-to-video) until all complete."""
+    if not jobs:
+        return {}
+
+    pending = {j["scene_id"]: j for j in jobs}
+    results = {}
+    start_time = time.time()
+
+    while pending and (time.time() - start_time < timeout_s):
+        # 1. Poll workflow jobs
+        wf_jobs = [j for j in pending.values() if j.get("type") == "workflow"]
+        if wf_jobs:
+            try:
+                wf_list = [j["workflow"] for j in wf_jobs]
+                pid = wf_jobs[0]["workflow"].get("project_id") or ""
+                res = http_json(
+                    f"{FLOWKIT_API_URL}/api/flow/check-omni-status",
+                    method="POST",
+                    data={"workflows": wf_list, "project_id": pid},
+                )
+                returned_wfs = res.get("workflows", [])
+                for rw in returned_wfs:
+                    if rw.get("done") is True:
+                        m_id = rw.get("primary_media_id")
+                        v_url = (rw.get("media") or {}).get("url")
+                        for j in wf_jobs:
+                            if j.get("primary_media_id") == m_id:
+                                sid = j["scene_id"]
+                                if v_url and sid in pending:
+                                    results[sid] = v_url
+                                    del pending[sid]
+                                    logger.info(f"🎉 Scene {sid} (Text-to-Video) hoàn thành!")
+            except Exception as e:
+                logger.warning(f"Lỗi kiểm tra tiến độ workflow: {e}")
+
+        # 2. Poll operation jobs (Reference-to-Video abra_r2v)
+        op_jobs = [j for j in pending.values() if j.get("type") == "operation"]
+        if op_jobs:
+            try:
+                ops_payload = [{"name": j["op_name"]} for j in op_jobs]
+                pid = op_jobs[0]["project_id"]
+                res = http_json(
+                    f"{FLOWKIT_API_URL}/api/flow/check-status",
+                    method="POST",
+                    data={"operations": ops_payload, "project_id": pid},
+                )
+                returned_ops = res.get("operations", [])
+                for rop in returned_ops:
+                    op_data = rop.get("operation") or {}
+                    op_name = op_data.get("name") or rop.get("name")
+                    status = rop.get("status")
+
+                    if status == "MEDIA_GENERATION_STATUS_SUCCESSFUL":
+                        v_meta = op_data.get("metadata", {}).get("video", {})
+                        v_url = v_meta.get("fifeUrl") or v_meta.get("url")
+                        for j in op_jobs:
+                            if j.get("op_name") == op_name:
+                                sid = j["scene_id"]
+                                if v_url and sid in pending:
+                                    results[sid] = v_url
+                                    del pending[sid]
+                                    logger.info(f"🎉 Scene {sid} (Consistent Ref-to-Video) hoàn thành!")
+                    elif status == "MEDIA_GENERATION_STATUS_FAILED":
+                        err_msg = rop.get("error") or "Unknown generation error"
+                        raise RuntimeError(f"Google Flow video gen failed for op {op_name}: {err_msg}")
+            except Exception as e:
+                logger.warning(f"Lỗi kiểm tra tiến độ operation: {e}")
+
+        if pending:
+            time.sleep(poll_interval_s)
+
+    if pending:
+        raise TimeoutError(f"Quá thời gian ({timeout_s}s) chờ các scenes: {list(pending.keys())}")
+
+    return results
 
 
 def poll_omni_workflows(
@@ -115,8 +243,13 @@ def generate_flow_ad(
     regen: bool = False,
     force_storyboard: bool = False,
     custom_idea: Optional[str] = None,
+    channel_name: Optional[str] = None,
+    channel_handle: Optional[str] = None,
 ) -> Path:
     """Execute Method 2 (Google Flow Omni 1.1 Flash AI Video + Real Product Photos)."""
+    channel_name = channel_name or DEFAULT_CHANNEL_NAME
+    channel_handle = channel_handle or DEFAULT_CHANNEL_HANDLE
+
     if not check_flow_ready():
         raise RuntimeError("FlowKit server chưa chạy hoặc Chrome Extension chưa kết nối!")
 
@@ -163,18 +296,10 @@ def generate_flow_ad(
         print("📸 [Tham Chiếu] Tải ảnh sản phẩm từ ZIP lên Google Flow làm hình ảnh tham chiếu...")
         for img in images[:2]:
             try:
-                res_up = http_json(
-                    f"{FLOWKIT_API_URL}/api/flow/upload-image",
-                    method="POST",
-                    data={
-                        "file_path": str(img.resolve()),
-                        "project_id": project_id,
-                    },
-                )
-                m_id = res_up.get("media_id")
+                m_id = upload_image_to_flow(img, project_id=project_id)
                 if m_id:
                     ref_media_ids.append(m_id)
-                    logger.info(f"Đã upload ảnh tham chiếu: {img.name} -> {m_id}")
+                    logger.info(f"Đã upload ảnh tham chiếu sản phẩm: {img.name} -> {m_id}")
             except Exception as e:
                 logger.warning(f"Không thể upload ảnh tham chiếu {img.name}: {e}")
 
@@ -188,6 +313,7 @@ def generate_flow_ad(
         cta_mode=cta_mode,
         force=force_storyboard or regen,
         custom_idea=custom_idea,
+        channel_name=channel_name,
     )
 
     # 5. Generate Voiceover via OmniVoice
@@ -207,41 +333,147 @@ def generate_flow_ad(
         audio_files[idx] = out_wav
         audio_durations[idx] = dur
 
-    # 6. Generate AI Video for Human Scenes via Google Flow
-    print("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow...")
-    ai_workflows = []
-    ai_scene_media_map = {}
+    # 6. Generate AI Video with Character Consistency via Google Flow
+    print("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow (Bảo đảm nhân vật nhất quán)...")
+    ai_scenes = [sc for sc in scenes if sc.kind in ("FLOW_AI", "AI")]
 
-    for sc in scenes:
-        if sc.kind in ("FLOW_AI", "AI"):
-            idx = sc.id
-            raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
-            if not regen and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
-                print(f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua gửi yêu cầu.")
-                continue
+    # Find Scene 1 (the anchor scene that establishes the human character)
+    scene_1 = next((sc for sc in ai_scenes if sc.id == 1), (ai_scenes[0] if ai_scenes else None))
+    char_media_id = None
 
-            print(f"  • Đang gửi Scene {idx} (AI): {sc.overlay_title}...")
+    if scene_1:
+        s1_clip = clips_dir / f"hybrid_raw_{scene_1.id:02d}.mp4"
+        anchor_img = clips_dir / "character_anchor.jpg"
+
+        # Check if Scene 1 video already exists and is valid
+        need_s1_gen = regen or (not s1_clip.exists()) or (s1_clip.stat().st_size < 100000)
+
+        if need_s1_gen:
+            print(f"  • Đang gửi Scene {scene_1.id} (Anchor Nhân Vật): {scene_1.overlay_title}...")
+            payload = {
+                "prompt": scene_1.prompt,
+                "project_id": project_id,
+                "duration_s": 6,
+                "aspect_ratio": "VIDEO_ASPECT_RATIO_PORTRAIT",
+                "resolution": "720p",
+            }
+            res_s1 = http_json(f"{FLOWKIT_API_URL}/api/flow/generate-video-omni-text", method="POST", data=payload)
+            wf_s1 = res_s1.get("workflows", [{}])[0]
+            s1_job = {
+                "scene_id": scene_1.id,
+                "type": "workflow",
+                "workflow": wf_s1,
+                "primary_media_id": wf_s1.get("primary_media_id"),
+            }
+            print("  ⏳ Chờ sinh video Scene 1 để trích xuất khuôn mặt nhân vật chuẩn (~35s)...")
+            s1_urls = poll_omni_jobs([s1_job], poll_interval_s=5, timeout_s=300)
+            v_url = s1_urls.get(scene_1.id)
+            if not v_url:
+                raise RuntimeError(f"Scene {scene_1.id} không lấy được video URL từ Google Flow!")
+            print(f"  ⬇️ Đang tải video Scene 1 về: {s1_clip.name}...")
+            urllib.request.urlretrieve(v_url, s1_clip)
+
+        # Trích xuất khung hình chân dung nhân vật từ Scene 1 để neo mặt cho các cảnh sau
+        try:
+            print("  🎯 [Nhân Vật Nhất Quán] Đang trích xuất frame chân dung nhân vật từ Scene 1...")
+            extract_character_anchor(s1_clip, anchor_img, time_sec=1.2)
+            char_media_id = upload_image_to_flow(anchor_img, project_id=project_id)
+            print(f"  ✅ [Nhân Vật Nhất Quán] Đã upload Anchor Frame lên Flow -> media_id: {char_media_id}")
+        except Exception as e:
+            logger.warning(f"Không thể trích xuất / upload character anchor: {e}")
+
+    # Gửi các phân cảnh AI còn lại
+    pending_jobs = []
+    for sc in ai_scenes:
+        idx = sc.id
+        raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
+
+        # Nếu là scene 1 thì đã xử lý ở trên
+        if scene_1 and idx == scene_1.id and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
+            continue
+
+        if not regen and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
+            print(f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua.")
+            continue
+
+        p_lower = (sc.prompt or "").lower()
+        is_human_scene = (
+            idx in (3, 4, 5)
+            or any(w in p_lower for w in ["person", "professional", "creator", "homemaker", "model", "man", "woman", "same", "persona", "face"])
+        )
+
+        if is_human_scene and char_media_id:
+            print(f"  • Đang gửi Scene {idx} (AI - Reference Nhân Vật Nhất Quán): {sc.overlay_title}...")
+            payload = {
+                "reference_media_ids": [char_media_id],
+                "prompt": sc.prompt,
+                "project_id": project_id,
+                "duration_s": 6,
+                "aspect_ratio": "VIDEO_ASPECT_RATIO_PORTRAIT",
+                "resolution": "720p",
+            }
+            res = http_json(f"{FLOWKIT_API_URL}/api/flow/generate-video-omni", method="POST", data=payload)
+            op = res.get("operations", [{}])[0].get("operation", {})
+            op_name = op.get("name")
+            pending_jobs.append({
+                "scene_id": idx,
+                "type": "operation",
+                "op_name": op_name,
+                "project_id": project_id,
+            })
+            logger.info(f"Scene {idx} submitted (abra_r2v consistent character): op_name={op_name}")
+        elif ref_media_ids and ("hands" in p_lower or "product" in p_lower or idx == 2):
+            print(f"  • Đang gửi Scene {idx} (AI - Reference Sản Phẩm ZIP): {sc.overlay_title}...")
+            payload = {
+                "reference_media_ids": ref_media_ids[:1],
+                "prompt": sc.prompt,
+                "project_id": project_id,
+                "duration_s": 6,
+                "aspect_ratio": "VIDEO_ASPECT_RATIO_PORTRAIT",
+                "resolution": "720p",
+            }
+            res = http_json(f"{FLOWKIT_API_URL}/api/flow/generate-video-omni", method="POST", data=payload)
+            op = res.get("operations", [{}])[0].get("operation", {})
+            op_name = op.get("name")
+            pending_jobs.append({
+                "scene_id": idx,
+                "type": "operation",
+                "op_name": op_name,
+                "project_id": project_id,
+            })
+            logger.info(f"Scene {idx} submitted (abra_r2v product): op_name={op_name}")
+        else:
+            print(f"  • Đang gửi Scene {idx} (AI Text-to-Video): {sc.overlay_title}...")
             payload = {
                 "prompt": sc.prompt,
-                "project_id": "",  # Empty to bind to active Google Flow session project
+                "project_id": project_id,
                 "duration_s": 6,
                 "aspect_ratio": "VIDEO_ASPECT_RATIO_PORTRAIT",
                 "resolution": "720p",
             }
             res = http_json(f"{FLOWKIT_API_URL}/api/flow/generate-video-omni-text", method="POST", data=payload)
             wf = res.get("workflows", [{}])[0]
-            media_id = wf.get("primary_media_id")
-            ai_workflows.append(wf)
-            ai_scene_media_map[idx] = media_id
-            logger.info(f"Scene {idx} submitted: media_id={media_id}")
-            time.sleep(2.5)
+            pending_jobs.append({
+                "scene_id": idx,
+                "type": "workflow",
+                "workflow": wf,
+                "primary_media_id": wf.get("primary_media_id"),
+            })
+            logger.info(f"Scene {idx} submitted (abra_t2v): media_id={wf.get('primary_media_id')}")
 
-    # Poll for completion if any AI scenes were requested
-    ai_video_urls = {}
-    if ai_workflows:
-        print("\n⏳ Đang theo dõi tiến độ sinh video AI từ Google Cloud (~40-60s)...")
-        flow_pid = ai_workflows[0].get("project_id") or ""
-        ai_video_urls = poll_omni_workflows(flow_pid, ai_workflows, poll_interval_s=6, timeout_s=300)
+        time.sleep(2.0)
+
+    # Chờ hoàn thành và tải về toàn bộ AI clips
+    if pending_jobs:
+        print(f"\n⏳ Đang theo dõi tiến độ sinh {len(pending_jobs)} AI clips từ Google Flow...")
+        download_urls = poll_omni_jobs(pending_jobs, poll_interval_s=5, timeout_s=360)
+        for job in pending_jobs:
+            sid = job["scene_id"]
+            url = download_urls.get(sid)
+            clip_dst = clips_dir / f"hybrid_raw_{sid:02d}.mp4"
+            if url:
+                print(f"  ⬇️ Đang tải AI clip Scene {sid} từ Google Flow ({clip_dst.name})...")
+                urllib.request.urlretrieve(url, clip_dst)
 
     # 7. Prepare Clips & Assemble with Fixed Audio Mapping
     print("\n✨ [Bước 5/5] Ráp video, ghép giọng thuyết minh tiếng Việt và chèn Text Overlay...")
@@ -252,18 +484,7 @@ def generate_flow_ad(
         raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
         dur = audio_durations[idx] + 0.4
 
-        if sc.kind in ("FLOW_AI", "AI"):
-            if regen or not (raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000):
-                media_id = ai_scene_media_map.get(idx)
-                if not media_id:
-                    raise RuntimeError(f"Scene {idx} chưa có media_id được submit!")
-                video_url = ai_video_urls.get(media_id)
-                if not video_url:
-                    raise RuntimeError(f"Scene {idx} không tìm thấy video URL từ Google Flow!")
-                print(f"  • Đang tải AI clip Scene {idx} từ Google Flow...")
-                urllib.request.urlretrieve(video_url, raw_clip_path)
-
-        elif sc.kind in ("PRODUCT_PHOTO", "IMAGE_SLIDE"):
+        if sc.kind in ("PRODUCT_PHOTO", "IMAGE_SLIDE"):
             img_idx = sc.image_index % len(images) if images else 0
             img_path = images[img_idx]
             print(f"  • Tạo shot sản phẩm thật từ ảnh {img_path.name} (Scene {idx})...")
@@ -282,16 +503,90 @@ def generate_flow_ad(
         )
         assembled_scenes.append(scene_out)
 
-    final_output = final_dir / f"{product.slug}_hybrid_final.mp4"
-    print("\n🎞️ Đang ghép toàn bộ các phân cảnh thành video cuối cùng...")
+    final_output = final_dir / f"{product.slug}_flow.mp4"
+    print(f"\n🎞️ Đang ghép toàn bộ các phân cảnh thành video {final_output.name}...")
     concat_scenes(assembled_scenes, final_output)
 
+    print("📝 Đang tạo bộ caption & metadata đa nền tảng (Facebook, TikTok, YouTube Shorts)...")
+    caption_files = generate_all_platform_captions(
+        product, scenes, final_dir, channel_name=channel_name, channel_handle=channel_handle
+    )
+
+    # 8. Generate 9:16 Cover Image (Thumbnail)
+    cover_source = clips_dir / "hybrid_raw_01.mp4"
+    if not cover_source.exists() or cover_source.stat().st_size < 1000:
+        cover_source = final_output
+    cover_path = final_dir / f"{product.slug}_cover.jpg"
+    print("🖼️ Đang tạo ảnh bìa (Cover / Thumbnail) 9:16 chuẩn đa nền tảng...")
+    try:
+        create_cover_image(cover_source, product, scenes, cover_path)
+    except Exception as e:
+        logger.warning(f"Lỗi tạo ảnh bìa: {e}")
+
+    # 9. Xuất file audio thuyết minh đầy đủ và text kịch bản lời thoại
+    print("🎙️ Đang xuất file audio thuyết minh & kịch bản text lời thoại...")
+    script_path = final_dir / f"{product.slug}_script.txt"
+    voiceover_path = final_dir / f"{product.slug}_voiceover.mp3"
+    export_voiceover_script(scenes, audio_durations, script_path, product_name=product.name)
+    concat_audio_files([audio_files[s.id] for s in scenes], voiceover_path)
+
+    # 10. Generate Publishing Guide for all 3 platforms
+    guide_path = final_dir / f"{product.slug}_publish_guide.txt"
+    video_map = {"flow": final_output}
+    local_output = final_dir / f"{product.slug}_local.mp4"
+    if local_output.exists():
+        video_map["local"] = local_output
+    create_publish_guide(
+        product=product,
+        scenes=scenes,
+        video_paths=video_map,
+        cover_path=cover_path,
+        caption_files=caption_files,
+        output_guide_path=guide_path,
+        channel_handle=channel_handle,
+        script_path=script_path,
+        voiceover_path=voiceover_path,
+    )
+
     print("\n" + "=" * 65)
-    print("🎉 HOÀN THÀNH XUẤT SẮC! Video AI Hybrid đã lưu tại:")
-    print(f"👉 {final_output.resolve()}")
+    print("🎉 HOÀN THÀNH XUẤT SẮC BỘ OUTPUT SẢN PHẨM:")
+    print(f"👉 1. Video chuẩn Flow:       {final_output.resolve()}")
+    if "local" in video_map:
+        print(f"👉 2. Video chuẩn Local:      {local_output.resolve()}")
+    print(f"👉 3. Audio lời thoại đầy đủ: {voiceover_path.resolve()}")
+    print(f"👉 4. Text kịch bản & time:   {script_path.resolve()}")
+    print(f"👉 5. Ảnh bìa thu nhỏ:        {cover_path.resolve()}")
+    print(f"👉 6. Hướng dẫn chi tiết:     {guide_path.resolve()}")
     print("=" * 65 + "\n")
     return final_output
 
 
+def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Google Flow AI Ad Generator for Shopee Products")
+    parser.add_argument("--zip", type=str, default=None, help="Đường dẫn đến file zip sản phẩm Shopee")
+    parser.add_argument("--speed", type=float, default=None, help="Tốc độ đọc giọng nói OmniVoice")
+    parser.add_argument("--profile", type=str, default=None, help="Profile ID giọng nói trên VoiceStudio")
+    parser.add_argument("--regen", action="store_true", help="Bắt buộc tạo lại video AI mới")
+    parser.add_argument("--force-storyboard", action="store_true", help="Bắt buộc nạp kịch bản mới")
+    parser.add_argument("--idea", type=str, default=None, help="Ý tưởng kịch bản tùy chỉnh")
+    parser.add_argument("--channel-name", type=str, default=DEFAULT_CHANNEL_NAME, help="Tên kênh xuất bản")
+    parser.add_argument("--channel-handle", type=str, default=DEFAULT_CHANNEL_HANDLE, help="Handle/ID kênh")
+
+    args = parser.parse_args()
+    target_zip = Path(args.zip) if args.zip else None
+
+    generate_flow_ad(
+        zip_path=target_zip,
+        speed=args.speed,
+        profile_id=args.profile,
+        regen=args.regen,
+        force_storyboard=args.force_storyboard or bool(args.idea),
+        custom_idea=args.idea,
+        channel_name=args.channel_name,
+        channel_handle=args.channel_handle,
+    )
+
+
 if __name__ == "__main__":
-    generate_flow_ad()
+    main()

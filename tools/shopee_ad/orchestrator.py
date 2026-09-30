@@ -1,12 +1,19 @@
 import argparse
 import json
 import shutil
+import subprocess
 import sys
 import urllib.request
 from pathlib import Path
 from typing import Optional
 
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from tools.shopee_ad.config import (
+    DEFAULT_CHANNEL_HANDLE,
+    DEFAULT_CHANNEL_NAME,
     FLOWKIT_API_URL,
     OUTPUT_ROOT,
     SHOPEE_DOWNLOADS_DIR,
@@ -20,7 +27,15 @@ from tools.shopee_ad.asset_extractor import (
     extract_vertical_subclip,
     create_image_slide_clip,
 )
-from tools.shopee_ad.video_assembler import assemble_scene_clip, concat_scenes
+from tools.shopee_ad.video_assembler import (
+    assemble_scene_clip,
+    concat_scenes,
+    concat_audio_files,
+    export_voiceover_script,
+)
+from tools.shopee_ad.caption_generator import generate_all_platform_captions
+from tools.shopee_ad.cover_generator import create_cover_image
+from tools.shopee_ad.publish_guide import create_publish_guide
 
 
 def check_flowkit_health() -> bool:
@@ -40,10 +55,14 @@ def run_pipeline(
     profile_id: Optional[str] = None,
     mode_9_16: str = "blur_bg",
     cta_mode: str = "none",
+    channel_name: Optional[str] = None,
+    channel_handle: Optional[str] = None,
 ) -> Path:
     """
     Execute the entire Shopee Ad production pipeline dynamically for ANY product zip.
     """
+    channel_name = channel_name or DEFAULT_CHANNEL_NAME
+    channel_handle = channel_handle or DEFAULT_CHANNEL_HANDLE
     # 1. Resolve Zip File strictly from SHOPEE_DOWNLOADS_DIR if zip_path is None
     if zip_path is None:
         if not SHOPEE_DOWNLOADS_DIR or not SHOPEE_DOWNLOADS_DIR.exists():
@@ -120,14 +139,25 @@ def run_pipeline(
     video_clips = {}
     has_raw_video = raw_video and raw_video.exists()
 
+    raw_video_dur = 0.0
+    if has_raw_video:
+        try:
+            cmd_probe = [
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", str(raw_video)
+            ]
+            res_p = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
+            raw_video_dur = float(res_p.stdout.strip())
+            print(f"  [Video Gốc] Tìm thấy video mẫu từ Shopee ({raw_video_dur:.1f}s), sẵn sàng biên tập sub-clips.")
+        except Exception as e:
+            print(f"  [Video Gốc] Không thể đo thời lượng video gốc: {e}")
+
+    curr_raw_time = 0.0
     for sc in scenes:
         clip_out = clips_dir / f"clip_raw_{sc.id:02d}.mp4"
         dur = audio_durations[sc.id] + 0.4  # Đảm bảo video dài hơn audio 0.4s để chuyển cảnh êm
 
-        if sc.kind == "REAL_FOOTAGE" and has_raw_video:
-            print(f"  • Scene {sc.id}: Cắt lát từ video gốc (bắt đầu {sc.real_start_sec:.1f}s, dài {dur:.1f}s)...")
-            extract_vertical_subclip(raw_video, sc.real_start_sec, dur, clip_out, mode=mode_9_16)
-        else:
+        if sc.kind == "PRODUCT_PHOTO" or (not has_raw_video):
             # Dùng hiệu ứng Ken Burns Pan & Zoom từ ảnh sản phẩm
             img_idx = sc.image_index % len(images) if images else 0
             img_path = images[img_idx] if images else None
@@ -135,10 +165,21 @@ def run_pipeline(
                 print(f"  • Scene {sc.id}: Tạo hiệu ứng chuyển động ảnh Pan & Zoom từ {img_path.name} (dài {dur:.1f}s)...")
                 create_image_slide_clip(img_path, dur, clip_out)
             elif has_raw_video:
-                print(f"  • Scene {sc.id}: Fallback cắt từ video gốc...")
-                extract_vertical_subclip(raw_video, sc.real_start_sec, dur, clip_out, mode=mode_9_16)
+                extract_vertical_subclip(raw_video, 0.0, dur, clip_out, mode=mode_9_16)
             else:
                 raise RuntimeError(f"Scene {sc.id} không có video lẫn hình ảnh để dựng!")
+        else:
+            # Biên tập cắt lát trực tiếp từ video mẫu của Shop
+            if sc.real_start_sec and sc.real_start_sec > 0:
+                start_sec = sc.real_start_sec
+            else:
+                start_sec = curr_raw_time
+                if raw_video_dur > 0 and start_sec + dur > raw_video_dur:
+                    start_sec = max(0.0, (curr_raw_time % max(1.0, raw_video_dur - dur)))
+                curr_raw_time += dur
+
+            print(f"  • Scene {sc.id}: Cắt video mẫu từ {start_sec:.1f}s đến {start_sec + dur:.1f}s (dài {dur:.1f}s, mode {mode_9_16})...")
+            extract_vertical_subclip(raw_video, start_sec, dur, clip_out, mode=mode_9_16)
 
         video_clips[sc.id] = clip_out
 
@@ -160,12 +201,55 @@ def run_pipeline(
 
     # 9. Ghép toàn bộ thành video thành phẩm
     print("\n🎞️ [Bước 5/5] Ghép các phân cảnh thành video cuối cùng...")
-    final_output = final_dir / f"{product.slug}_final.mp4"
+    final_output = final_dir / f"{product.slug}_local.mp4"
     concat_scenes(assembled_scenes, final_output)
 
+    print("📝 Đang tạo bộ caption & metadata đa nền tảng (Facebook, TikTok, YouTube Shorts)...")
+    caption_files = generate_all_platform_captions(
+        product, scenes, final_dir, channel_name=channel_name, channel_handle=channel_handle
+    )
+
+    cover_source = video_clips.get(1, final_output)
+    cover_path = final_dir / f"{product.slug}_cover.jpg"
+    print("🖼️ Đang tạo ảnh bìa (Cover / Thumbnail) 9:16 chuẩn đa nền tảng...")
+    try:
+        create_cover_image(cover_source, product, scenes, cover_path)
+    except Exception as e:
+        print(f"Cảnh báo: Lỗi tạo ảnh bìa: {e}")
+
+    # 10. Xuất file audio thuyết minh đầy đủ và text kịch bản lời thoại
+    print("🎙️ Đang xuất file audio thuyết minh & kịch bản text lời thoại...")
+    script_path = final_dir / f"{product.slug}_script.txt"
+    voiceover_path = final_dir / f"{product.slug}_voiceover.mp3"
+    export_voiceover_script(scenes, audio_durations, script_path, product_name=product.name)
+    concat_audio_files([audio_files[s.id] for s in scenes], voiceover_path)
+
+    guide_path = final_dir / f"{product.slug}_publish_guide.txt"
+    video_map = {"local": final_output}
+    flow_output = final_dir / f"{product.slug}_flow.mp4"
+    if flow_output.exists():
+        video_map["flow"] = flow_output
+    create_publish_guide(
+        product=product,
+        scenes=scenes,
+        video_paths=video_map,
+        cover_path=cover_path,
+        caption_files=caption_files,
+        output_guide_path=guide_path,
+        channel_handle=channel_handle,
+        script_path=script_path,
+        voiceover_path=voiceover_path,
+    )
+
     print("\n" + "=" * 60)
-    print("🎉 HOÀN THÀNH XUẤT SẮC! Video đã được lưu tại:")
-    print(f"👉 {final_output.resolve()}")
+    print("🎉 HOÀN THÀNH XUẤT SẮC BỘ OUTPUT SẢN PHẨM:")
+    print(f"👉 1. Video chuẩn Local:      {final_output.resolve()}")
+    if "flow" in video_map:
+        print(f"👉 2. Video chuẩn Flow:       {flow_output.resolve()}")
+    print(f"👉 3. Audio lời thoại đầy đủ: {voiceover_path.resolve()}")
+    print(f"👉 4. Text kịch bản & time:   {script_path.resolve()}")
+    print(f"👉 5. Ảnh bìa thu nhỏ:        {cover_path.resolve()}")
+    print(f"👉 6. Hướng dẫn chi tiết:     {guide_path.resolve()}")
     print(f"📝 Kịch bản có thể tùy chỉnh tại: {storyboard_file.resolve()}")
     print("=" * 60 + "\n")
     return final_output
@@ -180,9 +264,9 @@ def main():
     parser.add_argument(
         "--mode",
         type=str,
-        default="flow",
-        choices=["flow", "local", "zip"],
-        help="Chế độ tạo video: 'flow' (MẶC ĐỊNH: qua Google Flow AI, có tham chiếu ảnh zip & luôn tự động xóa logo) hoặc 'local'/'zip' (chỉ dùng ảnh/video gốc trong file zip)",
+        default="auto",
+        choices=["auto", "both", "flow", "local", "zip"],
+        help="Chế độ tạo video: 'auto' (MẶC ĐỊNH: nếu ZIP có video sẽ sinh CẢ HAI '_local.mp4' & '_flow.mp4'; nếu chỉ có ảnh sẽ sinh '_flow.mp4'), 'both', 'flow', hoặc 'local'",
     )
     parser.add_argument(
         "--crop",
@@ -228,7 +312,19 @@ def main():
     parser.add_argument(
         "--force-storyboard",
         action="store_true",
-        help="Bắt buộc tạo lại kịch bản storyboard.json mới",
+        help="Bắt buộc tạo lại kịch bản storyboard.json từ đầu",
+    )
+    parser.add_argument(
+        "--channel-name",
+        type=str,
+        default=DEFAULT_CHANNEL_NAME,
+        help=f"Tên kênh xuất bản (mặc định lấy từ .env SHOPEE_AD_CHANNEL_NAME: '{DEFAULT_CHANNEL_NAME}')",
+    )
+    parser.add_argument(
+        "--channel-handle",
+        type=str,
+        default=DEFAULT_CHANNEL_HANDLE,
+        help=f"Handle/ID kênh (mặc định lấy từ .env SHOPEE_AD_CHANNEL_HANDLE: '{DEFAULT_CHANNEL_HANDLE}')",
     )
 
     args = parser.parse_args()
@@ -243,15 +339,61 @@ def main():
         return
 
     target_zip = Path(args.zip) if args.zip else None
+    if target_zip is None:
+        if not SHOPEE_DOWNLOADS_DIR or not SHOPEE_DOWNLOADS_DIR.exists():
+            raise RuntimeError(
+                f"Chưa cấu hình SHOPEE_DOWNLOADS_DIR hợp lệ trong .env! (Hiện tại: '{SHOPEE_DOWNLOADS_DIR}')"
+            )
+        available = list_available_zips()
+        if not available:
+            raise RuntimeError(f"Không tìm thấy file zip nào trong thư mục: {SHOPEE_DOWNLOADS_DIR}")
+        target_zip = available[0]
+        print(f"[Orchestrator] Quét thư mục Shopee ({SHOPEE_DOWNLOADS_DIR})")
+        print(f"[Orchestrator] Tự động chọn file zip mới nhất: {target_zip.name}")
 
-    # Resolve mode: default is "flow"
+    product = parse_product_zip(target_zip)
+    has_video = bool(product.video_name)
+
+    # Resolve mode
     selected_mode = args.mode
     if args.method:
-        selected_mode = "local" if args.method in ("local", "zip", "ken_burns") else "flow"
+        selected_mode = "local" if args.method in ("local", "zip", "ken_burns") else args.method
     if args.flow:
         selected_mode = "flow"
 
-    if selected_mode == "flow":
+    run_local = False
+    run_flow = False
+
+    if selected_mode == "auto":
+        if has_video:
+            print("💡 File ZIP có chứa video gốc: Tự động kích hoạt CẢ HAI CHẾ ĐỘ (_local.mp4 & _flow.mp4)!")
+            run_local = True
+            run_flow = True
+        else:
+            print("💡 File ZIP chỉ có hình ảnh: Kích hoạt chế độ Google Flow AI (_flow.mp4)!")
+            run_flow = True
+    elif selected_mode == "both":
+        run_local = True
+        run_flow = True
+    elif selected_mode in ("local", "zip"):
+        run_local = True
+    elif selected_mode == "flow":
+        run_flow = True
+
+    if run_local:
+        print("\n" + "▶" * 25 + " [1/2] SẢN XUẤT VIDEO LOCAL (_local.mp4) " + "◀" * 25)
+        run_pipeline(
+            zip_path=target_zip,
+            speed=args.speed,
+            profile_id=args.profile,
+            mode_9_16=args.crop,
+            cta_mode=args.cta,
+            channel_name=args.channel_name,
+            channel_handle=args.channel_handle,
+        )
+
+    if run_flow:
+        print("\n" + "▶" * 25 + " [2/2] SẢN XUẤT VIDEO GOOGLE FLOW AI (_flow.mp4) " + "◀" * 25)
         from tools.shopee_ad.flow_ad_generator import generate_flow_ad
         generate_flow_ad(
             zip_path=target_zip,
@@ -262,14 +404,8 @@ def main():
             regen=args.regen,
             force_storyboard=args.force_storyboard or bool(args.idea),
             custom_idea=args.idea,
-        )
-    else:
-        run_pipeline(
-            zip_path=target_zip,
-            speed=args.speed,
-            profile_id=args.profile,
-            mode_9_16=args.crop,
-            cta_mode=args.cta,
+            channel_name=args.channel_name,
+            channel_handle=args.channel_handle,
         )
 
 

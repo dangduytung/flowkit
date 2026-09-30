@@ -76,14 +76,16 @@ python -m tools.shopee_ad.orchestrator --style lifestyle_edc --idea "nữ vlogge
 
 | Cờ CLI | Ý nghĩa | Mặc định |
 |---|---|---|
-| `--mode {flow, local, zip}` | Chế độ tạo video (Google Flow AI hay Ảnh/Video gốc) | `flow` |
+| `--mode {auto, both, flow, local, zip}` | Chế độ tạo video: 'auto' (ZIP có video sinh cả 2 bản `_local.mp4` & `_flow.mp4`), 'both', 'flow', 'local' | `auto` |
 | `--zip <đường_dẫn>` | Chỉ định đường dẫn tới file ZIP cụ thể | Mới nhất trong Downloads |
 | `--list` | Xem toàn bộ danh sách file ZIP đang có | - |
 | `--style {flow_cinematic, problem_solution, lifestyle_edc, hybrid}` | Phong cách kịch bản | `flow_cinematic` |
 | `--idea "..."` | Bổ sung ý tưởng / bối cảnh sáng tạo vào prompt | Không |
 | `--cta {none, follow, shopee}` | Lời kêu gọi hành động ở cảnh kết thúc | `none` (4 cảnh Fanpage) |
 | `--speed <float>` | Tốc độ đọc của OmniVoice | `0.86` |
-| `--profile <id>` | ID profile giọng đọc tiếng Việt OmniVoice | `338d9ba2` |
+| `--profile <id>` | ID profile giọng đọc tiếng Việt OmniVoice | Lấy từ .env `OMNIVOICE_PROFILE_ID` |
+| `--channel-name <tên>` | Tên kênh xuất bản đa nền tảng | Lấy từ .env `SHOPEE_AD_CHANNEL_NAME` |
+| `--channel-handle <id>` | Handle/ID kênh | Lấy từ .env `SHOPEE_AD_CHANNEL_HANDLE` |
 | `--regen` | Bắt buộc sinh lại toàn bộ clip AI từ Google Flow | `False` |
 
 ---
@@ -95,11 +97,14 @@ tools/shopee_ad/
 ├── __init__.py
 ├── config.py             # Quản lý đường dẫn và cấu hình môi trường (.env)
 ├── product_parser.py     # Phân tích file zip, trích xuất metadata và tính năng
-├── storyboard.py         # Nhận diện ngành hàng thông minh & tạo kịch bản 4 phân cảnh
-├── omnivoice_client.py   # Client sinh giọng đọc tiếng Việt OmniVoice
+├── storyboard.py         # Nhận diện ngành hàng thông minh & tạo kịch bản phân cảnh
+├── omnivoice_client.py   # Client sinh giọng đọc tiếng Việt OmniVoice (VoiceStudio)
 ├── asset_extractor.py    # Xử lý video/ảnh gốc (Ken Burns 9:16)
-├── video_assembler.py    # Xóa logo Flow (delogo), chèn text overlay UTF-8, đồng bộ 30fps
+├── video_assembler.py    # Ráp video, delogo Flow, text overlay UTF-8, xuất master audio & script
+├── caption_generator.py  # Tạo caption đa nền tảng (Facebook Reels, TikTok, Shorts)
+├── cover_generator.py    # Tạo ảnh bìa thumbnail 9:16 bắt mắt cho video
+├── publish_guide.py      # Sinh file cẩm nang hướng dẫn đăng bài chi tiết từng nền tảng
 ├── flow_ad_generator.py  # Điều phối sinh video AI qua Google Flow Omni Flash
-├── orchestrator.py       # Bộ điều khiển CLI trung tâm
+├── orchestrator.py       # Bộ điều khiển CLI trung tâm (quét ZIP, điều phối auto/flow/local)
 └── README.md
 ```

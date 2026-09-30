@@ -40,6 +40,8 @@ def generate_speech(
     profile = profile_id or OMNIVOICE_PROFILE_ID
     sp = speed if speed is not None else OMNIVOICE_SPEED
 
+    if not endpoint:
+        raise ValueError("OMNIVOICE_URL is not set. Please provide it in .env or pass as argument.")
     if not token:
         raise ValueError("OMNIVOICE_API_KEY is not set. Please provide it in .env or pass as argument.")
 

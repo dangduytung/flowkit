@@ -1,9 +1,7 @@
 """Asset Extractor and Preprocessor for Shopee Video & Images."""
-import os
 import zipfile
 import subprocess
 from pathlib import Path
-from typing import Optional
 
 def extract_zip(zip_path: Path, dest_dir: Path) -> dict:
     """

@@ -36,9 +36,9 @@ def _load_env_file(path: Path):
 _load_env_file(DEFAULT_ENV_FILE)
 
 # OmniVoice Settings
-OMNIVOICE_URL = os.environ.get("OMNIVOICE_URL", "https://voice.dangduytung.name.vn/generate")
-OMNIVOICE_API_KEY = os.environ.get("OMNIVOICE_API_KEY", "")
-OMNIVOICE_PROFILE_ID = os.environ.get("OMNIVOICE_PROFILE_ID", "338d9ba2")
+OMNIVOICE_URL = os.environ.get("OMNIVOICE_URL", "").strip()
+OMNIVOICE_API_KEY = os.environ.get("OMNIVOICE_API_KEY", "").strip()
+OMNIVOICE_PROFILE_ID = os.environ.get("OMNIVOICE_PROFILE_ID", "").strip()
 OMNIVOICE_SPEED = float(os.environ.get("OMNIVOICE_SPEED", "0.86"))
 
 # FlowKit API
@@ -48,6 +48,11 @@ FLOWKIT_API_URL = os.environ.get("FLOWKIT_API_URL", "http://127.0.0.1:8100")
 _shopee_dir_env = os.environ.get("SHOPEE_DOWNLOADS_DIR", "").strip()
 SHOPEE_DOWNLOADS_DIR = Path(_shopee_dir_env) if _shopee_dir_env else None
 OUTPUT_ROOT = REPO_ROOT / "output" / "shopee_ads"
+
+# Channel Branding (Optional - empty by default for 100% white-label multi-channel distribution)
+DEFAULT_CHANNEL_NAME = os.environ.get("SHOPEE_AD_CHANNEL_NAME", "").strip()
+DEFAULT_CHANNEL_HANDLE = os.environ.get("SHOPEE_AD_CHANNEL_HANDLE", "").strip()
+DEFAULT_CHANNEL_BIO_LINK = os.environ.get("SHOPEE_AD_BIO_LINK", "").strip()
 
 
 def list_available_zips(directory: Optional[Path] = None) -> list:

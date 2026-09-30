@@ -148,3 +148,100 @@ def concat_scenes(clip_paths: List[Path], output_path: Path, bgm_path: Optional[
 
     print(f"[Assembler] Video successfully assembled to: {output_path}")
     return output_path
+
+
+def concat_audio_files(audio_paths: List[Path], output_path: Path) -> Path:
+    """
+    Concatenate all individual scene audio files into a single master voiceover audio file (.mp3).
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    concat_list_file = output_path.parent / "concat_voice_list.txt"
+    with open(concat_list_file, "w", encoding="utf-8") as f:
+        for p in audio_paths:
+            f.write(f"file '{p.resolve().as_posix()}'\n")
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "concat", "-safe", "0",
+        "-i", str(concat_list_file),
+        "-c:a", "libmp3lame", "-b:a", "192k", "-ar", "48000",
+        str(output_path)
+    ]
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    if concat_list_file.exists():
+        concat_list_file.unlink()
+
+    print(f"[Assembler] Đã xuất file audio lời thoại đầy đủ: {output_path.name}")
+    return output_path
+
+
+def export_voiceover_script(
+    scenes: list,
+    audio_durations: dict,
+    output_path: Path,
+    product_name: str = "",
+) -> Path:
+    """
+    Export full spoken voiceover script and timecoded breakdown for editors / captions.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # 1. Full unbroken narration
+    full_paragraphs = []
+    for sc in scenes:
+        text = getattr(sc, "narrator_text", "").strip()
+        if text:
+            full_paragraphs.append(text)
+    continuous_speech = "\n\n".join(full_paragraphs)
+
+    # 2. Detailed per-scene breakdown with timecode
+    breakdown_lines = []
+    curr_time = 0.0
+    for sc in scenes:
+        idx = getattr(sc, "id", 0)
+        dur = audio_durations.get(idx, 6.0)
+        start_t = curr_time
+        end_t = curr_time + dur
+        curr_time = end_t
+
+        start_str = f"{int(start_t // 60):02d}:{int(start_t % 60):02d}"
+        end_str = f"{int(end_t // 60):02d}:{int(end_t % 60):02d}"
+
+        title = getattr(sc, "overlay_title", "")
+        sub = getattr(sc, "overlay_subtitle", "")
+        name = getattr(sc, "name", f"Phân cảnh {idx}")
+        narrator = getattr(sc, "narrator_text", "")
+
+        breakdown_lines.append(f"▶ PHÂN CẢNH {idx} [{start_str} - {end_str}] ({dur:.2f}s) — {name}")
+        breakdown_lines.append(f"  • Lời thoại thuyết minh: \"{narrator}\"")
+        if title:
+            breakdown_lines.append(f"  • Text Overlay (Tiêu đề): {title}")
+        if sub:
+            breakdown_lines.append(f"  • Text Overlay (Phụ đề):  {sub}")
+        breakdown_lines.append("")
+
+    total_dur_str = f"{int(curr_time // 60):02d}:{int(curr_time % 60):02d} ({curr_time:.1f}s)"
+    breakdown_str = "\n".join(breakdown_lines)
+
+    content = f"""======================================================================
+🎙️ KỊCH BẢN LỜI THOẠI & PHỤ ĐỀ (VOICEOVER SCRIPT)
+📦 Sản phẩm: {product_name}
+⏱️ Tổng thời lượng: {total_dur_str}
+======================================================================
+
+----------------------------------------------------------------------
+1. VĂN BẢN ĐỌC LIỀN MẠCH (DÙNG CHO CAPCUT AUTO-CAPTION / ĐỌC VOICE):
+----------------------------------------------------------------------
+{continuous_speech}
+
+----------------------------------------------------------------------
+2. CHI TIẾT TỪNG PHÂN CẢNH & TEXT OVERLAY (THEO TIMECODE):
+----------------------------------------------------------------------
+{breakdown_str}
+"""
+    output_path.write_text(content.strip(), encoding="utf-8")
+    print(f"[Assembler] Đã xuất file text lời thoại & timecode: {output_path.name}")
+    return output_path

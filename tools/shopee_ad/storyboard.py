@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from tools.shopee_ad.config import DEFAULT_CHANNEL_NAME
 from tools.shopee_ad.product_parser import ProductInfo
 
 logger = logging.getLogger(__name__)
@@ -28,11 +29,15 @@ class SceneDefinition:
 def clean_product_title(raw_name: str) -> str:
     """
     Extract a concise, clean product name suitable for spoken audio and overlay titles.
-    Removes spam tags, bracketed codes, repetitive capacity/size listings.
+    Removes spam tags, bracketed codes, repetitive capacity/size listings, and shop warranties.
     """
     name = re.sub(r"^(Tên sản phẩm:|\s*\[.*?\]|\s*\(.*?\))\s*", "", raw_name, flags=re.I).strip()
     # Strip common bracketed marketing noise like [Chính Hãng], (HOT), [Freeship Xtra]
     name = re.sub(r"\[.*?\]|\(.*?\)|\【.*?\】", " ", name)
+    # Strip warranty/official store noise from end
+    name = re.sub(r"[\-–—]\s*(?:bảo hành|chính hãng|full box|freeship|sẵn hàng|chất lượng).*", "", name, flags=re.I).strip()
+    # Strip model code at the end like HPW-CM01
+    name = re.sub(r"\s+[A-Z0-9]{2,}[\-\d]+[A-Z0-9]*$", "", name).strip()
     # Remove repetitive capacity listings (e.g. '2TB 1TB 128GB 64GB 32GB 16GB 8GB 4GB 1GB')
     name = re.sub(r"(?:\b\d+\s*(?:TB|GB|MB)\b[\s,/]*){2,}", " ", name, flags=re.I)
     # Remove repetitive size/volume listings (e.g. '50ml/100ml', 'Size S M L XL')
@@ -46,7 +51,7 @@ def clean_product_title(raw_name: str) -> str:
     short = parts[0].strip()
     if len(short) < 14 and len(parts) > 1:
         short = f"{short} {parts[1].strip()}"
-    return short[:40].strip()
+    return short[:38].strip()
 
 
 def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
@@ -55,25 +60,41 @@ def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
     Returns list of (badge_title, full_sentence).
     """
     lines = [l.strip() for l in description_text.splitlines() if l.strip()]
-    header_blacklist = (
-        "thông tin", "hướng dẫn", "lưu ý", "gợi ý", "chính sách",
-        "cam kết", "bảo hành", "xuất xứ", "mô tả", "tên sản phẩm",
-        "link sản phẩm", "ngày tải", "số sao", "đã bán", "hastag",
-        "về năng lực", "ghi chú",
+    spec_blacklist = (
+        "thông số", "kích thước", "trong hộp", "màu sắc", "xuất xứ",
+        "lưu ý", "bảo hành", "cam kết", "hướng dẫn", "liên hệ", "vat", "hóa đơn",
+        "tải trọng", "trọng lượng", "khối lượng", "chất liệu", "hastag", "link",
+        "ghi chú", "chính sách",
     )
 
-    # Pass 1: Prioritize lines with checkmarks or bullet symbols
-    bullets = []
+    # Pass 0: Prioritize lines under 'ĐẶC ĐIỂM NỔI BẬT' / 'TÍNH NĂNG NỔI BẬT' / 'ƯU ĐIỂM'
+    in_feature_section = False
+    candidates = []
     for l in lines:
-        if re.match(r"^[✅⭐👉🔹✔]\s*", l):
-            clean = re.sub(r"^[✅⭐👉🔹✔\s]+", "", l).strip()
-            if len(clean) >= 12 and not clean.startswith("#") and not clean.startswith("http"):
-                bullets.append(clean)
+        low = l.lower()
+        if any(h in low for h in ["đặc điểm nổi bật", "tính năng nổi bật", "ưu điểm nổi bật", "công dụng nổi bật"]):
+            in_feature_section = True
+            continue
+        if any(h in low for h in ["thông số kỹ thuật", "thông số", "hướng dẫn", "lưu ý", "chính sách", "cam kết"]):
+            in_feature_section = False
+            continue
+        if in_feature_section:
+            clean = re.sub(r"^[✅⭐👉🔹✔\-\*\•\d\.\)]+\s*", "", l).strip()
+            if 12 <= len(clean) <= 100 and not any(clean.lower().startswith(b) for b in spec_blacklist):
+                candidates.append(clean)
+
+    # Pass 1: Prioritize lines with checkmarks or bullet symbols
+    if len(candidates) < 2:
+        for l in lines:
+            if re.match(r"^[✅⭐👉🔹✔]\s*", l):
+                clean = re.sub(r"^[✅⭐👉🔹✔\s]+", "", l).strip()
+                if 12 <= len(clean) <= 100 and not any(clean.lower().startswith(b) for b in spec_blacklist):
+                    candidates.append(clean)
 
     # Pass 2: Lines formatted as 'Title: Description' or bulleted with dash
-    if len(bullets) < 2:
+    if len(candidates) < 2:
         for l in lines:
-            if any(l.lower().startswith(p) for p in header_blacklist) or l.startswith("---"):
+            if any(l.lower().startswith(p) for p in spec_blacklist) or l.startswith("---"):
                 continue
             clean = re.sub(r"^[\-\*\•\d\.\)]+\s*", "", l).strip()
             if len(clean) < 14 or clean.startswith("#") or clean.startswith("http"):
@@ -81,28 +102,12 @@ def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
             if ":" in clean:
                 t, d = clean.split(":", 1)
                 t, d = t.strip(), d.strip()
-                if 3 <= len(t) <= 28 and len(d) >= 12 and not any(h in t.lower() for h in header_blacklist):
-                    bullets.append(f"{t}: {d}")
-
-    # Pass 3: Lines under sections like 'Đặc trưng', 'Tính năng', 'Ưu điểm', 'Công dụng'
-    if len(bullets) < 2:
-        in_feat = False
-        for l in lines:
-            low = l.lower()
-            if any(h in low for h in ["đặc trưng", "tính năng", "ưu điểm", "công dụng"]):
-                in_feat = True
-                continue
-            if any(h in low for h in ["ghi chú", "lưu ý", "bảo hành", "chính sách", "hướng dẫn", "thông số", "năng lực"]):
-                in_feat = False
-                continue
-            if in_feat:
-                clean = re.sub(r"^[\-\*\•\d\.\)✅⭐👉🔹✔]+\s*", "", l).strip()
-                if 12 <= len(clean) <= 90 and not clean.startswith("#") and not clean.startswith("http"):
-                    bullets.append(clean)
+                if 3 <= len(t) <= 28 and len(d) >= 12 and not any(h in t.lower() for h in spec_blacklist):
+                    candidates.append(f"{t}: {d}")
 
     # Format into (badge_title, sentence)
     results = []
-    for b in bullets:
+    for b in candidates:
         if " - " in b:
             t, d = b.split(" - ", 1)
             t_clean = re.sub(r"[^\w\s\d]", "", t).strip().upper()[:22]
@@ -111,17 +116,21 @@ def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
             t, d = b.split(":", 1)
             t_clean = re.sub(r"[^\w\s\d]", "", t).strip().upper()[:22]
             results.append((t_clean, d.strip()))
-        elif ";" in b:
-            t, d = b.split(";", 1)
-            t_clean = re.sub(r"[^\w\s\d]", "", t).strip().upper()[:22]
-            results.append((t_clean, b.strip()))
-        elif "," in b and len(b.split(",")[0]) <= 24:
-            t, d = b.split(",", 1)
-            t_clean = re.sub(r"[^\w\s\d]", "", t).strip().upper()[:22]
-            results.append((t_clean, b.strip()))
         else:
-            t_clean = re.sub(r"[^\w\s\d]", "", b[:22]).strip().upper()
-            results.append((t_clean, b))
+            low_b = b.lower()
+            if "gọn gàng" in low_b or "đi dây" in low_b:
+                badge = "SẮP XẾP GỌN GÀNG"
+            elif "nhôm" in low_b or "chắc chắn" in low_b:
+                badge = "NHÔM NGUYÊN KHỐI"
+            elif "kẹp bàn" in low_b or "lắp đặt" in low_b:
+                badge = "LẮP ĐẶT ĐƠN GIẢN"
+            elif "tương thích" in low_b:
+                badge = "TƯƠNG THÍCH ĐA NĂNG"
+            else:
+                words = b.split()
+                badge = " ".join(words[:3]).upper()[:20]
+                badge = re.sub(r"[^\w\s\d]", "", badge).strip()
+            results.append((badge or "TÍNH NĂNG NỔI BẬT", b))
 
         if len(results) >= 3:
             break
@@ -188,7 +197,7 @@ def detect_product_category(name: str, description_text: str = "") -> str:
     if _matches(health_kw):
         return "HEALTH_FITNESS"
 
-    # 5. Tech & Gadgets
+    # 5. Tech & Gadgets & Desk Setup
     tech_kw = [
         "usb", "ổ đĩa", "o dia", "flash drive", "thẻ nhớ", "thẻ sd", "micro sd",
         "ổ cứng", "ssd", "hdd", "box ổ cứng", "củ sạc", "cáp sạc", "dây sạc",
@@ -196,12 +205,41 @@ def detect_product_category(name: str, description_text: str = "") -> str:
         "earbuds", "headphone", "chuột không dây", "chuột gaming", "bàn phím",
         "loa bluetooth", "soundbar", "micro thu âm", "webcam", "giá đỡ điện thoại",
         "kẹp điện thoại", "gimbal", "tripod", "ốp lưng", "kính cường lực",
-        "laptop", "máy tính", "ipad", "màn hình", "hub type c", "smartwatch"
+        "laptop", "máy tính", "ipad", "màn hình", "hub type c", "smartwatch",
+        "khay giấu dây", "kẹp bàn", "quản lý cáp", "giá treo tai nghe", "kệ nâng màn hình",
+        "đi dây", "desk setup", "hyperwork"
     ]
     if _matches(tech_kw):
         return "TECH_GADGETS"
 
     return "GENERAL_LIFESTYLE"
+
+
+def _get_character_persona(category: str) -> dict:
+    """
+    Return consistent, explicit physical character personas (intro, continuation)
+    for each product category to enforce visual continuity across Google Flow scenes.
+    """
+    if category in ("BEAUTY_SKINCARE", "FASHION_APPAREL"):
+        return {
+            "intro": "a stylish 24-year-old Vietnamese young woman with shoulder-length soft straight black hair, clear radiant skin, wearing an aesthetic beige knit top",
+            "cont": "the same 24-year-old Vietnamese young woman with shoulder-length soft black hair, clear skin, and beige knit top",
+        }
+    elif category == "HEALTH_FITNESS":
+        return {
+            "intro": "an athletic 25-year-old Vietnamese young man with short trim black hair, fit build, wearing a dark grey athletic crew-neck tee",
+            "cont": "the same athletic 25-year-old Vietnamese young man with short trim black hair and dark grey tee",
+        }
+    elif category == "KITCHEN_HOME":
+        return {
+            "intro": "a friendly 26-year-old Vietnamese homemaker with neat ponytail black hair, warm smile, wearing a casual white t-shirt under a light beige apron",
+            "cont": "the same friendly 26-year-old Vietnamese homemaker with neat ponytail black hair and beige apron",
+        }
+    else:  # TECH_GADGETS and GENERAL_LIFESTYLE
+        return {
+            "intro": "a stylish 25-year-old Vietnamese professional young man with neat short black side-part hair, wearing a crisp light-blue collared Oxford shirt and dark slacks",
+            "cont": "the same 25-year-old Vietnamese professional young man with neat short black side-part hair and light-blue Oxford shirt",
+        }
 
 
 def _build_flow_cinematic_scenes(
@@ -216,6 +254,7 @@ def _build_flow_cinematic_scenes(
 ) -> List[SceneDefinition]:
     """Generate 4 cinematic AI scenes tailored to the product's physical category."""
     idea_ctx = f" ({custom_idea})" if custom_idea else ""
+    persona = _get_character_persona(category)
 
     if category == "BEAUTY_SKINCARE":
         return [
@@ -508,7 +547,7 @@ def _build_flow_cinematic_scenes(
                     id=1,
                     name="Hook - Trải nghiệm công nghệ thông minh",
                     kind="FLOW_AI",
-                    narrator_text=f"Nâng cấp không gian làm việc và trải nghiệm công nghệ của bạn lên một tầm cao mới cùng {clean_title}!",
+                    narrator_text=f"Nâng cấp không gian làm việc, đưa trải nghiệm công nghệ lên tầm cao mới cùng {clean_title}!",
                     overlay_title="CÔNG NGHỆ ĐỈNH CAO",
                     overlay_subtitle=clean_title,
                     image_index=0,
@@ -521,7 +560,7 @@ def _build_flow_cinematic_scenes(
                     id=2,
                     name="Hero Action - Thao tác tương tác mượt mà",
                     kind="FLOW_AI",
-                    narrator_text="Thiết kế hiện đại, kết nối tức thì với độ trễ cực thấp. Độ hoàn thiện tinh xảo mang lại cảm giác cầm nắm và sử dụng vô cùng chắc chắn.",
+                    narrator_text="Thiết kế hiện đại, kết nối tức thì với độ trễ cực thấp. Hoàn thiện tinh xảo, mang lại cảm giác cầm nắm và sử dụng vô cùng chắc chắn.",
                     overlay_title="KẾT NỐI TỨC THÌ",
                     overlay_subtitle="Độ trễ thấp - Siêu mượt mà",
                     image_index=0,
@@ -626,6 +665,7 @@ def _build_problem_solution_scenes(
 ) -> List[SceneDefinition]:
     """Generate 4 Problem-Solution / Drama AI scenes tailored to the product category."""
     idea_ctx = f" ({custom_idea})" if custom_idea else ""
+    persona = _get_character_persona(category)
 
     if category == "BEAUTY_SKINCARE":
         return [
@@ -853,6 +893,7 @@ def _build_problem_solution_scenes(
 
     elif category == "TECH_GADGETS":
         is_storage = any(k in clean_title.lower() for k in ["usb", "ổ đĩa", "flash drive", "thẻ nhớ", "ổ cứng", "ssd"])
+        is_desk_setup = any(k in clean_title.lower() for k in ["khay", "giấu dây", "kẹp bàn", "kệ", "giá đỡ", "cáp", "đi dây"])
         if is_storage:
             return [
                 SceneDefinition(
@@ -906,6 +947,61 @@ def _build_problem_solution_scenes(
                     prompt=(
                         f"Vertical 9:16 RAW cinematic video. Cinematic close-up of hands clipping {clean_title} onto car keys with a confident gesture, ready to head out for meetings. "
                         f"Modern dynamic professional lifestyle, warm natural lighting. Mouth closed, no speaking, no dialogue. NO text overlays."
+                    ),
+                ),
+            ]
+        elif is_desk_setup:
+            return [
+                SceneDefinition(
+                    id=1,
+                    name="Hook - Dây điện bừa bộn dưới chân bàn",
+                    kind="FLOW_AI",
+                    narrator_text="Dây nguồn, ổ cắm lòng thòng bừa bộn dưới chân bàn, làm bạn ngột ngạt và mất tập trung? Đừng lo lắng!",
+                    overlay_title="DÂY ĐIỆN BỪA BỘN?",
+                    overlay_subtitle="Mất tập trung - Ngột ngạt?",
+                    image_index=0,
+                    prompt=(
+                        f"Vertical 9:16 RAW cinematic video. Featuring {persona['intro']}, sitting at an office desk looking annoyed and stressed at a tangle of messy black cables and power strips cluttering the floor under the desk. "
+                        f"Mouth closed, no speaking, serious frustrated expression{idea_ctx}. Cinematic moody lighting, shallow depth of field. NO text overlays, NO talking."
+                    ),
+                ),
+                SceneDefinition(
+                    id=2,
+                    name="Hero Action - Lắp khay kẹp bàn giấu trọn dây",
+                    kind="FLOW_AI",
+                    narrator_text=f"Lắp ngay {clean_title}! Thiết kế kẹp bàn thông minh, không cần khoan đục. Giấu trọn mọi ổ cắm và dây nhợ, gọn gàng chỉ trong tích tắc!",
+                    overlay_title="KẸP BÀN THÔNG MINH",
+                    overlay_subtitle="Không cần khoan - Lắp cực nhanh",
+                    image_index=0,
+                    prompt=(
+                        f"Vertical 9:16 RAW cinematic video. Dramatic macro close-up shot of hands clamping the sleek minimalist metallic cable management tray securely onto the edge of a clean wooden desk, routing power cables neatly inside. "
+                        f"Smooth confident action, commercial tech interior lighting. NO text overlays, NO face."
+                    ),
+                ),
+                SceneDefinition(
+                    id=3,
+                    name="Feature - Bàn làm việc thông thoáng nhẹ nhõm",
+                    kind="FLOW_AI",
+                    narrator_text=f"{feat1_desc}. Toàn bộ góc làm việc bỗng trở nên thông thoáng, ngăn nắp và hiện đại hơn bao giờ hết.",
+                    overlay_title=feat1_title,
+                    overlay_subtitle="Góc làm việc thông thoáng",
+                    image_index=0,
+                    prompt=(
+                        f"Vertical 9:16 RAW cinematic video. Featuring {persona['cont']}, leaning back in their office chair with a huge smile of relief and satisfaction looking at their clean, aesthetic, cable-free modern desk setup. "
+                        f"Taking a relaxed sip of coffee, mouth closed, no speaking, no dialogue. Warm morning sunlight. NO text overlays."
+                    ),
+                ),
+                SceneDefinition(
+                    id=4,
+                    name="Lifestyle - Không gian làm việc tràn đầy cảm hứng",
+                    kind="FLOW_AI",
+                    narrator_text="Chất liệu nhôm cao cấp chịu lực cực tốt. Giải phóng tối đa không gian, cho bạn thỏa sức sáng tạo và làm việc mỗi ngày!",
+                    overlay_title="KHÔNG GIAN LÝ TƯỞNG",
+                    overlay_subtitle="Thẩm mỹ - Hiện đại",
+                    image_index=0,
+                    prompt=(
+                        f"Vertical 9:16 RAW cinematic video. Wide aesthetic hero pan of the stylish minimalist desk setup with modern laptop, plant, and spotless floor without a single dangling cable. "
+                        f"Featuring {persona['cont']} working peacefully, mouth closed, no speaking. Warm natural lighting. NO text overlays."
                     ),
                 ),
             ]
@@ -1094,6 +1190,7 @@ def generate_default_storyboard(
     style: str = "flow_cinematic",
     cta_mode: str = "none",
     custom_idea: Optional[str] = None,
+    channel_name: Optional[str] = None,
 ) -> List[SceneDefinition]:
     """
     Generate a smart, data-driven ad template tailored to ANY product and category.
@@ -1108,6 +1205,7 @@ def generate_default_storyboard(
       - 'hybrid': Kết hợp video AI cảm xúc + ảnh thật sản phẩm từ Shopee ZIP.
       - 'local': Dùng video/ảnh gốc từ ZIP.
     """
+    channel_name = channel_name or DEFAULT_CHANNEL_NAME
     clean_title = clean_product_title(info.name)
     category = detect_product_category(info.name, info.description_text)
     logger.info(f"[Storyboard] Đã phát hiện ngành hàng: {category} cho sản phẩm '{clean_title}'")
@@ -1263,18 +1361,22 @@ def generate_default_storyboard(
 
     # Optional CTA Scene 5
     if cta_mode == "follow":
+        persona = _get_character_persona(category)
+        follow_text = f"Follow ngay {channel_name}" if channel_name else "Follow ngay kênh"
+        overlay_t = f"FOLLOW {channel_name.upper()}" if channel_name else "FOLLOW KÊNH NGAY"
+        name_t = f"Outro - Kêu gọi Follow {channel_name}" if channel_name else "Outro - Kêu gọi Follow Kênh"
         scenes.append(
             SceneDefinition(
                 id=len(scenes) + 1,
-                name="Outro - Kêu gọi Follow Page",
+                name=name_t,
                 kind="FLOW_AI" if style != "local" else ("REAL_FOOTAGE" if has_video else "IMAGE_SLIDE"),
-                narrator_text="Đừng quên bấm Follow page để cập nhật thêm nhiều món đồ hay ho và tiện ích mỗi ngày nhé!",
-                overlay_title="FOLLOW PAGE NHÉ!",
-                overlay_subtitle="Cập nhật video mới mỗi ngày",
+                narrator_text=f"{follow_text} để khám phá thêm nhiều món đồ thông minh và giải pháp tiện ích mỗi ngày nhé!",
+                overlay_title=overlay_t,
+                overlay_subtitle="Mẹo hay & Tiện ích mỗi ngày",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. Friendly young Vietnamese creator giving a gentle wave and warm genuine smile to camera. "
-                    "Natural modern aesthetic lighting. Mouth closed, no speaking, no dialogue. NO text overlays."
+                    f"Vertical 9:16 RAW cinematic video. Featuring {persona['cont']}, giving a gentle wave and warm genuine smile to camera in a modern tidy aesthetic room. "
+                    f"Natural modern aesthetic lighting. Mouth closed, no speaking, no dialogue. NO text overlays."
                 ),
             )
         )
@@ -1305,6 +1407,7 @@ def load_or_create_storyboard(
     cta_mode: str = "none",
     force: bool = False,
     custom_idea: Optional[str] = None,
+    channel_name: Optional[str] = None,
 ) -> List[SceneDefinition]:
     """
     Load an existing storyboard.json or create a new one from ProductInfo.
@@ -1321,7 +1424,7 @@ def load_or_create_storyboard(
         except Exception as e:
             print(f"[Storyboard] Cảnh báo: Không đọc được {json_path}, tạo mới kịch bản: {e}")
 
-    scenes = generate_default_storyboard(info, style=style, cta_mode=cta_mode, custom_idea=custom_idea)
+    scenes = generate_default_storyboard(info, style=style, cta_mode=cta_mode, custom_idea=custom_idea, channel_name=channel_name)
     json_path.parent.mkdir(parents=True, exist_ok=True)
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump([asdict(s) for s in scenes], f, ensure_ascii=False, indent=2)

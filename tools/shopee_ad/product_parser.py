@@ -1,5 +1,4 @@
 """Parser for Shopee product zip files and description metadata."""
-import re
 import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path

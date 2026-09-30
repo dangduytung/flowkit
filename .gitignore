@@ -28,3 +28,8 @@ extension/_metadata/
 .agent/
 flow_session_project.json
 .venv/
+
+# Private channel strategy and personal notes
+*STRATEGY*.md
+*strategy*.md
+
