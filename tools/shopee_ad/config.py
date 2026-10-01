@@ -39,7 +39,7 @@ _load_env_file(DEFAULT_ENV_FILE)
 OMNIVOICE_URL = os.environ.get("OMNIVOICE_URL", "").strip()
 OMNIVOICE_API_KEY = os.environ.get("OMNIVOICE_API_KEY", "").strip()
 OMNIVOICE_PROFILE_ID = os.environ.get("OMNIVOICE_PROFILE_ID", "").strip()
-OMNIVOICE_SPEED = float(os.environ.get("OMNIVOICE_SPEED", "0.86"))
+OMNIVOICE_SPEED = float(os.environ.get("OMNIVOICE_SPEED", "1.03"))
 
 # FlowKit API
 FLOWKIT_API_URL = os.environ.get("FLOWKIT_API_URL", "http://127.0.0.1:8100")

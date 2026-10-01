@@ -245,6 +245,8 @@ def generate_flow_ad(
     custom_idea: Optional[str] = None,
     channel_name: Optional[str] = None,
     channel_handle: Optional[str] = None,
+    no_voice: bool = False,
+    no_overlay: bool = False,
 ) -> Path:
     """Execute Method 2 (Google Flow Omni 1.1 Flash AI Video + Real Product Photos)."""
     channel_name = channel_name or DEFAULT_CHANNEL_NAME
@@ -316,32 +318,43 @@ def generate_flow_ad(
         channel_name=channel_name,
     )
 
-    # 5. Generate Voiceover via OmniVoice
-    print(f"\n🎙️ [Bước 3/5] Sinh giọng đọc OmniVoice cho {len(scenes)} phân cảnh...")
+    # 5. Generate Voiceover via OmniVoice (or Silent POV timing)
     audio_files = {}
     audio_durations = {}
-    for sc in scenes:
-        idx = sc.id
-        out_wav = audio_dir / f"scene_{idx:02d}.wav"
-        print(f"  • Scene {idx}: {sc.overlay_title}")
-        dur = generate_speech(
-            text=sc.narrator_text,
-            output_path=out_wav,
-            speed=speed,
-            profile_id=profile_id,
-        )
-        audio_files[idx] = out_wav
-        audio_durations[idx] = dur
+    if not no_voice:
+        print(f"\n🎙️ [Bước 3/5] Sinh giọng đọc OmniVoice cho {len(scenes)} phân cảnh...")
+        for sc in scenes:
+            idx = sc.id
+            out_wav = audio_dir / f"scene_{idx:02d}.wav"
+            print(f"  • Scene {idx}: {sc.overlay_title}")
+            dur = generate_speech(
+                text=sc.narrator_text,
+                output_path=out_wav,
+                speed=speed,
+                profile_id=profile_id,
+            )
+            audio_files[idx] = out_wav
+            audio_durations[idx] = dur
+    else:
+        print(f"\n🔇 [Bước 3/5] Chế độ Không Voiceover (Silent POV) - Nhịp cắt chuẩn 5.0s/cảnh...")
+        for sc in scenes:
+            audio_files[sc.id] = None
+            audio_durations[sc.id] = 5.0
 
     # 6. Generate AI Video with Character Consistency via Google Flow
-    print("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow (Bảo đảm nhân vật nhất quán)...")
+    is_faceless = style in ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov")
+    if is_faceless:
+        print("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow (Phong cách POV / Hands-On 100% Không Lộ Mặt)...")
+    else:
+        print("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow (Bảo đảm nhân vật nhất quán)...")
+
     ai_scenes = [sc for sc in scenes if sc.kind in ("FLOW_AI", "AI")]
 
     # Find Scene 1 (the anchor scene that establishes the human character)
     scene_1 = next((sc for sc in ai_scenes if sc.id == 1), (ai_scenes[0] if ai_scenes else None))
     char_media_id = None
 
-    if scene_1:
+    if scene_1 and not is_faceless:
         s1_clip = clips_dir / f"hybrid_raw_{scene_1.id:02d}.mp4"
         anchor_img = clips_dir / "character_anchor.jpg"
 
@@ -388,8 +401,8 @@ def generate_flow_ad(
         idx = sc.id
         raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
 
-        # Nếu là scene 1 thì đã xử lý ở trên
-        if scene_1 and idx == scene_1.id and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
+        # Nếu là scene 1 (chế độ có mặt) thì đã xử lý ở trên
+        if not is_faceless and scene_1 and idx == scene_1.id and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
             continue
 
         if not regen and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
@@ -398,8 +411,11 @@ def generate_flow_ad(
 
         p_lower = (sc.prompt or "").lower()
         is_human_scene = (
-            idx in (3, 4, 5)
-            or any(w in p_lower for w in ["person", "professional", "creator", "homemaker", "model", "man", "woman", "same", "persona", "face"])
+            not is_faceless
+            and (
+                idx in (3, 4, 5)
+                or any(w in p_lower for w in ["person", "professional", "creator", "homemaker", "model", "man", "woman", "same", "persona", "face"])
+            )
         )
 
         if is_human_scene and char_media_id:
@@ -422,7 +438,7 @@ def generate_flow_ad(
                 "project_id": project_id,
             })
             logger.info(f"Scene {idx} submitted (abra_r2v consistent character): op_name={op_name}")
-        elif ref_media_ids and ("hands" in p_lower or "product" in p_lower or idx == 2):
+        elif ref_media_ids and (is_faceless or "hands" in p_lower or "product" in p_lower or idx == 2):
             print(f"  • Đang gửi Scene {idx} (AI - Reference Sản Phẩm ZIP): {sc.overlay_title}...")
             payload = {
                 "reference_media_ids": ref_media_ids[:1],
@@ -491,14 +507,18 @@ def generate_flow_ad(
             create_image_slide_clip(img_path, dur, raw_clip_path)
 
         scene_out = scenes_dir / f"scene_{idx:02d}_hybrid_assembled.mp4"
-        print(f"  • Ráp Scene {idx}: {sc.overlay_title} (OmniVoice: {audio_durations[idx]:.2f}s)...")
+        title_to_burn = None if no_overlay else sc.overlay_title
+        subtitle_to_burn = None if no_overlay else sc.overlay_subtitle
+        timing_info = f"OmniVoice: {audio_durations[idx]:.2f}s" if not no_voice else "Silent: 5.0s"
+        print(f"  • Ráp Scene {idx}: {sc.overlay_title} ({timing_info})...")
         assemble_scene_clip(
             video_path=raw_clip_path,
-            audio_path=audio_files[idx],
+            audio_path=audio_files.get(idx),
             output_path=scene_out,
-            title_text=sc.overlay_title,
-            subtitle_text=sc.overlay_subtitle,
+            title_text=title_to_burn,
+            subtitle_text=subtitle_to_burn,
             audio_duration=audio_durations[idx],
+            target_duration=5.5 if no_voice else None,
             remove_watermark=(sc.kind in ("FLOW_AI", "AI")),
         )
         assembled_scenes.append(scene_out)
@@ -524,11 +544,17 @@ def generate_flow_ad(
         logger.warning(f"Lỗi tạo ảnh bìa: {e}")
 
     # 9. Xuất file audio thuyết minh đầy đủ và text kịch bản lời thoại
-    print("🎙️ Đang xuất file audio thuyết minh & kịch bản text lời thoại...")
+    print("🎙️ Đang xuất file kịch bản text lời thoại...")
     script_path = final_dir / f"{product.slug}_script.txt"
     voiceover_path = final_dir / f"{product.slug}_voiceover.mp3"
     export_voiceover_script(scenes, audio_durations, script_path, product_name=product.name)
-    concat_audio_files([audio_files[s.id] for s in scenes], voiceover_path)
+
+    valid_audios = [audio_files[s.id] for s in scenes if audio_files.get(s.id) and Path(audio_files[s.id]).exists()]
+    if valid_audios:
+        print("🎙️ Đang xuất file audio thuyết minh đầy đủ...")
+        concat_audio_files(valid_audios, voiceover_path)
+    else:
+        voiceover_path = None
 
     # 10. Generate Publishing Guide for all 3 platforms
     guide_path = final_dir / f"{product.slug}_publish_guide.txt"
@@ -553,7 +579,8 @@ def generate_flow_ad(
     print(f"👉 1. Video chuẩn Flow:       {final_output.resolve()}")
     if "local" in video_map:
         print(f"👉 2. Video chuẩn Local:      {local_output.resolve()}")
-    print(f"👉 3. Audio lời thoại đầy đủ: {voiceover_path.resolve()}")
+    if voiceover_path:
+        print(f"👉 3. Audio lời thoại đầy đủ: {voiceover_path.resolve()}")
     print(f"👉 4. Text kịch bản & time:   {script_path.resolve()}")
     print(f"👉 5. Ảnh bìa thu nhỏ:        {cover_path.resolve()}")
     print(f"👉 6. Hướng dẫn chi tiết:     {guide_path.resolve()}")
@@ -567,6 +594,9 @@ def main():
     parser.add_argument("--zip", type=str, default=None, help="Đường dẫn đến file zip sản phẩm Shopee")
     parser.add_argument("--speed", type=float, default=None, help="Tốc độ đọc giọng nói OmniVoice")
     parser.add_argument("--profile", type=str, default=None, help="Profile ID giọng nói trên VoiceStudio")
+    parser.add_argument("--style", type=str, default="flow_cinematic", help="Phong cách kịch bản (flow_cinematic, faceless_pov, problem_solution, lifestyle_edc)")
+    parser.add_argument("--no-voice", "--silent", dest="no_voice", action="store_true", help="Không tạo voiceover thuyết minh (video thuần hình ảnh)")
+    parser.add_argument("--no-overlay", "--clean", dest="no_overlay", action="store_true", help="Không chèn chữ Text Overlay (video sạch để tự chèn trên TikTok)")
     parser.add_argument("--regen", action="store_true", help="Bắt buộc tạo lại video AI mới")
     parser.add_argument("--force-storyboard", action="store_true", help="Bắt buộc nạp kịch bản mới")
     parser.add_argument("--idea", type=str, default=None, help="Ý tưởng kịch bản tùy chỉnh")
@@ -580,6 +610,9 @@ def main():
         zip_path=target_zip,
         speed=args.speed,
         profile_id=args.profile,
+        style=args.style,
+        no_voice=args.no_voice,
+        no_overlay=args.no_overlay,
         regen=args.regen,
         force_storyboard=args.force_storyboard or bool(args.idea),
         custom_idea=args.idea,

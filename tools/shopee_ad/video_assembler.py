@@ -14,44 +14,67 @@ def _format_ffmpeg_path(path: Path) -> str:
 
 def assemble_scene_clip(
     video_path: Path,
-    audio_path: Path,
-    output_path: Path,
+    audio_path: Optional[Path] = None,
+    output_path: Path = None,
     title_text: Optional[str] = None,
     subtitle_text: Optional[str] = None,
     audio_duration: Optional[float] = None,
+    target_duration: Optional[float] = None,
     pad_tail: float = 0.4,
     remove_watermark: bool = True,
 ) -> Path:
     """
     Combines video clip with audio, trims/loops video to fit audio, and burns text overlays.
+    If audio_path is None, generates silent audio and uses target_duration or video duration.
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     scene_stem = output_path.stem
     scene_dir = output_path.parent
 
-    # Determine duration
-    if audio_duration is None:
-        cmd_probe = [
+    # Measure video duration
+    video_duration = 0.0
+    try:
+        cmd_vprobe = [
             "ffprobe", "-v", "error", "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)
+            "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)
         ]
-        res = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
-        audio_duration = float(res.stdout.strip())
+        res_v = subprocess.run(cmd_vprobe, capture_output=True, text=True, check=True)
+        video_duration = float(res_v.stdout.strip())
+    except Exception:
+        pass
 
-    total_duration = audio_duration + pad_tail
+    # Determine total duration
+    has_audio = audio_path is not None and Path(audio_path).exists()
+    if has_audio:
+        if audio_duration is None:
+            cmd_probe = [
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)
+            ]
+            res = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
+            audio_duration = float(res.stdout.strip())
+        total_duration = audio_duration + pad_tail
+    elif target_duration is not None:
+        total_duration = float(target_duration)
+    elif audio_duration is not None:
+        total_duration = float(audio_duration)
+    elif video_duration > 0:
+        total_duration = video_duration
+    else:
+        total_duration = 5.0
 
-    # Filters for text overlays
+    loop_input = (video_duration > 0 and video_duration < total_duration)
+
+    # Filters for video processing and text overlays
     filters = []
-    # Loop video if shorter than audio and standardize to 30fps
-    filters.append("loop=loop=-1:size=3000:start=0")
+    filters.append(f"trim=duration={total_duration:.2f}")
+    filters.append("setpts=PTS-STARTPTS")
     filters.append("fps=fps=30")
 
     # Clean Google Flow watermark (sparkle icon at bottom right) if requested
     if remove_watermark:
         filters.append("delogo=x=568:y=1120:w=64:h=64")
-
-    filters.append(f"trim=duration={total_duration:.2f}")
 
     # Resolve fonts (Arial Bold for titles, Arial for subtitles)
     font_title_path = Path("C:/Windows/Fonts/arialbd.ttf")
@@ -65,7 +88,7 @@ def assemble_scene_clip(
     font_sub_str = f"fontfile='{_format_ffmpeg_path(font_sub_path)}'" if font_sub_path.exists() else "font='Arial'"
 
     # Text overlays (Using UTF-8 textfile to avoid Windows codepage / mojibake / tofu issues)
-    if title_text:
+    if title_text and title_text.strip():
         title_file = scene_dir / f"{scene_stem}_title.txt"
         title_file.write_text(title_text.strip(), encoding="utf-8")
         title_ff = _format_ffmpeg_path(title_file)
@@ -73,7 +96,7 @@ def assemble_scene_clip(
             f"drawtext=textfile='{title_ff}':{font_title_str}:fontsize=38:fontcolor=yellow:"
             f"box=1:boxcolor=black@0.65:boxborderw=12:x=(w-text_w)/2:y=140"
         )
-    if subtitle_text:
+    if subtitle_text and subtitle_text.strip():
         sub_file = scene_dir / f"{scene_stem}_sub.txt"
         sub_file.write_text(subtitle_text.strip(), encoding="utf-8")
         sub_ff = _format_ffmpeg_path(sub_file)
@@ -84,19 +107,27 @@ def assemble_scene_clip(
 
     vf_str = ",".join(filters)
 
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", str(video_path),
-        "-i", str(audio_path),
+    cmd = ["ffmpeg", "-y"]
+    if loop_input:
+        cmd.extend(["-stream_loop", "-1"])
+    cmd.extend(["-i", str(video_path)])
+
+    if has_audio:
+        cmd.extend(["-i", str(audio_path)])
+    else:
+        # Standard silent stereo audio to guarantee TikTok/Reels container compatibility
+        cmd.extend(["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"])
+
+    cmd.extend([
         "-vf", vf_str,
         "-map", "0:v:0",
         "-map", "1:a:0",
         "-t", f"{total_duration:.2f}",
-        "-c:v", "libx264", "-r", "30", "-pix_fmt", "yuv420p",
+        "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
         "-shortest",
         str(output_path)
-    ]
+    ])
 
     subprocess.run(cmd, capture_output=True, text=True, check=True)
     return output_path

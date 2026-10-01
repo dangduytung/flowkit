@@ -26,6 +26,7 @@ from tools.shopee_ad.asset_extractor import (
     extract_zip,
     extract_vertical_subclip,
     create_image_slide_clip,
+    calculate_smart_subclip_starts,
 )
 from tools.shopee_ad.video_assembler import (
     assemble_scene_clip,
@@ -57,6 +58,11 @@ def run_pipeline(
     cta_mode: str = "none",
     channel_name: Optional[str] = None,
     channel_handle: Optional[str] = None,
+    style: str = "problem_solution",
+    force_storyboard: bool = False,
+    custom_idea: Optional[str] = None,
+    no_voice: bool = False,
+    no_overlay: bool = False,
 ) -> Path:
     """
     Execute the entire Shopee Ad production pipeline dynamically for ANY product zip.
@@ -115,24 +121,38 @@ def run_pipeline(
 
     # 5. Nạp hoặc tự động sinh Storyboard (kịch bản linh hoạt theo cta_mode)
     storyboard_file = product_dir / "storyboard.json"
-    scenes = load_or_create_storyboard(product, storyboard_file, cta_mode=cta_mode)
+    scenes = load_or_create_storyboard(
+        product,
+        storyboard_file,
+        style=style,
+        cta_mode=cta_mode,
+        force=force_storyboard,
+        custom_idea=custom_idea,
+        channel_name=channel_name,
+    )
 
-    # 6. Sinh giọng đọc thuyết minh qua OmniVoice API cho từng phân cảnh
-    print(f"\n🎙️ [Bước 2/5] Sinh giọng đọc thuyết minh qua OmniVoice API cho {len(scenes)} phân cảnh...")
+    # 6. Sinh giọng đọc thuyết minh qua OmniVoice API cho từng phân cảnh (hoặc nhịp POV silent)
     audio_files = {}
     audio_durations = {}
 
-    for sc in scenes:
-        out_wav = audio_dir / f"scene_{sc.id:02d}.wav"
-        print(f"  • Scene {sc.id}: {sc.name}")
-        dur = generate_speech(
-            text=sc.narrator_text,
-            output_path=out_wav,
-            speed=speed,
-            profile_id=profile_id,
-        )
-        audio_files[sc.id] = out_wav
-        audio_durations[sc.id] = dur
+    if not no_voice:
+        print(f"\n🎙️ [Bước 2/5] Sinh giọng đọc thuyết minh qua OmniVoice API cho {len(scenes)} phân cảnh...")
+        for sc in scenes:
+            out_wav = audio_dir / f"scene_{sc.id:02d}.wav"
+            print(f"  • Scene {sc.id}: {sc.name}")
+            dur = generate_speech(
+                text=sc.narrator_text,
+                output_path=out_wav,
+                speed=speed,
+                profile_id=profile_id,
+            )
+            audio_files[sc.id] = out_wav
+            audio_durations[sc.id] = dur
+    else:
+        print(f"\n🔇 [Bước 2/5] Chế độ Không Voiceover (Silent POV) - Nhịp cắt chuẩn 5.0s/cảnh...")
+        for sc in scenes:
+            audio_files[sc.id] = None
+            audio_durations[sc.id] = 5.0
 
     # 7. Chuẩn bị các đoạn video clip cho từng cảnh
     print("\n🎬 [Bước 3/5] Chuẩn bị video clip 9:16 cho từng phân cảnh...")
@@ -140,6 +160,8 @@ def run_pipeline(
     has_raw_video = raw_video and raw_video.exists()
 
     raw_video_dur = 0.0
+    smart_starts = []
+    glitch_intervals = []
     if has_raw_video:
         try:
             cmd_probe = [
@@ -148,12 +170,16 @@ def run_pipeline(
             ]
             res_p = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
             raw_video_dur = float(res_p.stdout.strip())
+            smart_starts, glitch_intervals = calculate_smart_subclip_starts(raw_video, len(scenes), raw_video_dur)
             print(f"  [Video Gốc] Tìm thấy video mẫu từ Shopee ({raw_video_dur:.1f}s), sẵn sàng biên tập sub-clips.")
+            print(f"  [Smart Cuts] Phân bổ mốc thời gian mượt mà (tránh giật hình): {smart_starts}")
+            if glitch_intervals:
+                print(f"  [Vùng Tránh Giật] Danh sách khoảng chớp/nháy được né: {glitch_intervals}")
         except Exception as e:
             print(f"  [Video Gốc] Không thể đo thời lượng video gốc: {e}")
 
     curr_raw_time = 0.0
-    for sc in scenes:
+    for idx_sc, sc in enumerate(scenes):
         clip_out = clips_dir / f"clip_raw_{sc.id:02d}.mp4"
         dur = audio_durations[sc.id] + 0.4  # Đảm bảo video dài hơn audio 0.4s để chuyển cảnh êm
 
@@ -165,13 +191,15 @@ def run_pipeline(
                 print(f"  • Scene {sc.id}: Tạo hiệu ứng chuyển động ảnh Pan & Zoom từ {img_path.name} (dài {dur:.1f}s)...")
                 create_image_slide_clip(img_path, dur, clip_out)
             elif has_raw_video:
-                extract_vertical_subclip(raw_video, 0.0, dur, clip_out, mode=mode_9_16)
+                extract_vertical_subclip(raw_video, 0.0, dur, clip_out, mode=mode_9_16, glitch_intervals=glitch_intervals)
             else:
                 raise RuntimeError(f"Scene {sc.id} không có video lẫn hình ảnh để dựng!")
         else:
             # Biên tập cắt lát trực tiếp từ video mẫu của Shop
             if sc.real_start_sec and sc.real_start_sec > 0:
                 start_sec = sc.real_start_sec
+            elif smart_starts and idx_sc < len(smart_starts):
+                start_sec = smart_starts[idx_sc]
             else:
                 start_sec = curr_raw_time
                 if raw_video_dur > 0 and start_sec + dur > raw_video_dur:
@@ -179,7 +207,7 @@ def run_pipeline(
                 curr_raw_time += dur
 
             print(f"  • Scene {sc.id}: Cắt video mẫu từ {start_sec:.1f}s đến {start_sec + dur:.1f}s (dài {dur:.1f}s, mode {mode_9_16})...")
-            extract_vertical_subclip(raw_video, start_sec, dur, clip_out, mode=mode_9_16)
+            extract_vertical_subclip(raw_video, start_sec, dur, clip_out, mode=mode_9_16, glitch_intervals=glitch_intervals)
 
         video_clips[sc.id] = clip_out
 
@@ -188,14 +216,18 @@ def run_pipeline(
     assembled_scenes = []
     for sc in scenes:
         scene_out = scenes_dir / f"scene_{sc.id:02d}_assembled.mp4"
-        print(f"  • Ráp Scene {sc.id}: {sc.overlay_title} ({audio_durations[sc.id]:.2f}s)")
+        title_to_burn = None if no_overlay else sc.overlay_title
+        subtitle_to_burn = None if no_overlay else sc.overlay_subtitle
+        timing_info = f"OmniVoice: {audio_durations[sc.id]:.2f}s" if not no_voice else "Silent: 5.0s"
+        print(f"  • Ráp Scene {sc.id}: {sc.overlay_title} ({timing_info})")
         assemble_scene_clip(
             video_path=video_clips[sc.id],
             audio_path=audio_files[sc.id],
             output_path=scene_out,
-            title_text=sc.overlay_title,
-            subtitle_text=sc.overlay_subtitle,
+            title_text=title_to_burn,
+            subtitle_text=subtitle_to_burn,
             audio_duration=audio_durations[sc.id],
+            target_duration=5.0 if no_voice else None,
         )
         assembled_scenes.append(scene_out)
 
@@ -218,11 +250,17 @@ def run_pipeline(
         print(f"Cảnh báo: Lỗi tạo ảnh bìa: {e}")
 
     # 10. Xuất file audio thuyết minh đầy đủ và text kịch bản lời thoại
-    print("🎙️ Đang xuất file audio thuyết minh & kịch bản text lời thoại...")
+    print("🎙️ Đang xuất file kịch bản text lời thoại...")
     script_path = final_dir / f"{product.slug}_script.txt"
     voiceover_path = final_dir / f"{product.slug}_voiceover.mp3"
     export_voiceover_script(scenes, audio_durations, script_path, product_name=product.name)
-    concat_audio_files([audio_files[s.id] for s in scenes], voiceover_path)
+
+    valid_audios = [audio_files[s.id] for s in scenes if audio_files.get(s.id) and Path(audio_files[s.id]).exists()]
+    if valid_audios:
+        print("🎙️ Đang xuất file audio thuyết minh đầy đủ...")
+        concat_audio_files(valid_audios, voiceover_path)
+    else:
+        voiceover_path = None
 
     guide_path = final_dir / f"{product.slug}_publish_guide.txt"
     video_map = {"local": final_output}
@@ -244,9 +282,10 @@ def run_pipeline(
     print("\n" + "=" * 60)
     print("🎉 HOÀN THÀNH XUẤT SẮC BỘ OUTPUT SẢN PHẨM:")
     print(f"👉 1. Video chuẩn Local:      {final_output.resolve()}")
-    if "flow" in video_map:
-        print(f"👉 2. Video chuẩn Flow:       {flow_output.resolve()}")
-    print(f"👉 3. Audio lời thoại đầy đủ: {voiceover_path.resolve()}")
+    if "flow" in video_map and video_map["flow"]:
+        print(f"👉 2. Video chuẩn Flow:       {video_map['flow'].resolve()}")
+    if voiceover_path:
+        print(f"👉 3. Audio lời thoại đầy đủ: {voiceover_path.resolve()}")
     print(f"👉 4. Text kịch bản & time:   {script_path.resolve()}")
     print(f"👉 5. Ảnh bìa thu nhỏ:        {cover_path.resolve()}")
     print(f"👉 6. Hướng dẫn chi tiết:     {guide_path.resolve()}")
@@ -287,15 +326,15 @@ def main():
         "--cta",
         type=str,
         default="none",
-        choices=["none", "follow", "shopee"],
-        help="Chế độ kết thúc: 'none' (mặc định 4 cảnh không CTA, hợp Fanpage FB), 'follow' (kêu gọi follow page), 'shopee' (kêu gọi giỏ hàng)",
+        choices=["none", "follow", "shopee", "tiktok"],
+        help="Chế độ kết thúc: 'none' (4 cảnh tự nhiên), 'follow' (kêu gọi follow kênh), 'shopee' (link giỏ hàng/bình luận Shopee), 'tiktok' (giỏ hàng màu vàng góc trái)",
     )
     parser.add_argument(
         "--style",
         type=str,
         default="flow_cinematic",
-        choices=["flow_cinematic", "problem_solution", "lifestyle_edc", "hybrid"],
-        help="Phong cách video: 'flow_cinematic' (công nghệ tối giản, tinh tế), 'problem_solution' (tình huống đầy bộ nhớ cứu nguy), 'lifestyle_edc' (năng động đời thường), hoặc 'hybrid' (AI + ảnh thật)",
+        choices=["faceless_pov", "flow_cinematic", "problem_solution", "lifestyle_edc", "hybrid"],
+        help="Phong cách video: 'faceless_pov' (POV cận cảnh bàn tay/thao tác hoàn toàn không lộ mặt, chuẩn TikTok review), 'flow_cinematic' (điện ảnh tinh tế), 'problem_solution' (drama cứu nguy), 'lifestyle_edc' (năng động đời thường), hoặc 'hybrid' (AI + ảnh thật)",
     )
     parser.add_argument(
         "--idea",
@@ -325,6 +364,20 @@ def main():
         type=str,
         default=DEFAULT_CHANNEL_HANDLE,
         help=f"Handle/ID kênh (mặc định lấy từ .env SHOPEE_AD_CHANNEL_HANDLE: '{DEFAULT_CHANNEL_HANDLE}')",
+    )
+    parser.add_argument(
+        "--no-voice",
+        "--silent",
+        dest="no_voice",
+        action="store_true",
+        help="Không tạo voiceover thuyết minh (video thuần hình ảnh, thích hợp tự chèn nhạc trend TikTok)",
+    )
+    parser.add_argument(
+        "--no-overlay",
+        "--clean",
+        dest="no_overlay",
+        action="store_true",
+        help="Không chèn chữ Text Overlay (video sạch để tự chèn text font TikTok)",
     )
 
     args = parser.parse_args()
@@ -390,6 +443,11 @@ def main():
             cta_mode=args.cta,
             channel_name=args.channel_name,
             channel_handle=args.channel_handle,
+            style=args.style,
+            force_storyboard=args.force_storyboard or bool(args.idea),
+            custom_idea=args.idea,
+            no_voice=args.no_voice,
+            no_overlay=args.no_overlay,
         )
 
     if run_flow:
@@ -406,6 +464,8 @@ def main():
             custom_idea=args.idea,
             channel_name=args.channel_name,
             channel_handle=args.channel_handle,
+            no_voice=args.no_voice,
+            no_overlay=args.no_overlay,
         )
 
 

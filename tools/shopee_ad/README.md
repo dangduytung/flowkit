@@ -2,6 +2,8 @@
 
 Hệ thống tự động hóa sản xuất video quảng cáo sản phẩm Shopee dạng dọc 9:16 (chuẩn TikTok / Reels / Shopee Video / Facebook Page). Hoạt động linh hoạt với **mọi ngành hàng** (Mỹ phẩm, Đồ gia dụng, Thời trang, Công nghệ, Thể thao, Đời sống), tự động tải ảnh làm tham chiếu lên Google Flow và **xóa sạch 100% logo Google Flow**.
 
+👉 **Xem cẩm nang hướng dẫn sử dụng nhanh & cách giao tiếp với Agent**: [Tài Liệu Markdown (SHOPEE_AD_GUIDE.md)](../../docs/SHOPEE_AD_GUIDE.md) | 🌐 **[Mở Trực Tiếp Trên Trình Duyệt (ECOMMERCE_AD_GUIDE.html)](../../docs/ECOMMERCE_AD_GUIDE.html)**
+
 ---
 
 ## 1. Cơ Chế Thông Minh Đa Ngành Hàng (Universal Multi-Category)
@@ -52,18 +54,25 @@ python -m tools.shopee_ad.orchestrator --mode zip
 Bạn có thể thay đổi phong cách kịch bản và câu chuyện bằng các cờ CLI:
 
 ### 🎬 Các phong cách kịch bản (`--style`):
-1. `--style flow_cinematic` *(Mặc định)*:
+1. `--style faceless_pov` *(POV Bàn Tay / Hands-On Tutorial - 100% Không Lộ Mặt)*:
+   * **Chuẩn clip review TikTok Affiliate**: Mở hộp (Unbox), lắp ráp điều chỉnh phụ kiện, thử nghiệm thực tế (test co giãn vải, lăn chân, giấu dây...), kết quả góc setup/outfit thẩm mỹ.
+   * Hoàn toàn không lộ mặt/đầu nhân vật (POV góc nhìn thứ nhất, cận cảnh bàn tay hoặc từ cổ trở xuống).
+   * Thích hợp nhất khi kết hợp cùng `--no-voice` và `--no-overlay` để lấy video sạch rồi tự chèn nhạc trend + text trên TikTok!
+2. `--style flow_cinematic` *(Mặc định)*:
    * 4 cảnh điện ảnh tập trung vào chiêm ngưỡng thiết kế, thao tác trải nghiệm trực tiếp, tính năng vượt trội và phong cách sống hàng ngày.
-2. `--style problem_solution`:
+3. `--style problem_solution`:
    * Kịch bản Drama/Tình huống cấp bách theo ngành hàng (da khô sạm trước sự kiện, chảo dính cháy khét, không biết mặc gì mỗi sáng, đau mỏi vai gáy, đầy bộ nhớ...) -> Sản phẩm xuất hiện giải cứu ngoạn mục -> Nhẹ nhõm, thảnh thơi.
-3. `--style lifestyle_edc`:
+4. `--style lifestyle_edc`:
    * Phong cách sống năng động, du lịch, quán cafe, món đồ bỏ túi bất ly thân.
-4. `--style hybrid`:
+5. `--style hybrid`:
    * Kết hợp video AI cho cảnh con người/cảm xúc và chèn xen kẽ ảnh chụp thật từ shop Shopee.
 
 ### 💡 Tự do thêm ý tưởng sáng tạo (`--idea`):
 ```bash
-# Thêm bối cảnh hoặc phong cách nhân vật riêng:
+# Video POV hướng dẫn sử dụng không lộ mặt, không voiceover, không dán chữ:
+python -m tools.shopee_ad.orchestrator --style faceless_pov --no-voice --no-overlay
+
+# Thêm bối cảnh hoặc phong cách riêng:
 python -m tools.shopee_ad.orchestrator --style problem_solution --idea "một bạn sinh viên đang ở phòng trọ chuẩn bị đi phỏng vấn"
 
 # Hoặc:
@@ -79,10 +88,12 @@ python -m tools.shopee_ad.orchestrator --style lifestyle_edc --idea "nữ vlogge
 | `--mode {auto, both, flow, local, zip}` | Chế độ tạo video: 'auto' (ZIP có video sinh cả 2 bản `_local.mp4` & `_flow.mp4`), 'both', 'flow', 'local' | `auto` |
 | `--zip <đường_dẫn>` | Chỉ định đường dẫn tới file ZIP cụ thể | Mới nhất trong Downloads |
 | `--list` | Xem toàn bộ danh sách file ZIP đang có | - |
-| `--style {flow_cinematic, problem_solution, lifestyle_edc, hybrid}` | Phong cách kịch bản | `flow_cinematic` |
+| `--style {faceless_pov, flow_cinematic, problem_solution, lifestyle_edc, hybrid}` | Phong cách kịch bản | `flow_cinematic` |
+| `--no-voice`, `--silent` | Không tạo voiceover thuyết minh (video thuần hình ảnh, nhịp chuẩn ~5s/cảnh để ghép nhạc trend TikTok) | `False` |
+| `--no-overlay`, `--clean` | Không chèn chữ Text Overlay (xuất video sạch để tự gõ text font TikTok/CapCut) | `False` |
 | `--idea "..."` | Bổ sung ý tưởng / bối cảnh sáng tạo vào prompt | Không |
 | `--cta {none, follow, shopee}` | Lời kêu gọi hành động ở cảnh kết thúc | `none` (4 cảnh Fanpage) |
-| `--speed <float>` | Tốc độ đọc của OmniVoice | `0.86` |
+| `--speed <float>` | Tốc độ đọc của OmniVoice | `1.03` (chuẩn KOC đàm thoại) |
 | `--profile <id>` | ID profile giọng đọc tiếng Việt OmniVoice | Lấy từ .env `OMNIVOICE_PROFILE_ID` |
 | `--channel-name <tên>` | Tên kênh xuất bản đa nền tảng | Lấy từ .env `SHOPEE_AD_CHANNEL_NAME` |
 | `--channel-handle <id>` | Handle/ID kênh | Lấy từ .env `SHOPEE_AD_CHANNEL_HANDLE` |

@@ -110,10 +110,12 @@ This project has reusable skills in `skills/`. When the user says `/fk-<name>`, 
 | `/fk-research` | fk-research — Fact-Check & Research Before Scripting |
 | `/fk-review-board` | Start the Scene Review Board web app for visual feedback on scene chains. |
 | `/fk-review-video` | Review AI-generated scene videos for quality. |
+| `/fk-shopee-ad` | `/fk-shopee-ad` — Shopee Video Ad Generator (Dynamic & Watermark-Free) |
 | `/fk-status` | Show full status dashboard for a project. |
 | `/fk-switch-project` | fk-switch-project — Switch Active Project |
 | `/fk-thumbnail-guide` | YouTube Thumbnail Guide — Hook-Worthy Design Rules |
 | `/fk-thumbnail` | Generate 4 YouTube-optimized thumbnail variants for a project video. |
+| `/fk-tiktok-ad` | `/fk-tiktok-ad` — TikTok Video Ad Generator (Viral Hooks & Trend Remix) |
 | `/fk-upload-image` | Upload a local image file to Google Flow and get a media_id (UUID). |
 | `/fk-youtube-seo` | fk-youtube-seo — Generate YouTube Metadata (SEO-Optimized) |
 | `/fk-youtube-upload` | fk-youtube-upload — Upload Video to YouTube (Shorts + Long-form) |

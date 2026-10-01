@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cẩm Nang Video Ads Đa Nền Tảng (Shopee & TikTok) — FlowKit</title>
+  <style>
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #1e293b;
+      --bg-card-hover: #334155;
+      --border-color: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-flow: #38bdf8;
+      --accent-local: #4ade80;
+      --accent-pov: #f43f5e;
+      --accent-purple: #c084fc;
+      --accent-amber: #fbbf24;
+      --code-bg: #090d16;
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      margin-bottom: 28px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      position: relative;
+      overflow: hidden;
+    }
+
+    header::after {
+      content: "";
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.2) 0%, rgba(0, 0, 0, 0) 70%);
+      pointer-events: none;
+    }
+
+    .badge-bar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .badge-blue { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .badge-pink { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
+    .badge-green { background: rgba(74, 222, 128, 0.15); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      background: linear-gradient(to right, #ffffff, #94a3b8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.lead {
+      color: var(--text-muted);
+      font-size: 15px;
+      max-width: 820px;
+    }
+
+    /* Quick Nav */
+    .quick-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .nav-btn {
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 14px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: #38bdf8;
+      color: #fff;
+    }
+
+    /* Section Cards */
+    section {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 26px;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 12px;
+    }
+
+    /* Grid Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 18px;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: #475569;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card p {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    th {
+      background: #090d16;
+      color: #cbd5e1;
+      text-align: left;
+      padding: 12px 14px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+      vertical-align: top;
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Code Blocks & Copy */
+    .code-box {
+      background: var(--code-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin: 12px 0;
+      position: relative;
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      font-size: 13.5px;
+      color: #38bdf8;
+      overflow-x: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .code-text {
+      white-space: pre;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: #38bdf8;
+      color: #0f172a;
+      border-color: #38bdf8;
+    }
+
+    .copy-btn.copied {
+      background: #4ade80;
+      color: #0f172a;
+      border-color: #4ade80;
+    }
+
+    /* Agent Prompt Card */
+    .agent-card {
+      background: rgba(192, 132, 252, 0.05);
+      border: 1px solid rgba(192, 132, 252, 0.2);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .agent-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .agent-role {
+      font-size: 14px;
+      font-weight: 700;
+      color: #c084fc;
+    }
+
+    .agent-prompt {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 10px 12px;
+      border-radius: 6px;
+      border-left: 3px solid #c084fc;
+      font-size: 14px;
+      color: #f1f5f9;
+      font-style: italic;
+    }
+
+    .agent-action {
+      margin-top: 8px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    /* Tag styles */
+    .tag {
+      font-family: Consolas, monospace;
+      font-size: 12px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      margin-top: 36px;
+      padding-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="badge-bar">
+        <span class="badge badge-blue">FlowKit v2.0</span>
+        <span class="badge badge-pink">Shopee & TikTok Ads</span>
+        <span class="badge badge-green">Faceless POV Mode</span>
+      </div>
+      <h1>Cẩm Nang Tạo Video Ads Đa Nền Tảng (Shopee & TikTok)</h1>
+      <p class="lead">
+        Tài liệu tra cứu toàn diện các chế độ sản xuất video (Mode), phong cách kịch bản (Style), tùy chọn âm thanh/chữ, phân hệ Shopee & TikTok, và cách giao tiếp bằng tiếng Việt tự nhiên với AI Agent.
+      </p>
+
+      <div class="quick-nav">
+        <a href="#architecture" class="nav-btn" style="border-color: #38bdf8; color: #38bdf8;">📌 Phân Định Shopee vs TikTok</a>
+        <a href="#modes" class="nav-btn">1. Các Chế Độ (--mode)</a>
+        <a href="#styles" class="nav-btn">2. Các Phong Cách (--style)</a>
+        <a href="#options" class="nav-btn">3. Tùy Chọn Âm Thanh/Chữ</a>
+        <a href="#cli" class="nav-btn">4. Dòng Lệnh Mẫu (CLI)</a>
+        <a href="#agent" class="nav-btn">5. Nhắn Cho AI Agent</a>
+      </div>
+    </header>
+
+    <!-- SECTION 0: ARCHITECTURE -->
+    <section id="architecture" style="border: 1px solid rgba(56, 189, 248, 0.3); background: rgba(15, 23, 42, 0.8);">
+      <h2 style="color: #38bdf8;">📌 Phân Định Kiến Trúc Đa Nền Tảng (Shopee vs. TikTok)</h2>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+        Hệ thống được thiết kế tách bạch hoàn toàn giữa các phân hệ: từ <strong>Skill</strong>, <strong>Prompt/Kịch bản</strong>, <strong>Tool</strong> cho đến <strong>Tài liệu hướng dẫn</strong> để phục vụ mở rộng công cụ TikTok trong tương lai mà không bị lẫn lộn.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 20%;">Tiêu Chí</th>
+            <th style="width: 40%; color: #fb923c;">🛍️ Phân Hệ Shopee (Hiện tại)</th>
+            <th style="width: 40%; color: #f43f5e;">🎵 Phân Hệ TikTok (Mở rộng tương lai)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Skill Kích Hoạt</strong></td>
+            <td><span class="tag" style="color: #fb923c; border-color: rgba(251, 146, 60, 0.4);">/fk-shopee-ad</span></td>
+            <td><span class="tag" style="color: #f43f5e; border-color: rgba(244, 63, 94, 0.4);">/fk-tiktok-ad</span></td>
+          </tr>
+          <tr>
+            <td><strong>Gói Công Cụ (Tool)</strong></td>
+            <td><code>tools.shopee_ad</code></td>
+            <td><code>tools.tiktok_ad</code></td>
+          </tr>
+          <tr>
+            <td><strong>Nguồn Tư Liệu Đầu Vào</strong></td>
+            <td><strong>File ZIP tải về từ Shopee</strong> (Ảnh sản phẩm, video shop, thông số mô tả, lượt mua, đánh giá sao thật)</td>
+            <td><strong>Link video TikTok / TikTok Shop</strong> (Video scraper, âm thanh thịnh hành, hiệu ứng chuyển cảnh)</td>
+          </tr>
+          <tr>
+            <td><strong>Đặc Trưng Prompt & Kịch Bản</strong></td>
+            <td>
+              • Khai thác sâu tính năng sản phẩm từ tư liệu thật.<br>
+              • Góc quay cận cảnh POV bàn tay, unboxing, test co giãn, giấu dây, lăn chân.<br>
+              • Đàm thoại review thực tế, giải quyết nhu cầu đời sống.
+            </td>
+            <td>
+              • Tập trung vào Hook 1-2 giây đầu gây sốc / tò mò.<br>
+              • Nhịp cắt nhanh (Fast-cut 1-2s), bắt beat nhạc thịnh hành.<br>
+              • Format biến hình, reaction, duet, thử thách viral.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Kêu Gọi Hành Động (CTA)</strong></td>
+            <td>
+              • <span class="tag">--cta shopee</span>: Link bình luận ghim / giỏ Shopee.<br>
+              • <span class="tag">--cta follow</span>: Bấm follow kênh.
+            </td>
+            <td>
+              • <span class="tag">--cta tiktok</span>: Bấm giỏ hàng màu vàng góc trái màn hình.<br>
+              • Bấm biểu tượng đĩa nhạc để dùng sound.
+            </td>
+          </tr>
+          <tr>
+            <td><strong>Tài Liệu Hướng Dẫn</strong></td>
+            <td><code>docs/SHOPEE_AD_GUIDE.md</code> (Web chung: <code>ECOMMERCE_AD_GUIDE.html</code>)</td>
+            <td><code>docs/TIKTOK_AD_GUIDE.md</code> (Web chung: <code>ECOMMERCE_AD_GUIDE.html</code>)</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top: 20px; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 16px;">
+        <h3 style="font-size: 15px; color: #38bdf8; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+          🤖 Khi bạn bảo "Tạo video...", Agent biết lấy sản phẩm từ Shopee hay TikTok bằng cách nào?
+        </h3>
+        <p style="font-size: 13.5px; color: #cbd5e1; margin-bottom: 8px;">
+          Hệ thống có cơ chế <strong>Auto-Routing</strong> cực kỳ thông minh theo 3 mức ưu tiên:
+        </p>
+        <ul style="font-size: 13.5px; color: #94a3b8; line-height: 1.6; padding-left: 20px;">
+          <li><strong style="color: #f1f5f9;">1. Qua định dạng đầu vào (Ưu tiên số 1):</strong> Nếu bạn gửi kèm <code>Link TikTok / Douyin</code> 👉 Tự động chạy phân hệ <strong>TikTok</strong> (cào video, tách sound trend). Nếu bạn nhắc đến <code>File ZIP</code> hoặc sản phẩm vừa tải về 👉 Tự động chạy phân hệ <strong>Shopee</strong>.</li>
+          <li><strong style="color: #f1f5f9;">2. Khi chỉ nói tên sản phẩm chung chung:</strong> Ví dụ <em>"Tạo video cho tôi chiếc quần kaki nhé"</em> 👉 Agent tự động quét thư mục <code>Shopee Downloads</code> trên máy bạn trước, nếu thấy file ZIP thì dựng ngay.</li>
+          <li><strong style="color: #f1f5f9;">3. Cơ chế hỏi lại (Fallback):</strong> Nếu không có link và trong máy cũng chưa có file ZIP, Agent sẽ chủ động hỏi xác nhận nguồn trước khi làm.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- SECTION 1: MODES -->
+    <section id="modes">
+      <h2>🎬 1. Các Cách Tạo Video (--mode)</h2>
+      <div class="grid-2">
+        <div class="card" style="border-top: 3px solid var(--accent-flow);">
+          <div class="card-title">
+            <span>🌟 Mode: <span class="tag">flow</span></span>
+            <span style="font-size: 12px; color: var(--accent-flow);">100% Video AI</span>
+          </div>
+          <p>
+            Sinh toàn bộ 4 phân cảnh điện ảnh 9:16 thông qua <strong>Google Flow</strong>. Tự động tải ảnh thật từ ZIP lên làm tham chiếu vật lý và <strong>xóa sạch 100% logo Google Flow</strong> bằng bộ lọc delogo.
+          </p>
+          <p style="margin-top: 8px; font-size: 12px; color: #cbd5e1;">
+            👉 <em>Dành cho: Muốn hình ảnh sáng tạo, góc quay độc lạ, bối cảnh studio điện ảnh.</em>
+          </p>
+        </div>
+
+        <div class="card" style="border-top: 3px solid var(--accent-local);">
+          <div class="card-title">
+            <span>📦 Mode: <span class="tag">local</span></span>
+            <span style="font-size: 12px; color: var(--accent-local);">Video Shop Gốc (10s)</span>
+          </div>
+          <p>
+            • Nếu ZIP có video gốc: Tự động phân tích cảnh, né toàn bộ các đoạn chớp giật/glitch, cắt thành 4 sub-clip 9:16 mượt mà.<br>
+            • Nếu ZIP chỉ có ảnh: Tự tạo chuyển động lia máy điện ảnh Pan & Zoom (Ken Burns).
+          </p>
+          <p style="margin-top: 8px; font-size: 12px; color: #cbd5e1;">
+            👉 <em>Dành cho: Chạy offline siêu tốc (10-15s là xong), tận dụng 100% tư liệu thật của shop.</em>
+          </p>
+        </div>
+
+        <div class="card" style="border-top: 3px solid var(--accent-purple);">
+          <div class="card-title">
+            <span>🔀 Mode: <span class="tag">hybrid</span></span>
+            <span style="font-size: 12px; color: var(--accent-purple);">AI + Ảnh Thật</span>
+          </div>
+          <p>
+            Kết hợp đan xen: Cảnh 1 và 3 dùng Video AI tạo cảm xúc & phong cách sống; Cảnh 2 và 4 chèn ảnh chụp thật từ shop Shopee để tăng độ tin cậy khi mua hàng.
+          </p>
+        </div>
+
+        <div class="card" style="border-top: 3px solid var(--accent-amber);">
+          <div class="card-title">
+            <span>⚡ Mode: <span class="tag">auto</span> (Mặc định)</span>
+            <span style="font-size: 12px; color: var(--accent-amber);">Tự Động 2 Bản</span>
+          </div>
+          <p>
+            Nếu file ZIP có video mẫu: Tự động xuất cả 2 bản <span class="tag">_local.mp4</span> và <span class="tag">_flow.mp4</span> để bạn thoải mái so sánh lựa chọn bản ưng ý nhất!
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: STYLES -->
+    <section id="styles">
+      <h2>🎭 2. Các Phong Cách Kịch Bản (--style)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 22%;">Phong Cách</th>
+            <th style="width: 45%;">Góc Quay & Cấu Trúc Kịch Bản</th>
+            <th style="width: 33%;">Sản Phẩm Phù Hợp</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong style="color: var(--accent-pov);">faceless_pov</strong><br>
+              <span style="font-size: 12px; color: var(--text-muted);">(Mới Nhất)</span>
+            </td>
+            <td>
+              <strong>100% Không Lộ Mặt / Cận Cảnh Bàn Tay / Góc POV</strong><br>
+              • <strong>Cảnh 1:</strong> Mở hộp (Unbox) trên bàn/sàn, cận cảnh chất liệu.<br>
+              • <strong>Cảnh 2:</strong> Hướng dẫn lắp đặt, xoay núm chỉnh, con lăn, test co giãn vải.<br>
+              • <strong>Cảnh 3:</strong> Thử nghiệm thực tế đời thường (lăn chân, giấu dây, đi thử...).<br>
+              • <strong>Cảnh 4:</strong> Góc setup hoàn thiện sạch sẽ, outfit gọn gàng.
+            </td>
+            <td>
+              Đồ tiện ích văn phòng, ghế kê chân, khay giấu dây, quần áo, gia dụng, đồ công nghệ.<br>
+              <em>(Chuẩn clip review TikTok Affiliate triệu view)</em>
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong style="color: var(--accent-flow);">flow_cinematic</strong><br>
+              <span style="font-size: 12px; color: var(--text-muted);">(Mặc Định)</span>
+            </td>
+            <td>
+              <strong>KOC Review Điện Ảnh Có Mặt Nhân Vật</strong><br>
+              Nhân vật KOC xuất hiện ngắm nghía sản phẩm, cận cảnh bàn tay trải nghiệm, hiệu quả sử dụng và phong cách sống hiện đại. Khuôn mặt nhân vật được neo đồng nhất xuyên suốt video.
+            </td>
+            <td>
+              Sản phẩm cần người đại diện KOC, mỹ phẩm, thời trang phong cách lookbook, đồ tập gym.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong style="color: var(--accent-amber);">problem_solution</strong>
+            </td>
+            <td>
+              <strong>Drama / Tình Huống Cấp Bách "Giải Cứu"</strong><br>
+              Mở đầu bằng "nỗi đau" (đầy bộ nhớ giữa deadline, dây điện bừa bộn dưới chân, sáng nào cũng đắn đo chọn đồ, chảo dính cháy...) -> Sản phẩm xuất hiện giải cứu ngoạn mục -> Nhẹ nhõm thảnh thơi.
+            </td>
+            <td>
+              Kích thích nhu cầu mua sắm mạnh, giải quyết vấn đề cấp bách, đồ tiện ích thông minh.
+            </td>
+          </tr>
+          <tr>
+            <td>
+              <strong style="color: var(--accent-purple);">lifestyle_edc</strong>
+            </td>
+            <td>
+              <strong>Phong Cách Sống Năng Động / Quán Cafe / Du Lịch</strong><br>
+              Món đồ bỏ túi bất ly thân, luôn đồng hành trong balo/túi xách khi đi làm, cà phê, dạo phố.
+            </td>
+            <td>
+              Đồ mang theo người (ví, túi xách, cáp sạc, USB, bình nước giữ nhiệt...).
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- SECTION 3: OPTIONS -->
+    <section id="options">
+      <h2>⚙️ 3. Các Tùy Chọn Âm Thanh & Chữ Bổ Trợ</h2>
+      <div class="grid-3">
+        <div class="card">
+          <div class="card-title">
+            <span style="color: var(--accent-pov);">🔇 --no-voice</span>
+            <span class="tag">--silent</span>
+          </div>
+          <p>
+            Tắt hoàn toàn giọng đọc OmniVoice. Video sẽ có nhịp cắt chuẩn <strong>20 giây</strong> (4 cảnh x 5s) và kèm track audio silent stereo để bạn tự do ghép các bài nhạc trend trên TikTok/CapCut mà không sợ lệch tiếng.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span style="color: var(--accent-local);">🧼 --no-overlay</span>
+            <span class="tag">--clean</span>
+          </div>
+          <p>
+            Tắt việc dán chữ Text Overlay vàng/trắng lên video. Xuất ra <strong>video sạch 100%</strong> để bạn tự gõ chữ bằng font TikTok hoặc các template chữ động của CapCut.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span style="color: var(--accent-amber);">📣 --cta</span>
+            <span class="tag">none | follow | shopee | tiktok</span>
+          </div>
+          <p>
+            • <span class="tag">none</span>: 4 cảnh tự nhiên không ép buộc CTA.<br>
+            • <span class="tag">follow</span>: 5 cảnh, cảnh cuối kêu gọi bấm follow kênh (ở dạng POV chỉ xuất hiện ngón tay like).<br>
+            • <span class="tag">shopee</span>: 5 cảnh, cảnh cuối kêu gọi xem link giỏ hàng hoặc bình luận ghim.<br>
+            • <span class="tag">tiktok</span>: 5 cảnh, cảnh cuối kêu gọi bấm vào giỏ hàng màu vàng ở góc dưới bên trái màn hình.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 4: CLI COMMANDS -->
+    <section id="cli">
+      <h2>💻 4. Dòng Lệnh Mẫu Phổ Biến (CLI Cheat Sheet)</h2>
+      <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 12px;">
+        Chạy trực tiếp trong PowerShell / Terminal tại thư mục dự án <span class="tag">E:\GitHub\flowkit</span>:
+      </p>
+
+      <div style="margin-bottom: 16px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--accent-pov);">
+          🎯 1. Video POV không lộ mặt, không voice, không chữ (Chuẩn TikTok Affiliate):
+        </span>
+        <div class="code-box">
+          <span class="code-text">python -m tools.shopee_ad.orchestrator --mode local --style faceless_pov --no-voice --no-overlay</span>
+          <button class="copy-btn" onclick="copyCode(this)">Sao chép</button>
+        </div>
+        <div class="code-box">
+          <span class="code-text">python -m tools.shopee_ad.orchestrator --mode flow --style faceless_pov --no-voice --no-overlay</span>
+          <button class="copy-btn" onclick="copyCode(this)">Sao chép (Flow AI)</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--accent-flow);">
+          🎙️ 2. Video KOC Review đầy đủ (Có giọng đọc OmniVoice + Chữ Text Overlay):
+        </span>
+        <div class="code-box">
+          <span class="code-text">python -m tools.shopee_ad.orchestrator --mode local --style flow_cinematic</span>
+          <button class="copy-btn" onclick="copyCode(this)">Sao chép</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--accent-amber);">
+          🎭 3. Video Drama "Giải cứu" có lời kêu gọi Follow kênh:
+        </span>
+        <div class="code-box">
+          <span class="code-text">python -m tools.shopee_ad.orchestrator --style problem_solution --cta follow</span>
+          <button class="copy-btn" onclick="copyCode(this)">Sao chép</button>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 8px;">
+        <span style="font-weight: 600; font-size: 14px; color: var(--accent-purple);">
+          💡 4. Thêm ý tưởng bối cảnh sáng tạo riêng:
+        </span>
+        <div class="code-box">
+          <span class="code-text">python -m tools.shopee_ad.orchestrator --style faceless_pov --idea "bàn làm việc tone tối decor đèn led" --no-voice</span>
+          <button class="copy-btn" onclick="copyCode(this)">Sao chép</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: TALKING TO AGENT -->
+    <section id="agent">
+      <h2>🤖 5. Cách Nhắn Cho AI Agent (Bằng Tiếng Việt Tự Nhiên)</h2>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+        Khi chat với Agent, bạn <strong>không cần phải nhớ bất kỳ cờ lệnh nào</strong>. Bạn chỉ cần gõ yêu cầu tự nhiên theo các mẫu dưới đây:
+      </p>
+
+      <div class="agent-card">
+        <div class="agent-header">
+          <span class="agent-role">👉 Yêu cầu tạo clip TikTok không lộ mặt & không tiếng:</span>
+          <button class="copy-btn" onclick="copyText(this, 'Tạo video POV không lộ mặt, không voice, không chữ cho sản phẩm quần kaki vừa tải nhé')">Sao chép câu</button>
+        </div>
+        <div class="agent-prompt">
+          "Tạo video POV không lộ mặt, không voice, không chữ cho sản phẩm quần kaki vừa tải nhé"
+        </div>
+        <div class="agent-action">
+          ⚡ <em>Agent sẽ tự hiểu và chạy:</em> <span class="tag">--style faceless_pov --no-voice --no-overlay</span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div class="agent-header">
+          <span class="agent-role">👉 Dựng nhanh từ video shop có sẵn (chỉ 10 giây):</span>
+          <button class="copy-btn" onclick="copyText(this, 'Cắt video local cho tôi chiếc quần kaki, kiểu POV hướng dẫn sử dụng không tiếng')">Sao chép câu</button>
+        </div>
+        <div class="agent-prompt">
+          "Cắt video local cho tôi chiếc quần kaki, kiểu POV hướng dẫn sử dụng không tiếng"
+        </div>
+        <div class="agent-action">
+          ⚡ <em>Agent sẽ tự hiểu và chạy:</em> <span class="tag">--mode local --style faceless_pov --no-voice --no-overlay</span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div class="agent-header">
+          <span class="agent-role">👉 Sinh video AI Google Flow đầy đủ KOC:</span>
+          <button class="copy-btn" onclick="copyText(this, 'Tạo video Google Flow cho khay giấu dây, có voice đọc đầy đủ')">Sao chép câu</button>
+        </div>
+        <div class="agent-prompt">
+          "Tạo video Google Flow cho khay giấu dây, có voice đọc đầy đủ"
+        </div>
+        <div class="agent-action">
+          ⚡ <em>Agent sẽ tự hiểu và chạy:</em> <span class="tag">--mode flow --style flow_cinematic</span>
+        </div>
+      </div>
+
+      <div class="agent-card">
+        <div class="agent-header">
+          <span class="agent-role">👉 Làm video drama giải cứu có kêu gọi follow:</span>
+          <button class="copy-btn" onclick="copyText(this, 'Làm video kịch bản drama cứu nguy cho khay giấu dây, thêm đoạn cuối kêu gọi follow kênh nhé')">Sao chép câu</button>
+        </div>
+        <div class="agent-prompt">
+          "Làm video kịch bản drama cứu nguy cho khay giấu dây, thêm đoạn cuối kêu gọi follow kênh nhé"
+        </div>
+        <div class="agent-action">
+          ⚡ <em>Agent sẽ tự hiểu và chạy:</em> <span class="tag">--style problem_solution --cta follow</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      FlowKit Shopee Ad Generator &bull; Tự động hóa sáng tạo video 9:16 đa nền tảng
+    </footer>
+  </div>
+
+  <script>
+    function copyCode(btn) {
+      const code = btn.parentElement.querySelector('.code-text').innerText.trim();
+      navigator.clipboard.writeText(code).then(() => {
+        const oldText = btn.innerText;
+        btn.innerText = "✓ Đã chép!";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.innerText = oldText;
+          btn.classList.remove("copied");
+        }, 1800);
+      });
+    }
+
+    function copyText(btn, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        const oldText = btn.innerText;
+        btn.innerText = "✓ Đã chép!";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.innerText = oldText;
+          btn.classList.remove("copied");
+        }, 1800);
+      });
+    }
+  </script>
+</body>
+</html>
