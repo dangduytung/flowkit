@@ -260,6 +260,13 @@ token. Step 3 is not optional: Flow's project-creation endpoint went with the
 migration, so without a pinned project every request fails `NO_FLOW_PROJECT`.
 You can also pass `flow_project_id` per project on `POST /api/projects`.
 
+**Using the Muse provider (`muse2api`)?** It needs a second service: the
+[muse2api](https://github.com/crisng95/muse2api) gateway, cloned from its own
+repo and started separately (default `http://127.0.0.1:18610`), with
+`MUSE2API_URL` / `MUSE2API_KEY` exported before step 4. The Flow tab and
+extension are not needed for muse2api requests. Full setup:
+[Muse Media Provider](#muse-media-provider-provider-muse2api).
+
 ### Configuration
 
 | Env var | Default | What it does |
@@ -270,6 +277,14 @@ You can also pass `flow_project_id` per project on `POST /api/projects`.
 | `MEDIA_PROVIDER` | `flow` | `flow` (Google Flow via extension) or `assistant` (route all generation to the AI assistant). |
 | `ASSISTANT_PROVIDER_TIMEOUT_S` | `1800` | How long a request waits for a worker to complete its provider job before failing. |
 | `ASSISTANT_PROVIDER_POLL_S` | `15` | How often to poll the provider-job row while waiting for completion. |
+| `MUSE2API_URL` | — | Base URL of a running [muse2api](https://github.com/crisng95/muse2api) gateway — a separate service you start from its own repo (see [Muse Media Provider](#muse-media-provider-provider-muse2api)). Setting it makes the `muse2api` provider available. |
+| `MUSE2API_KEY` | — | The gateway's `MUSE2API_API_KEY` (sent as `Authorization: Bearer`). |
+| `MUSE2API_IMAGE_MODEL` / `MUSE2API_VIDEO_MODEL` | `muse-image` / `muse-video` | Model ids sent to the gateway. |
+| `MUSE2API_VIDEO_SECONDS` | `8` | Clip length requested for i2v. |
+| `MUSE2API_TIMEOUT_S` | `1800` | Max wait for one image call or video task (covers the gateway's own account failover). |
+| `MUSE2API_POLL_S` | `5` | Video task poll interval. |
+| `MUSE2API_MAX_CONCURRENT` / `MUSE2API_COOLDOWN_S` | `2` / `0` | Worker throttling for this provider. |
+| `MUSE2API_ALLOW_DEGRADED` | `0` | `1` renders chained scenes and r2v as plain i2v (muse.ai takes a first frame only). |
 
 ### Assistant Media Provider (`MEDIA_PROVIDER=assistant`)
 
@@ -298,6 +313,101 @@ Protocol (persistent provider-job queue + HTTP API):
 See `agent/worker/assistant_worker.py` for a reference worker implementing the
 worker side of the protocol. Video upscale is not supported on this provider and
 fails loudly.
+
+### Muse Media Provider (`provider: muse2api`)
+
+Renders through a [muse2api](https://github.com/crisng95/muse2api) gateway, which
+exposes the muse.ai web app as an OpenAI-compatible API:
+
+```
+Flow Kit worker ──> Muse2APIProvider ──HTTP──> muse2api service ──> muse.ai
+     (this repo, :8100)                      (separate repo, :18610)
+```
+
+> **muse2api is a separate service — Flow Kit does not ship or start it.**
+> Flow Kit only contains the client (`agent/services/muse2api_client.py`) and
+> the provider adapter. Before using `provider: muse2api` you must clone the
+> [muse2api repo](https://github.com/crisng95/muse2api), start its server, and
+> keep it running alongside the Flow Kit server. With no gateway running, every
+> muse2api request fails with `muse2api connection_error`.
+
+#### 1. Start the muse2api service (from its own repo)
+
+```bash
+git clone https://github.com/crisng95/muse2api.git
+cd muse2api
+python3 -m venv .venv && source .venv/bin/activate    # Python 3.10+
+pip install -e .
+cp .env.example .env
+```
+
+Edit `.env`:
+
+| Variable | Set to | Why |
+|----------|--------|-----|
+| `MUSE2API_DRIVER` | `browser` | The default `mock` returns fake media — fine for a dry run, useless for real renders. |
+| `MUSE2API_CHROMIUM_PATH` | path to Chromium/Chrome (or leave empty to auto-detect) | The browser driver drives muse.ai through Chromium. |
+| `MUSE2API_API_KEY` | any secret | Flow Kit sends it as `MUSE2API_KEY`. Left empty, one is generated into `data/api_key`. |
+| `MUSE2API_HOST` | `0.0.0.0` only if Flow Kit runs on another machine | Default `127.0.0.1` accepts local connections only. |
+
+Start it and leave it running (its own terminal, tmux, or a service manager):
+
+```bash
+python -m muse2api                         # → http://127.0.0.1:18610
+# or, from the same folder: docker compose up -d --build   (binds 0.0.0.0:18610)
+```
+
+Import at least one logged-in muse.ai account — the gateway renders nothing
+without one. Export the cookies `hatch_sess`, `hatch_gw`, `hatch_vml` and
+`hatch_native_auth_device` from a browser signed in to muse.ai:
+
+```bash
+KEY=$(cat data/api_key)   # or your MUSE2API_API_KEY
+curl http://127.0.0.1:18610/admin/accounts \
+  -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"label":"acc1","cookies":{"hatch_sess":"...","hatch_gw":"...","hatch_vml":"...","hatch_native_auth_device":"..."}}'
+
+curl -s http://127.0.0.1:18610/readyz
+# {"ready": true, "driver": {...}, "accounts": {"available": 1, ...}}
+```
+
+`ready: false` or `accounts.available: 0` means Flow Kit requests will fail with
+`no_account_available` — fix the gateway first. Account management, renewal and
+the rest of the gateway's options are documented in the muse2api README.
+
+#### 2. Point Flow Kit at it
+
+Set these before starting the Flow Kit server (they are read once at startup —
+restart after changing them):
+
+```bash
+export MUSE2API_URL=http://127.0.0.1:18610          # where the gateway listens
+export MUSE2API_KEY=<the gateway's MUSE2API_API_KEY>
+export DEFAULT_PROVIDER=muse2api                    # optional: make it the default
+```
+
+Check that Flow Kit sees it:
+
+```bash
+curl -s http://127.0.0.1:8100/api/providers/status   # muse2api → "available": true
+```
+
+`available: true` only means `MUSE2API_URL` is set — Flow Kit does not probe the
+gateway. Use `/readyz` above to confirm the service itself is up.
+
+#### 3. Use it
+
+Pass `"provider": "muse2api"` on any request (or rely on `DEFAULT_PROVIDER`).
+Flow Kit calls `POST /v1/images/generations` for images and `POST /v1/videos` +
+`GET /v1/videos/{id}` for i2v, sends input frames inline as data URLs (so the
+gateway may run on another host), and downloads every result into
+`output/_shared/muse2api/` as a `file://` URL with a minted UUID `media_id` —
+so `/fk-refresh-urls` is never needed for it.
+
+Supports image and i2v; no edit, upscale or TTS, and no end frame or r2v unless
+`MUSE2API_ALLOW_DEGRADED=1`. Entity reference images are not sent (muse.ai takes
+none), so character consistency across scenes is weaker than on Flow.
+Troubleshooting lives in `/fk-provider` and `/fk-doctor`.
 
 ### Post-production (provider-neutral)
 

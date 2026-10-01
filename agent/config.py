@@ -60,7 +60,7 @@ DEFAULT_PAYGATE_TIER = os.environ.get("DEFAULT_PAYGATE_TIER", "PAYGATE_TIER_TWO"
 # /api/provider-jobs. See agent/sdk/services/assistant_provider.py and
 # agent/worker/assistant_worker.py for the full protocol.
 # Default media provider for requests that don't specify one ("flow" |
-# "assistant" | any registered provider name). MEDIA_PROVIDER is kept as a
+# "assistant" | "muse2api" | any registered provider name). MEDIA_PROVIDER is kept as a
 # legacy alias — DEFAULT_PROVIDER wins if both are set.
 DEFAULT_PROVIDER = os.environ.get(
     "DEFAULT_PROVIDER", os.environ.get("MEDIA_PROVIDER", "flow")
@@ -70,6 +70,24 @@ ASSISTANT_PROVIDER_TIMEOUT_S = int(os.environ.get("ASSISTANT_PROVIDER_TIMEOUT_S"
 ASSISTANT_PROVIDER_POLL_S = int(os.environ.get("ASSISTANT_PROVIDER_POLL_S", "15"))
 ASSISTANT_MAX_CONCURRENT = int(os.environ.get("ASSISTANT_MAX_CONCURRENT", "2"))
 ASSISTANT_COOLDOWN_S = float(os.environ.get("ASSISTANT_COOLDOWN_S", "0"))
+
+# "muse2api": render through a muse2api gateway (https://github.com/crisng95/muse2api),
+# which fronts the muse.ai web app with an OpenAI-compatible API. The provider
+# is registered always and becomes available once MUSE2API_URL is set; the key
+# is the gateway's own MUSE2API_API_KEY. See agent/sdk/services/muse2api_provider.py.
+MUSE2API_URL = os.environ.get("MUSE2API_URL", "").strip().rstrip("/")
+MUSE2API_KEY = os.environ.get("MUSE2API_KEY", "")
+MUSE2API_IMAGE_MODEL = os.environ.get("MUSE2API_IMAGE_MODEL", "muse-image")
+MUSE2API_VIDEO_MODEL = os.environ.get("MUSE2API_VIDEO_MODEL", "muse-video")
+MUSE2API_VIDEO_SECONDS = int(os.environ.get("MUSE2API_VIDEO_SECONDS", "8"))
+# Covers the gateway's own failover (up to 3 accounts x its 240s/600s timeouts).
+MUSE2API_TIMEOUT_S = float(os.environ.get("MUSE2API_TIMEOUT_S", "1800"))
+MUSE2API_POLL_S = float(os.environ.get("MUSE2API_POLL_S", "5"))
+MUSE2API_MAX_CONCURRENT = int(os.environ.get("MUSE2API_MAX_CONCURRENT", "2"))
+MUSE2API_COOLDOWN_S = float(os.environ.get("MUSE2API_COOLDOWN_S", "0"))
+# muse.ai takes a first frame only. With this on, chained scenes drop the end
+# frame and r2v renders as i2v; off, both fail loudly (same rule as Flow).
+MUSE2API_ALLOW_DEGRADED = os.environ.get("MUSE2API_ALLOW_DEGRADED", "0") == "1"
 
 # ─── Worker ──────────────────────────────────────────────────
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "5"))

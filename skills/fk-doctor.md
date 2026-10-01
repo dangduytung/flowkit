@@ -52,7 +52,7 @@ curl -s "http://127.0.0.1:8100/api/provider-jobs?limit=20"
 ```
 
 Bucket the failures by `error_message` prefix, print a table, and for each bucket give the fix from the taxonomy.
-For requests with a `provider` other than `flow`, also read the linked
+For requests with a `provider` other than `flow` or `muse2api`, also read the linked
 provider job (`provider_job_id` on the request row): a `QUEUED` job with no
 worker means `assistant_worker.py` isn't running; a `FAILED` job carries the
 worker's `error_message`.
@@ -264,6 +264,26 @@ Check the job row first: `GET /api/provider-jobs?provider=assistant&limit=20`.
 | `400 Unknown provider '<name>'` | Typo, or the provider isn't registered | Names come from `GET /api/providers/status` |
 | `400 provider 'flow' does not support audio` | TTS routed to flow | Use `assistant` or `local` for `/api/tts/generate` |
 | `Cannot fetch video for scene ...` in review | Remote URL dead and no Flow fallback (not connected, or non-Flow media) | Re-check the URL; for Flow media connect the extension, for local files verify the path exists |
+
+### I. muse2api gateway errors (`provider: muse2api`)
+
+No provider job is involved — the worker calls the gateway directly, so the
+request's `error_message` is the whole story. It reads
+`muse2api <code> (HTTP <status>): <message>`, where `<code>` is the gateway's
+own OpenAI error code. Check the gateway with `curl -s $MUSE2API_URL/readyz`.
+
+| Error | Cause | Fix |
+|---|---|---|
+| Requests stay `PENDING`, `muse2api.available: false` in `/api/providers/status` | `MUSE2API_URL` unset | Set `MUSE2API_URL` (+ `MUSE2API_KEY`) and restart the server |
+| `muse2api connection_error` | Gateway down or wrong URL | Start muse2api; verify `MUSE2API_URL` |
+| `muse2api invalid_api_key (HTTP 401)` | Key mismatch | `MUSE2API_KEY` must equal the gateway's `MUSE2API_API_KEY` |
+| `muse2api no_account_available (HTTP 503)` | No usable muse.ai account (`readyz` shows `accounts.available: 0`) | Import/renew accounts via the gateway's `/admin/accounts` |
+| `muse2api upstream_auth_failed` | The muse.ai session expired | Re-export cookies and update the account on the gateway |
+| `muse2api upstream_quota_exhausted (HTTP 429)` | Account out of quota | Wait out the cooldown or add accounts |
+| `muse2api upstream_refused` / `task_failed` | muse.ai answered but produced nothing usable (often a content refusal) | Rephrase the prompt; the worker retries it as usual |
+| `muse2api timeout` | Image call or video task exceeded `MUSE2API_TIMEOUT_S` | Check the gateway logs; raise the env var if renders are just slow |
+| `muse2api has no end-frame input for chained video` | Chained scene on muse2api | `MUSE2API_ALLOW_DEGRADED=1` (plain i2v), or render that scene on `flow` |
+| `... does not support job kind 'edit_image'` / `'upscale'` | Not offered by muse.ai | Use `flow` for edits and upscale |
 
 ## Output format
 
