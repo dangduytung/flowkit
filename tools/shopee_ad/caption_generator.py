@@ -43,10 +43,23 @@ def create_facebook_caption(
     bullets_text = _extract_bullets(scenes)
 
     social_proof = ""
+    has_strong_sales = False
     if product.sold_count:
+        sold_clean = product.sold_count.lower().replace("+", "").replace(",", ".").strip()
+        if "k" in sold_clean:
+            has_strong_sales = True
+        else:
+            try:
+                has_strong_sales = float(sold_clean) >= 50
+            except ValueError:
+                has_strong_sales = False
+
+    if has_strong_sales:
         social_proof = f"⭐ Đã bán hơn {product.sold_count} lượt trên Shopee với đánh giá cực tốt!"
     elif product.rating:
         social_proof = f"⭐ Đánh giá uy tín {product.rating} sao từ người tiêu dùng!"
+    else:
+        social_proof = "⭐ Sản phẩm chất lượng được đông đảo khách hàng tin dùng!"
 
     channel_header = f"[{channel_name.upper()}] " if channel_name else ""
     follow_target = f" {channel_handle}" if channel_handle else " kênh"

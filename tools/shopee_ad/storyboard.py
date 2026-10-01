@@ -587,7 +587,7 @@ def _build_flow_cinematic_scenes(
                     name="Lifestyle - Gọn nhẹ đồng hành mỗi ngày",
                     kind="FLOW_AI",
                     narrator_text=f"{feat2_desc}. Sản phẩm nhỏ gọn, tiện lợi bỏ túi mang theo mọi lúc mọi nơi!",
-                    overlay_title=social_proof_title,
+                    overlay_title="ĐỒNG HÀNH MỖI NGÀY",
                     overlay_subtitle="Tiện lợi tối đa",
                     image_index=0,
                     prompt=(
@@ -643,8 +643,8 @@ def _build_flow_cinematic_scenes(
             name="Lifestyle - Tiện dụng hàng ngày",
             kind="FLOW_AI",
             narrator_text=feat2_desc,
-            overlay_title=social_proof_title,
-            overlay_subtitle=feat2_title[:28],
+            overlay_title="LỰA CHỌN HOÀN HẢO",
+            overlay_subtitle="Tiện ích mỗi ngày",
             image_index=0,
             prompt=(
                 f"Vertical 9:16 RAW cinematic video. Dynamic lifestyle shot of hands packing {clean_title} conveniently into everyday carry bag, ready for travel or work. "
@@ -1223,13 +1223,17 @@ def generate_default_storyboard(
         else ("CHẤT LƯỢNG HÀNG ĐẦU", "Chất liệu cao cấp, độ bền bỉ dài lâu và được đông đảo khách hàng đánh giá cao.")
     )
 
-    # Social proof overlay text
-    if info.sold_count:
-        social_proof_title = f"ĐÃ BÁN {info.sold_count.upper()}"
-    elif info.rating:
-        social_proof_title = f"ĐÁNH GIÁ {info.rating} SAO"
-    else:
-        social_proof_title = "SIÊU PHẨM BÁN CHẠY"
+    # Trust badge overlay text (Do NOT use raw sold count in video overlays)
+    social_proof_title = "LỰA CHỌN HOÀN HẢO"
+    if info.rating:
+        try:
+            r_val = float(str(info.rating).replace(",", ".").strip())
+            if r_val >= 4.5:
+                social_proof_title = f"ĐÁNH GIÁ {info.rating} SAO"
+            elif r_val >= 4.0:
+                social_proof_title = "ĐƯỢC ĐÁNH GIÁ CAO"
+        except (ValueError, AttributeError):
+            pass
 
     num_images = len(info.image_names) if info.image_names else 1
 
