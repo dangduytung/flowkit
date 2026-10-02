@@ -1,4 +1,4 @@
-"""Video Assembler: binds TTS audio, burns text overlays, and stitches scenes."""
+"""Video Assembler: binds TTS audio, burns text overlays, and stitches scenes for TikTok."""
 import subprocess
 from pathlib import Path
 from typing import List, Optional
@@ -36,8 +36,14 @@ def assemble_scene_clip(
     video_duration = 0.0
     try:
         cmd_vprobe = [
-            "ffprobe", "-v", "error", "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(video_path),
         ]
         res_v = subprocess.run(cmd_vprobe, capture_output=True, text=True, check=True)
         video_duration = float(res_v.stdout.strip())
@@ -49,8 +55,14 @@ def assemble_scene_clip(
     if has_audio:
         if audio_duration is None:
             cmd_probe = [
-                "ffprobe", "-v", "error", "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1", str(audio_path)
+                "ffprobe",
+                "-v",
+                "error",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(audio_path),
             ]
             res = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
             audio_duration = float(res.stdout.strip())
@@ -64,7 +76,7 @@ def assemble_scene_clip(
     else:
         total_duration = 5.0
 
-    loop_input = (video_duration > 0 and video_duration < total_duration)
+    loop_input = video_duration > 0 and video_duration < total_duration
 
     # Filters for video processing and text overlays
     filters = []
@@ -84,10 +96,18 @@ def assemble_scene_clip(
     if not font_sub_path.exists():
         font_sub_path = Path("C:/Windows/Fonts/segoeui.ttf")
 
-    font_title_str = f"fontfile='{_format_ffmpeg_path(font_title_path)}'" if font_title_path.exists() else "font='Arial'"
-    font_sub_str = f"fontfile='{_format_ffmpeg_path(font_sub_path)}'" if font_sub_path.exists() else "font='Arial'"
+    font_title_str = (
+        f"fontfile='{_format_ffmpeg_path(font_title_path)}'"
+        if font_title_path.exists()
+        else "font='Arial'"
+    )
+    font_sub_str = (
+        f"fontfile='{_format_ffmpeg_path(font_sub_path)}'"
+        if font_sub_path.exists()
+        else "font='Arial'"
+    )
 
-    # Text overlays (Using UTF-8 textfile to avoid Windows codepage / mojibake / tofu issues)
+    # Text overlays safe for TikTok mobile screen (y=140 for Title, y=210 for Subtitle)
     if title_text and title_text.strip():
         title_file = scene_dir / f"{scene_stem}_title.txt"
         title_file.write_text(title_text.strip(), encoding="utf-8")
@@ -115,61 +135,104 @@ def assemble_scene_clip(
     if has_audio:
         cmd.extend(["-i", str(audio_path)])
     else:
-        # Standard silent stereo audio to guarantee TikTok/Reels container compatibility
-        cmd.extend(["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"])
+        # Generate clean silent audio stream for compatibility
+        cmd.extend([
+            "-f",
+            "lavfi",
+            "-i",
+            f"anullsrc=r=48000:cl=stereo:d={total_duration:.2f}",
+        ])
 
     cmd.extend([
-        "-vf", vf_str,
-        "-map", "0:v:0",
-        "-map", "1:a:0",
-        "-t", f"{total_duration:.2f}",
-        "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+        "-vf",
+        vf_str,
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-t",
+        f"{total_duration:.2f}",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
         "-shortest",
-        str(output_path)
+        str(output_path),
     ])
 
     subprocess.run(cmd, capture_output=True, text=True, check=True)
     return output_path
 
 
-def concat_scenes(clip_paths: List[Path], output_path: Path, bgm_path: Optional[Path] = None) -> Path:
-    """
-    Concatenate all assembled scene clips into the final video, with optional background music.
-    """
+def concat_scenes(
+    clip_paths: List[Path], output_path: Path, bgm_path: Optional[Path] = None
+) -> Path:
+    """Concatenate all assembled scene clips into the final video."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     concat_list_file = output_path.parent / "concat_list.txt"
     with open(concat_list_file, "w", encoding="utf-8") as f:
         for p in clip_paths:
-            # Format path for ffmpeg concat
             f.write(f"file '{p.resolve().as_posix()}'\n")
 
     temp_concat = output_path.parent / "temp_concat.mp4"
 
     cmd_concat = [
-        "ffmpeg", "-y",
-        "-f", "concat", "-safe", "0",
-        "-i", str(concat_list_file),
-        "-c:v", "libx264", "-r", "30", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-        str(temp_concat)
+        "ffmpeg",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat_list_file),
+        "-c:v",
+        "libx264",
+        "-r",
+        "30",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        str(temp_concat),
     ]
     subprocess.run(cmd_concat, capture_output=True, text=True, check=True)
 
     if bgm_path and Path(bgm_path).exists():
-        # Mix background music at low volume (ducked)
         cmd_bgm = [
-            "ffmpeg", "-y",
-            "-i", str(temp_concat),
-            "-i", str(bgm_path),
+            "ffmpeg",
+            "-y",
+            "-i",
+            str(temp_concat),
+            "-i",
+            str(bgm_path),
             "-filter_complex",
             "[1:a]volume=0.15,aloop=loop=-1:size=2e+09[bgm];"
             "[0:a][bgm]amix=inputs=2:duration=first:dropout_transition=2[aout]",
-            "-map", "0:v", "-map", "[aout]",
-            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-            str(output_path)
+            "-map",
+            "0:v",
+            "-map",
+            "[aout]",
+            "-c:v",
+            "copy",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(output_path),
         ]
         subprocess.run(cmd_bgm, capture_output=True, text=True, check=True)
         if temp_concat.exists():
@@ -179,6 +242,39 @@ def concat_scenes(clip_paths: List[Path], output_path: Path, bgm_path: Optional[
 
     print(f"[Assembler] Video successfully assembled to: {output_path}")
     return output_path
+
+
+def create_silent_version(video_path: Path, silent_output_path: Path) -> Path:
+    """
+    Generate a 100% silent copy with a stereo silent audio stream.
+    Perfect for users wanting to add trending TikTok sounds without audio clash.
+    """
+    silent_output_path = Path(silent_output_path)
+    silent_output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i",
+        str(video_path),
+        "-f",
+        "lavfi",
+        "-i",
+        "anullsrc=r=48000:cl=stereo",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        "-shortest",
+        str(silent_output_path),
+    ]
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    print(f"[Assembler] Đã xuất bản video tắt tiếng (Silent): {silent_output_path.name}")
+    return silent_output_path
 
 
 def concat_audio_files(audio_paths: List[Path], output_path: Path) -> Path:
@@ -194,11 +290,21 @@ def concat_audio_files(audio_paths: List[Path], output_path: Path) -> Path:
             f.write(f"file '{p.resolve().as_posix()}'\n")
 
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "concat", "-safe", "0",
-        "-i", str(concat_list_file),
-        "-c:a", "libmp3lame", "-b:a", "192k", "-ar", "48000",
-        str(output_path)
+        "ffmpeg",
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat_list_file),
+        "-c:a",
+        "libmp3lame",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        str(output_path),
     ]
     subprocess.run(cmd, capture_output=True, text=True, check=True)
     if concat_list_file.exists():
@@ -220,7 +326,6 @@ def export_voiceover_script(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 1. Full unbroken narration
     full_paragraphs = []
     for sc in scenes:
         text = getattr(sc, "narrator_text", "").strip()
@@ -228,12 +333,11 @@ def export_voiceover_script(
             full_paragraphs.append(text)
     continuous_speech = "\n\n".join(full_paragraphs)
 
-    # 2. Detailed per-scene breakdown with timecode
     breakdown_lines = []
     curr_time = 0.0
     for sc in scenes:
         idx = getattr(sc, "id", 0)
-        dur = audio_durations.get(idx, 6.0)
+        dur = audio_durations.get(idx, 5.0)
         start_t = curr_time
         end_t = curr_time + dur
         curr_time = end_t
@@ -246,8 +350,10 @@ def export_voiceover_script(
         name = getattr(sc, "name", f"Phân cảnh {idx}")
         narrator = getattr(sc, "narrator_text", "")
 
-        breakdown_lines.append(f"▶ PHÂN CẢNH {idx} [{start_str} - {end_str}] ({dur:.2f}s) — {name}")
-        breakdown_lines.append(f"  • Lời thoại thuyết minh: \"{narrator}\"")
+        breakdown_lines.append(
+            f"▶ PHÂN CẢNH {idx} [{start_str} - {end_str}] ({dur:.2f}s) — {name}"
+        )
+        breakdown_lines.append(f'  • Lời thoại thuyết minh: "{narrator}"')
         if title:
             breakdown_lines.append(f"  • Text Overlay (Tiêu đề): {title}")
         if sub:
@@ -258,7 +364,7 @@ def export_voiceover_script(
     breakdown_str = "\n".join(breakdown_lines)
 
     content = f"""======================================================================
-🎙️ KỊCH BẢN LỜI THOẠI & PHỤ ĐỀ (VOICEOVER SCRIPT)
+🎙️ KỊCH BẢN LỜI THOẠI & PHỤ ĐỀ TIKTOK (VOICEOVER SCRIPT)
 📦 Sản phẩm: {product_name}
 ⏱️ Tổng thời lượng: {total_dur_str}
 ======================================================================
@@ -276,28 +382,3 @@ def export_voiceover_script(
     output_path.write_text(content.strip(), encoding="utf-8")
     print(f"[Assembler] Đã xuất file text lời thoại & timecode: {output_path.name}")
     return output_path
-
-
-def create_silent_version(video_path: Path, silent_output_path: Path) -> Path:
-    """
-    Generate a 100% silent copy with a stereo silent audio stream.
-    Perfect for users wanting to add trending sounds without audio clash.
-    """
-    silent_output_path = Path(silent_output_path)
-    silent_output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", str(video_path),
-        "-f", "lavfi",
-        "-i", "anullsrc=r=48000:cl=stereo",
-        "-c:v", "copy",
-        "-c:a", "aac",
-        "-b:a", "192k",
-        "-ar", "48000",
-        "-shortest",
-        str(silent_output_path),
-    ]
-    subprocess.run(cmd, capture_output=True, text=True, check=True)
-    print(f"[Assembler] Đã xuất bản video tắt tiếng (Silent): {silent_output_path.name}")
-    return silent_output_path

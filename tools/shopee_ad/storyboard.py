@@ -258,17 +258,6 @@ def detect_product_category(name: str, description_text: str = "") -> str:
     return "GENERAL_LIFESTYLE"
 
 
-from tools.shopee_ad.prompts import (
-    _get_character_persona,
-    _build_flow_cinematic_scenes,
-    _build_problem_solution_scenes,
-    _build_lifestyle_edc_scenes,
-    _build_faceless_pov_scenes,
-    _build_cta_scene,
-)
-
-
-
 def generate_default_storyboard(
     info: ProductInfo,
     style: str = "flow_cinematic",
@@ -321,6 +310,13 @@ def generate_default_storyboard(
             pass
 
     num_images = len(info.image_names) if info.image_names else 1
+
+    from tools.shopee_ad.prompts import (
+        _build_flow_cinematic_scenes,
+        _build_problem_solution_scenes,
+        _build_lifestyle_edc_scenes,
+        _build_faceless_pov_scenes,
+    )
 
     if style in ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov"):
         scenes = _build_faceless_pov_scenes(
@@ -460,6 +456,7 @@ def generate_default_storyboard(
         ]
 
     # Optional CTA Scene 5
+    from tools.shopee_ad.prompts import _build_cta_scene
     cta_scene = _build_cta_scene(
         scene_id=len(scenes) + 1,
         cta_mode=cta_mode,

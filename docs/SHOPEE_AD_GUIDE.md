@@ -8,25 +8,28 @@ Tài liệu hướng dẫn toàn diện cách sản xuất video quảng cáo s�
 
 Hệ thống FlowKit được thiết kế tách bạch rõ ràng giữa các phân hệ nền tảng từ **Skill**, **Prompt/Kịch bản**, **Công cụ** cho đến **Tài liệu hướng dẫn**:
 
-| Tiêu chí | 🛍️ Phân hệ Shopee (Hiện tại) | 🎵 Phân hệ TikTok (Mở rộng tương lai) |
+| Tiêu chí | 🛍️ Phân hệ Shopee (`tools.shopee_ad`) | 🎵 Phân hệ TikTok (`tools.tiktok_ad`) |
 |---|---|---|
 | **Skill kích hoạt** | `/fk-shopee-ad` | `/fk-tiktok-ad` |
 | **Gói công cụ (Tool)** | `tools.shopee_ad` | `tools.tiktok_ad` |
-| **Nguồn tư liệu đầu vào** | **File ZIP tải về từ Shopee** (ảnh sản phẩm, video shop, mô tả, thông số, lượt mua, đánh giá) | **Link video TikTok / TikTok Shop** (video scraper, âm thanh trend, hiệu ứng viral) |
-| **Đặc trưng Prompt & Kịch bản** | • Khai thác sâu tính năng sản phẩm từ tư liệu thật.<br>• Góc quay cận cảnh POV bàn tay, mở hộp, test co giãn/chất liệu.<br>• Giọng đọc review đàm thoại tự nhiên, giải quyết vấn đề đời sống. | • Tập trung vào Hook 1-2 giây đầu gây sốc/tò mò.<br>• Nhịp cắt nhanh (Fast-cut 1-2s), bắt beat âm thanh thịnh hành.<br>• Format biến hình, reaction, thử thách viral. |
-| **Kêu gọi hành động (CTA)** | `--cta shopee` (link bình luận ghim/giỏ Shopee) | `--cta tiktok` (bấm giỏ hàng màu vàng góc trái màn hình) |
+| **Thư mục đầu vào (.env)** | `SHOPEE_DOWNLOADS_DIR` (`Shopee Downloads`) | `TIKTOK_DOWNLOADS_DIR` (`TikTok Downloads`) |
+| **Thư mục đầu ra (Output)** | `output/shopee_ads/{slug}/` | `output/tiktok_ads/{slug}/` |
+| **Nguồn tư liệu đầu vào** | **File ZIP tải về từ Shopee** (ảnh sản phẩm, video shop, thông số mô tả, phản hồi thực tế, đánh giá sao) | **File ZIP tải về từ TikTok** (ảnh sản phẩm, video shop, thông số mô tả, phản hồi thực tế, đánh giá sao) |
+| **Đặc trưng Prompt & Kịch bản** | • Khai thác sâu tính năng sản phẩm từ tư liệu thật.<br>• Góc quay cận cảnh POV bàn tay, mở hộp, test co giãn/chất liệu.<br>• Giọng đọc review đàm thoại tự nhiên, giải quyết vấn đề đời sống. | • Hook 2-3s đầu gây sốc/tò mò kéo retention rate.<br>• Nhịp cắt nhanh (Fast-cut), bắt beat âm thanh thịnh hành.<br>• Format POV cận cảnh thao tác, giải pháp cấp bách. |
+| **Kêu gọi hành động (CTA)** | `--cta shopee` (link bình luận ghim/giỏ Shopee) | `--cta yellow_cart` (bấm giỏ hàng màu vàng góc trái màn hình) |
+| **Đặc quyền xuất video** | Xuất độc lập theo từng biến thể (Semantic Variant) không bao giờ bị ghi đè: Bản Local (`_local_<variant>.mp4`), Bản tắt tiếng (`_silent.mp4`), Bản AI (`_flow_<variant>.mp4`) | Xuất độc lập theo từng biến thể (Semantic Variant): Bản Local (`_local_<variant>.mp4`), Bản tắt tiếng (`_silent.mp4`), Bản AI (`_flow_<variant>.mp4`) |
 | **Tài liệu hướng dẫn** | `docs/SHOPEE_AD_GUIDE.md` (Web: `docs/ECOMMERCE_AD_GUIDE.html`) | `docs/TIKTOK_AD_GUIDE.md` (Web: `docs/ECOMMERCE_AD_GUIDE.html`) |
 
 ### 🤖 Khi bạn bảo "Tạo video...", Agent biết lấy sản phẩm từ Shopee hay TikTok bằng cách nào?
 
-Hệ thống tự động điều phối nguồn (**Auto-Routing**) theo 3 nguyên tắc rõ ràng:
-1. **Dựa vào định dạng đầu vào (Ưu tiên số 1 — Chuẩn xác 100%)**:
-   - **Gửi Link TikTok / Douyin** (ví dụ: `https://vt.tiktok.com/...`): Agent tự động chuyển sang phân hệ **TikTok** (`/fk-tiktok-ad` / `tools.tiktok_ad`) để cào video, bóc tách âm thanh trend và dựng hook viral.
-   - **Nhắc đến File ZIP / Sản phẩm vừa tải về**: Agent tự động kích hoạt phân hệ **Shopee** (`/fk-shopee-ad` / `tools.shopee_ad`) để quét thư mục `Shopee Downloads` trên máy bạn.
-2. **Khi bạn chỉ nói tên sản phẩm chung chung** *(ví dụ: "Tạo video cho tôi chiếc quần kaki nhé")*:
-   - Agent sẽ tự động quét thư mục `Shopee Downloads` trước. Nếu thấy file ZIP khớp với sản phẩm bạn vừa tải, Agent lập tức dựng từ file đó.
-3. **Cơ chế dự phòng (Fallback)**:
-   - Nếu không có link TikTok và trong thư mục máy cũng chưa có file ZIP tương ứng, Agent sẽ hỏi xác nhận: *"Bạn muốn lấy từ file ZIP Shopee trong máy hay gửi link video TikTok để tôi phân tích?"*
+Hệ thống tự động điều phối nguồn (**Auto-Routing**) theo các nguyên tắc rõ ràng:
+1. **Dựa vào Skill kích hoạt hoặc từ khóa nền tảng**:
+   - Khi dùng `/fk-tiktok-ad` hoặc nhắc tới "TikTok", "TikTok Shop": Agent chạy phân hệ `tools.tiktok_ad` quét thư mục `TIKTOK_DOWNLOADS_DIR`.
+   - Khi dùng `/fk-shopee-ad` hoặc nhắc tới "Shopee": Agent chạy phân hệ `tools.shopee_ad` quét thư mục `SHOPEE_DOWNLOADS_DIR`.
+2. **Khi bạn chỉ định file ZIP trực tiếp**:
+   - Sử dụng cờ `--zip <đường_dẫn>` tới file ZIP cần sản xuất.
+3. **Khi chỉ nói tên sản phẩm chung chung**:
+   - Agent sẽ kiểm tra thư mục sản phẩm tương ứng và tự động chọn file ZIP mới nhất phù hợp.
 
 ---
 
@@ -66,6 +69,7 @@ Hệ thống hoạt động theo cơ chế **Dynamic Universal** (tự động t
 
 * **`--no-voice`** (hoặc `--silent`): Tắt giọng đọc OmniVoice, xuất video chuẩn 20 giây (4 cảnh x 5 giây) với track âm thanh silent stereo sẵn sàng để bạn ném vào TikTok/CapCut ghép nhạc trend.
 * **`--no-overlay`** (hoặc `--clean`): Tắt chữ Text Overlay vàng/trắng, xuất video sạch 100% để bạn tự chèn chữ font yêu thích.
+* **`--tag <tên>`**: Gắn nhãn/tag tùy chỉnh vào tên file (ví dụ: `--tag v2`, `--tag test1`) để thoải mái xuất thử nghiệm nhiều biến thể mà không bị ghi đè.
 * **`--cta {none, follow, shopee, tiktok}`**:
   * `none` (mặc định 4 cảnh): Thích hợp video review tự nhiên hoặc chạy ads không lộ tính thương mại.
   * `follow` (5 cảnh): Cảnh cuối kêu gọi bấm follow kênh (ở dạng `faceless_pov` cảnh cuối vẫn chỉ xuất hiện bàn tay giơ ngón tay like/thân thiện).
@@ -91,7 +95,15 @@ Chạy trực tiếp trong terminal tại thư mục gốc repository `flowkit`:
   python -m tools.shopee_ad.orchestrator --mode local --style faceless_pov --no-voice --no-overlay
   ```
 
-### 🎙️ Trường hợp 2: Dạng KOC Review đầy đủ (Có giọng đọc OmniVoice + Chữ Text Overlay)
+### 🔬 Trường hợp 2: Xuất nhiều phong cách khác nhau để tự so sánh và chọn video tốt nhất
+*(Nhờ cơ chế Semantic Variant, các file sẽ không bao giờ đè lên nhau trong thư mục `final/`)*
+```powershell
+python -m tools.shopee_ad.orchestrator --style faceless_pov --tag v1
+python -m tools.shopee_ad.orchestrator --style flow_cinematic --tag v2
+python -m tools.shopee_ad.orchestrator --style problem_solution --tag v3
+```
+
+### 🎙️ Trường hợp 3: Dạng KOC Review đầy đủ (Có giọng đọc OmniVoice + Chữ Text Overlay)
 * **Bằng Google Flow**:
   ```powershell
   python -m tools.shopee_ad.orchestrator --mode flow --style flow_cinematic
@@ -101,19 +113,19 @@ Chạy trực tiếp trong terminal tại thư mục gốc repository `flowkit`:
   python -m tools.shopee_ad.orchestrator --mode local --style flow_cinematic
   ```
 
-### 🎭 Trường hợp 3: Kịch bản Drama "Giải cứu" (Problem - Solution) có kêu gọi Follow kênh
+### 🎭 Trường hợp 4: Kịch bản Drama "Giải cứu" (Problem - Solution) có kêu gọi Follow kênh
 ```powershell
 python -m tools.shopee_ad.orchestrator --mode flow --style problem_solution --cta follow
 ```
 
-### 💡 Trường hợp 4: Thêm ý tưởng bối cảnh riêng
+### 💡 Trường hợp 5: Thêm ý tưởng bối cảnh riêng
 ```powershell
 python -m tools.shopee_ad.orchestrator --style faceless_pov --idea "phòng làm việc phong cách tối giản ánh đèn vàng" --no-voice
 ```
 
-### 📂 Trường hợp 5: Chỉ định file ZIP cụ thể (thay vì lấy file mới nhất)
+### 📂 Trường hợp 6: Chỉ định file ZIP cụ thể (thay vì lấy file mới nhất)
 ```powershell
-python -m tools.shopee_ad.orchestrator --zip "C:\Users\user\Downloads\Shopee Downloads\file_san_pham.zip" --style faceless_pov --no-voice
+python -m tools.shopee_ad.orchestrator --zip "path/to/shopee_product_file.zip" --style faceless_pov --no-voice
 ```
 
 ---
@@ -125,27 +137,32 @@ Khi làm việc với AI Agent (như Antigravity), bạn **không cần phải g
 | Mục tiêu của bạn | Câu bạn có thể nhắn cho Agent | Hành động Agent sẽ tự động thực hiện |
 |---|---|---|
 | **Dạng POV không mặt, không tiếng** | *"Tạo video POV không lộ mặt, không voice, không chữ cho sản phẩm quần kaki vừa tải nhé"* | Tự động kích hoạt: `--style faceless_pov --no-voice --no-overlay` |
+| **Xuất nhiều bản để so sánh** | *"Xuất cho tôi 2 bản: 1 bản POV và 1 bản cinematic để tôi xem cái nào đẹp hơn"* | Tự động kích hoạt: `--style faceless_pov --tag v1` và `--style flow_cinematic --tag v2` |
 | **Dựng nhanh từ video shop có sẵn** | *"Cắt video local cho tôi chiếc quần kaki, kiểu POV hướng dẫn sử dụng không tiếng"* | Tự động kích hoạt: `--mode local --style faceless_pov --no-voice --no-overlay` |
 | **Sinh Video AI Google Flow đầy đủ** | *"Tạo video Google Flow cho khay giấu dây, có voice đọc đầy đủ"* | Tự động kích hoạt: `--mode flow --style flow_cinematic` |
 | **Làm video drama giải cứu** | *"Làm video kịch bản drama cứu nguy cho khay giấu dây, thêm đoạn cuối kêu gọi follow kênh nhé"* | Tự động kích hoạt: `--style problem_solution --cta follow` |
 | **Tạo video có ý tưởng bối cảnh riêng** | *"Tạo video AI cho ghế kê chân, kiểu POV bàn tay, bối cảnh phòng làm việc tone màu tối decor đèn led"* | Tự động kích hoạt: `--style faceless_pov --idea "..." --no-voice` |
 | **Xem lại danh sách file ZIP có sẵn** | *"Xem trong thư mục Downloads có những file sản phẩm nào rồi"* | Tự động quét và liệt kê danh sách file ZIP kèm dung lượng |
-| **Kiểm tra hoặc tùy chỉnh kịch bản trước khi dựng** | *"Cho tôi xem kịch bản phân cảnh của sản phẩm trước khi sinh video"* | Tự động đọc hoặc tạo `storyboard.json` và trình bày cho bạn duyệt |
+| **Kiểm tra hoặc tùy chỉnh kịch bản trước khi dựng** | *"Cho tôi xem kịch bản phân cảnh của sản phẩm trước khi sinh video"* | Tự động đọc hoặc tạo `storyboard_<style>.json` và trình bày cho bạn duyệt |
 
 ---
 
 ## 7. Cấu Trúc Thư Mục Xuất Thành Phẩm
 
-Khi chạy xong một sản phẩm, thư mục `output/shopee_ads/<tên-slug-sản-phẩm>/` sẽ tự động có đầy đủ bộ tài nguyên:
+Hệ thống sử dụng cơ chế đặt tên **Semantic Variant (`{slug}_{mode}_{style}[_clean][_cta-<cta>][_tag].mp4`)**. Tất cả các biến thể được lưu trữ trong thư mục `output/shopee_ads/<slug>/final/` mà **không bao giờ đè lên nhau**, giúp bạn dễ dàng duyệt qua các phiên bản để chọn video ưng ý nhất trước khi tải lên các kênh:
+
 ```
 output/shopee_ads/<slug>/
 ├── final/
-│   ├── <slug>_flow.mp4           # Video thành phẩm AI từ Google Flow (9:16)
-│   ├── <slug>_local.mp4          # Video thành phẩm dựng từ video shop (9:16)
-│   ├── <slug>_cover.jpg          # Ảnh bìa (Thumbnail/Cover) 9:16 bắt mắt
-│   ├── <slug>_voiceover.mp3      # File audio giọng đọc đầy đủ (nếu có voice)
-│   ├── <slug>_script.txt         # File text kịch bản & timecode từng cảnh
-│   └── <slug>_publish_guide.txt  # Cẩm nang hướng dẫn đăng bài (Facebook/TikTok/Shorts)
-├── storyboard.json               # File kịch bản JSON (có thể chỉnh sửa thủ công)
-└── assets/                       # Ảnh và video gốc trích xuất từ file ZIP Shopee
+│   ├── <slug>_local_flow_cinematic.mp4        # Video dựng từ video shop (Style: flow_cinematic)
+│   ├── <slug>_local_flow_cinematic_silent.mp4 # Video Local tắt tiếng (chỉ sinh khi truyền cờ --silent để ghép nhạc trend)
+│   ├── <slug>_local_faceless_pov_clean.mp4    # Bản POV sạch chữ (Style: faceless_pov, clean)
+│   ├── <slug>_flow_flow_cinematic.mp4         # Video AI điện ảnh từ Google Flow (9:16)
+│   ├── <slug>_<variant>_cover.jpg             # Ảnh bìa (Thumbnail/Cover) 9:16 bắt mắt cho từng biến thể
+│   ├── <slug>_<variant>_voiceover.mp3         # File audio giọng đọc đầy đủ (MP3 48kHz)
+│   ├── <slug>_<variant>_script.txt            # File text kịch bản & timecode từng cảnh
+│   └── <slug>_<variant>_publish_guide.txt     # Cẩm nang hướng dẫn đăng bài (Facebook/TikTok/Shorts)
+├── storyboard_flow_cinematic.json             # Kịch bản JSON lưu riêng biệt theo từng phong cách
+├── storyboard_faceless_pov.json               # Đảm bảo an toàn không xung đột kịch bản khi đổi style
+└── assets/                                    # Ảnh và video gốc trích xuất từ file ZIP Shopee
 ```
