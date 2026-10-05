@@ -7,6 +7,7 @@ authentic product photos from TikTok zip (Ken Burns 9:16).
 import base64
 import json
 import logging
+import re
 import shutil
 import subprocess
 import sys
@@ -32,7 +33,7 @@ from tools.tiktok_ad.product_parser import ProductInfo, parse_product_zip
 from tools.tiktok_ad.storyboard import SceneDefinition, load_or_create_storyboard
 from tools.tiktok_ad.omnivoice_client import generate_speech
 from tools.tiktok_ad.asset_extractor import extract_zip, create_image_slide_clip
-from tools.tiktok_ad.orchestrator import build_variant_suffix
+from tools.common.naming import build_variant_suffix
 from tools.tiktok_ad.video_assembler import (
     assemble_scene_clip,
     concat_scenes,
@@ -127,7 +128,7 @@ def extract_character_anchor(
 def poll_omni_jobs(
     jobs: list[dict],
     poll_interval_s: int = 5,
-    timeout_s: int = 360,
+    timeout_s: int = 600,
 ) -> dict[int, str]:
     """Poll both workflow jobs (text-to-video) and operation jobs (ref-to-video) until all complete."""
     if not jobs:
@@ -362,11 +363,11 @@ def generate_flow_ad(
     char_media_id = None
 
     if scene_1 and not is_faceless:
-        s1_clip = clips_dir / f"hybrid_raw_{scene_1.id:02d}.mp4"
-        anchor_img = clips_dir / "character_anchor.jpg"
+        s1_clip = clips_dir / f"{style}_raw_{scene_1.id:02d}.mp4"
+        anchor_img = clips_dir / f"{style}_character_anchor.jpg"
 
         need_s1_gen = (
-            regen or (not s1_clip.exists()) or (s1_clip.stat().st_size < 100000)
+            regen or force_storyboard or (not s1_clip.exists()) or (s1_clip.stat().st_size < 100000)
         )
         if need_s1_gen:
             print(
@@ -394,7 +395,7 @@ def generate_flow_ad(
             print(
                 "  ⏳ Chờ sinh video Scene 1 để trích xuất khuôn mặt nhân vật chuẩn (~35s)..."
             )
-            s1_urls = poll_omni_jobs([s1_job], poll_interval_s=5, timeout_s=300)
+            s1_urls = poll_omni_jobs([s1_job], poll_interval_s=5, timeout_s=600)
             v_url = s1_urls.get(scene_1.id)
             if not v_url:
                 raise RuntimeError(
@@ -422,7 +423,7 @@ def generate_flow_ad(
     pending_jobs = []
     for sc in ai_scenes:
         idx = sc.id
-        raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
+        raw_clip_path = clips_dir / f"{style}_raw_{idx:02d}.mp4"
 
         if (
             not is_faceless
@@ -434,7 +435,7 @@ def generate_flow_ad(
             continue
 
         if (
-            not regen
+            not (regen or force_storyboard)
             and raw_clip_path.exists()
             and raw_clip_path.stat().st_size > 100000
         ):
@@ -444,24 +445,20 @@ def generate_flow_ad(
             continue
 
         p_lower = (sc.prompt or "").lower()
-        is_human_scene = not is_faceless and (
-            idx in (3, 4, 5)
-            or any(
-                w in p_lower
-                for w in [
-                    "person",
-                    "professional",
-                    "creator",
-                    "homemaker",
-                    "model",
-                    "man",
-                    "woman",
-                    "same",
-                    "persona",
-                    "face",
-                ]
-            )
+        is_faceless_scene = (
+            is_faceless
+            or "no face" in p_lower
+            or "hands only" in p_lower
+            or "no human face" in p_lower
+            or "macro" in p_lower
+            or "top-down" in p_lower
+            or "overhead" in p_lower
         )
+        has_human_words = any(
+            re.search(r"\b" + re.escape(w) + r"\b", p_lower)
+            for w in ["person", "professional", "creator", "homemaker", "model", "man", "woman", "same", "persona", "actor", "traveler"]
+        )
+        is_human_scene = (not is_faceless_scene) and has_human_words
 
         if is_human_scene and char_media_id:
             print(
@@ -489,16 +486,17 @@ def generate_flow_ad(
                 "project_id": project_id,
             })
         elif ref_media_ids and (
-            is_faceless
+            is_faceless_scene
             or "hands" in p_lower
             or "product" in p_lower
-            or idx in (1, 2)
+            or idx == 2
         ):
             print(
                 f"  • Đang gửi Scene {idx} (AI - Reference Sản Phẩm ZIP): {sc.overlay_title}..."
             )
+            ref_idx = sc.image_index % len(ref_media_ids) if ref_media_ids else 0
             payload = {
-                "reference_media_ids": ref_media_ids[:1],
+                "reference_media_ids": [ref_media_ids[ref_idx]],
                 "prompt": sc.prompt,
                 "project_id": project_id,
                 "duration_s": 6,
@@ -550,12 +548,12 @@ def generate_flow_ad(
             f"\n⏳ Đang theo dõi tiến độ sinh {len(pending_jobs)} AI clips từ Google Flow..."
         )
         download_urls = poll_omni_jobs(
-            pending_jobs, poll_interval_s=5, timeout_s=360
+            pending_jobs, poll_interval_s=5, timeout_s=600
         )
         for job in pending_jobs:
             sid = job["scene_id"]
             url = download_urls.get(sid)
-            clip_dst = clips_dir / f"hybrid_raw_{sid:02d}.mp4"
+            clip_dst = clips_dir / f"{style}_raw_{sid:02d}.mp4"
             if url:
                 print(
                     f"  ⬇️ Đang tải AI clip Scene {sid} từ Google Flow ({clip_dst.name})..."
@@ -568,7 +566,7 @@ def generate_flow_ad(
 
     for sc in scenes:
         idx = sc.id
-        raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
+        raw_clip_path = clips_dir / f"{style}_raw_{idx:02d}.mp4"
         dur = audio_durations[idx] + 0.4
 
         if sc.kind in ("PRODUCT_PHOTO", "IMAGE_SLIDE"):

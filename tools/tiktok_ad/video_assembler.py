@@ -22,6 +22,7 @@ def assemble_scene_clip(
     target_duration: Optional[float] = None,
     pad_tail: float = 0.4,
     remove_watermark: bool = True,
+    delogo: Optional[str] = None,
 ) -> Path:
     """
     Combines video clip with audio, trims/loops video to fit audio, and burns text overlays.
@@ -84,8 +85,10 @@ def assemble_scene_clip(
     filters.append("setpts=PTS-STARTPTS")
     filters.append("fps=fps=30")
 
-    # Clean Google Flow watermark (sparkle icon at bottom right) if requested
-    if remove_watermark:
+    # Clean Google Flow watermark (sparkle icon at bottom right) or custom delogo filter
+    if delogo:
+        filters.append(delogo)
+    elif remove_watermark:
         filters.append("delogo=x=568:y=1120:w=64:h=64")
 
     # Resolve fonts (Arial Bold for titles, Arial for subtitles)

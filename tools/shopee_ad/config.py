@@ -46,7 +46,11 @@ FLOWKIT_API_URL = os.environ.get("FLOWKIT_API_URL", "http://127.0.0.1:8100")
 
 # Input & Output Paths
 _shopee_dir_env = os.environ.get("SHOPEE_DOWNLOADS_DIR", "").strip()
-SHOPEE_DOWNLOADS_DIR = Path(_shopee_dir_env) if _shopee_dir_env else None
+if _shopee_dir_env:
+    SHOPEE_DOWNLOADS_DIR = Path(_shopee_dir_env)
+else:
+    _default_dl = Path.home() / "Downloads" / "Shopee Downloads"
+    SHOPEE_DOWNLOADS_DIR = _default_dl if _default_dl.exists() else None
 OUTPUT_ROOT = REPO_ROOT / "output" / "shopee_ads"
 
 # Channel Branding (Optional - empty by default for 100% white-label multi-channel distribution)

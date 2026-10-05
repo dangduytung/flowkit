@@ -2,10 +2,12 @@
 import json
 import logging
 import re
-from dataclasses import asdict, dataclass
+import unicodedata
+from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from tools.common.models import SceneDefinition
 from tools.tiktok_ad.config import DEFAULT_CHANNEL_NAME
 from tools.tiktok_ad.product_parser import ProductInfo
 from tools.tiktok_ad.prompts import (
@@ -18,19 +20,14 @@ from tools.tiktok_ad.prompts import (
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class SceneDefinition:
-    id: int
-    name: str
-    kind: str  # "FLOW_AI", "PRODUCT_PHOTO", "REAL_FOOTAGE", or "IMAGE_SLIDE"
-    narrator_text: str
-    overlay_title: str
-    overlay_subtitle: str
-    real_start_sec: float = 0.0
-    image_index: int = 0
-    prompt: Optional[str] = None
-    video_prompt: Optional[str] = None
+__all__ = [
+    "SceneDefinition",
+    "clean_product_title",
+    "detect_product_category",
+    "extract_top_features",
+    "generate_dynamic_storyboard",
+    "load_or_create_storyboard",
+]
 
 
 def clean_product_title(raw_name: str) -> str:
@@ -87,46 +84,56 @@ def detect_product_category(name: str, description_text: str = "") -> str:
     """Intelligently classify ANY product into core commercial categories."""
     text = f"{name} {description_text}".lower()
 
-    if any(
-        k in text
-        for k in [
-            "kê chân",
-            "gác chân",
-            "massage",
-            "công thái học",
-            "ergonomic",
-            "thư giãn",
-            "sức khỏe",
-        ]
-    ):
+    def _matches(keywords: list[str]) -> bool:
+        for kw in keywords:
+            pattern = r"(?:\b|\s|^)" + re.escape(kw) + r"(?:\b|\s|$)"
+            if re.search(pattern, text, re.IGNORECASE):
+                return True
+        return False
+
+    # 1. Health & Fitness
+    health_kw = [
+        "kê chân", "gác chân", "massage", "công thái học", "ergonomic", "thư giãn", "sức khỏe", "súng massage"
+    ]
+    if _matches(health_kw):
         return "HEALTH_FITNESS"
-    if any(
-        k in text
-        for k in ["son", "serum", "kem dưỡng", "skincare", "da", "trang điểm"]
-    ):
+
+    # 2. Storage & Home Organization & Travel (Checked before apparel/general to avoid collision)
+    storage_kw = [
+        "túi hút chân không", "túi nén hút chân không", "túi nén", "túi đựng", "hộp đựng đồ",
+        "giá treo", "tủ vải", "kệ để giày", "vali", "sắp xếp tủ", "chăn màn"
+    ]
+    if _matches(storage_kw):
+        return "GENERAL_LIFESTYLE"
+
+    # 3. Beauty & Skincare
+    beauty_kw = [
+        "son", "serum", "kem dưỡng", "skincare", "kem chống nắng", "trang điểm", "nước hoa", "sữa rửa mặt"
+    ]
+    if _matches(beauty_kw):
         return "BEAUTY_SKINCARE"
-    if any(
-        k in text
-        for k in [
-            "chuột",
-            "bàn phím",
-            "usb",
-            "tai nghe",
-            "cáp sạc",
-            "giá đỡ",
-            "kẹp bàn",
-        ]
-    ):
+
+    # 4. Tech & Gadgets
+    tech_kw = [
+        "chuột", "bàn phím", "usb", "tai nghe", "cáp sạc", "giá đỡ", "kẹp bàn"
+    ]
+    if _matches(tech_kw):
         return "TECH_GADGETS"
-    if any(
-        k in text
-        for k in ["bếp", "nồi", "chảo", "túi hút chân không", "hộp đựng", "dao"]
-    ):
+
+    # 5. Kitchen & Home
+    kitchen_kw = [
+        "bếp", "nồi", "chảo", "hộp đựng thực phẩm", "dao", "máy hút chân không", "hút chân không thực phẩm"
+    ]
+    if _matches(kitchen_kw):
         return "KITCHEN_HOME"
-    if any(
-        k in text for k in ["áo", "quần", "váy", "giày", "dép", "túi xách", "ví"]
-    ):
+
+    # 6. Fashion & Apparel
+    fashion_kw = [
+        "áo thun", "áo sơ mi", "quần kaki", "quần jean", "váy", "giày", "dép", "túi xách", "ví"
+    ]
+    if _matches(fashion_kw):
         return "FASHION_APPAREL"
+
     return "GENERAL_LIFESTYLE"
 
 
@@ -135,7 +142,6 @@ def extract_top_features(
     product_name: str = "",
 ) -> List[Tuple[str, str]]:
     """Extract top highlight feature bullet points from product description."""
-    import unicodedata
 
     lines = [line.strip() for line in description_text.splitlines() if line.strip()]
     candidates = []

@@ -13,9 +13,11 @@ class ProductInfo:
     slug: str
     name: str
     url: str = ""
+    price: str = ""
     rating: str = ""
     review_count: str = ""
     sold_count: str = ""
+    seller: str = ""
     description_text: str = ""
     image_names: List[str] = field(default_factory=list)
     video_name: Optional[str] = None
@@ -49,9 +51,11 @@ def parse_product_zip(zip_path: Path) -> ProductInfo:
     # Parse metadata from description.txt
     product_name = zip_path.stem
     url = ""
+    price = ""
     rating = ""
     reviews = ""
     sold = ""
+    seller = ""
     clean_desc = desc_content
 
     for line in desc_content.splitlines():
@@ -60,6 +64,10 @@ def parse_product_zip(zip_path: Path) -> ProductInfo:
             product_name = line_clean.replace("Tên sản phẩm:", "").strip()
         elif line_clean.startswith("Link sản phẩm:"):
             url = line_clean.replace("Link sản phẩm:", "").strip()
+        elif line_clean.startswith("Giá:") or line_clean.startswith("Giá bán:"):
+            price = line_clean.split(":", 1)[1].strip()
+        elif line_clean.startswith("Shop:") or line_clean.startswith("Người bán:"):
+            seller = line_clean.split(":", 1)[1].strip()
         elif line_clean.startswith("Số sao:"):
             rating = line_clean.replace("Số sao:", "").strip()
         elif line_clean.startswith("Lượt đánh giá:"):
@@ -77,9 +85,11 @@ def parse_product_zip(zip_path: Path) -> ProductInfo:
         slug=slug,
         name=product_name,
         url=url,
+        price=price,
         rating=rating,
         review_count=reviews,
         sold_count=sold,
+        seller=seller,
         description_text=clean_desc,
         image_names=sorted(image_names),
         video_name=video_name,

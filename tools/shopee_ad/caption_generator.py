@@ -1,12 +1,12 @@
 """Multi-Platform Caption & Metadata Generator (Facebook Reels, TikTok, YouTube Shorts)."""
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 from tools.shopee_ad.config import DEFAULT_CHANNEL_NAME, DEFAULT_CHANNEL_HANDLE
 from tools.shopee_ad.product_parser import ProductInfo
 from tools.shopee_ad.storyboard import SceneDefinition, clean_product_title, detect_product_category
 
 
-def _get_category_meta(category: str):
+def _get_category_meta(category: str) -> Tuple[str, str]:
     category_meta = {
         "BEAUTY_SKINCARE": ("💄", "Chăm sóc làn da rạng ngời & Tươi tắn"),
         "KITCHEN_HOME": ("🍳", "Gian bếp tinh tươm & Tiện nghi gia đình"),

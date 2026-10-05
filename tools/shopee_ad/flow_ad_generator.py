@@ -7,6 +7,7 @@ authentic product photos from Shopee zip (Ken Burns 9:16).
 import base64
 import json
 import logging
+import re
 import shutil
 import subprocess
 import sys
@@ -42,7 +43,7 @@ from tools.shopee_ad.video_assembler import (
 from tools.shopee_ad.caption_generator import generate_all_platform_captions
 from tools.shopee_ad.cover_generator import create_cover_image
 from tools.shopee_ad.publish_guide import create_publish_guide
-from tools.shopee_ad.orchestrator import build_variant_suffix
+from tools.common.naming import build_variant_suffix
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -114,7 +115,7 @@ def extract_character_anchor(video_path: Path, output_image: Path, time_sec: flo
 def poll_omni_jobs(
     jobs: list[dict],
     poll_interval_s: int = 5,
-    timeout_s: int = 360,
+    timeout_s: int = 600,
 ) -> dict[int, str]:
     """Poll both workflow jobs (text-to-video) and operation jobs (ref-to-video) until all complete."""
     if not jobs:
@@ -367,11 +368,11 @@ def generate_flow_ad(
     char_media_id = None
 
     if scene_1 and not is_faceless:
-        s1_clip = clips_dir / f"hybrid_raw_{scene_1.id:02d}.mp4"
-        anchor_img = clips_dir / "character_anchor.jpg"
+        s1_clip = clips_dir / f"{style}_raw_{scene_1.id:02d}.mp4"
+        anchor_img = clips_dir / f"{style}_character_anchor.jpg"
 
         # Check if Scene 1 video already exists and is valid
-        need_s1_gen = regen or (not s1_clip.exists()) or (s1_clip.stat().st_size < 100000)
+        need_s1_gen = regen or force_storyboard or (not s1_clip.exists()) or (s1_clip.stat().st_size < 100000)
 
         if need_s1_gen:
             print(f"  • Đang gửi Scene {scene_1.id} (Anchor Nhân Vật): {scene_1.overlay_title}...")
@@ -411,24 +412,31 @@ def generate_flow_ad(
     pending_jobs = []
     for sc in ai_scenes:
         idx = sc.id
-        raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
+        raw_clip_path = clips_dir / f"{style}_raw_{idx:02d}.mp4"
 
         # Nếu là scene 1 (chế độ có mặt) thì đã xử lý ở trên
         if not is_faceless and scene_1 and idx == scene_1.id and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
             continue
 
-        if not regen and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
+        if not (regen or force_storyboard) and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
             print(f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua.")
             continue
 
         p_lower = (sc.prompt or "").lower()
-        is_human_scene = (
-            not is_faceless
-            and (
-                idx in (3, 4, 5)
-                or any(w in p_lower for w in ["person", "professional", "creator", "homemaker", "model", "man", "woman", "same", "persona", "face"])
-            )
+        is_faceless_scene = (
+            is_faceless
+            or "no face" in p_lower
+            or "hands only" in p_lower
+            or "no human face" in p_lower
+            or "macro" in p_lower
+            or "top-down" in p_lower
+            or "overhead" in p_lower
         )
+        has_human_words = any(
+            re.search(r"\b" + re.escape(w) + r"\b", p_lower)
+            for w in ["person", "professional", "creator", "homemaker", "model", "man", "woman", "same", "persona", "actor", "traveler"]
+        )
+        is_human_scene = (not is_faceless_scene) and has_human_words
 
         if is_human_scene and char_media_id:
             print(f"  • Đang gửi Scene {idx} (AI - Reference Nhân Vật Nhất Quán): {sc.overlay_title}...")
@@ -450,10 +458,11 @@ def generate_flow_ad(
                 "project_id": project_id,
             })
             logger.info(f"Scene {idx} submitted (abra_r2v consistent character): op_name={op_name}")
-        elif ref_media_ids and (is_faceless or "hands" in p_lower or "product" in p_lower or idx == 2):
+        elif ref_media_ids and (is_faceless_scene or "hands" in p_lower or "product" in p_lower or idx == 2):
             print(f"  • Đang gửi Scene {idx} (AI - Reference Sản Phẩm ZIP): {sc.overlay_title}...")
+            ref_idx = sc.image_index % len(ref_media_ids) if ref_media_ids else 0
             payload = {
-                "reference_media_ids": ref_media_ids[:1],
+                "reference_media_ids": [ref_media_ids[ref_idx]],
                 "prompt": sc.prompt,
                 "project_id": project_id,
                 "duration_s": 6,
@@ -494,11 +503,11 @@ def generate_flow_ad(
     # Chờ hoàn thành và tải về toàn bộ AI clips
     if pending_jobs:
         print(f"\n⏳ Đang theo dõi tiến độ sinh {len(pending_jobs)} AI clips từ Google Flow...")
-        download_urls = poll_omni_jobs(pending_jobs, poll_interval_s=5, timeout_s=360)
+        download_urls = poll_omni_jobs(pending_jobs, poll_interval_s=5, timeout_s=600)
         for job in pending_jobs:
             sid = job["scene_id"]
             url = download_urls.get(sid)
-            clip_dst = clips_dir / f"hybrid_raw_{sid:02d}.mp4"
+            clip_dst = clips_dir / f"{style}_raw_{sid:02d}.mp4"
             if url:
                 print(f"  ⬇️ Đang tải AI clip Scene {sid} từ Google Flow ({clip_dst.name})...")
                 urllib.request.urlretrieve(url, clip_dst)
@@ -509,7 +518,7 @@ def generate_flow_ad(
 
     for sc in scenes:
         idx = sc.id
-        raw_clip_path = clips_dir / f"hybrid_raw_{idx:02d}.mp4"
+        raw_clip_path = clips_dir / f"{style}_raw_{idx:02d}.mp4"
         dur = audio_durations[idx] + 0.4
 
         if sc.kind in ("PRODUCT_PHOTO", "IMAGE_SLIDE"):
@@ -557,7 +566,7 @@ def generate_flow_ad(
     )
 
     # 8. Generate 9:16 Cover Image (Thumbnail)
-    cover_source = assembled_scenes[0] if assembled_scenes else (clips_dir / "hybrid_raw_01.mp4")
+    cover_source = assembled_scenes[0] if assembled_scenes else (clips_dir / f"{style}_raw_01.mp4")
     if not cover_source.exists() or cover_source.stat().st_size < 1000:
         cover_source = final_output
     cover_path = final_dir / f"{product.slug}_{variant}_cover.jpg"

@@ -2,7 +2,8 @@
 Dedicated exclusively to physical product categories, macro POV B-roll, KOC personas, and CTA prompts.
 """
 from typing import List, Optional
-from tools.shopee_ad.storyboard import SceneDefinition
+
+from tools.common.models import SceneDefinition
 
 def _get_character_persona(category: str) -> dict:
     """
@@ -385,6 +386,86 @@ def _build_flow_cinematic_scenes(
                     ),
                 ),
             ]
+
+    # Storage, Compression Bags, Travel Organization
+    is_storage = any(
+        k in clean_title.lower()
+        for k in [
+            "túi hút chân không",
+            "túi nén",
+            "hút chân không",
+            "vali",
+            "chăn màn",
+            "tủ quần áo",
+            "gấp gọn",
+            "vali gia đình",
+            "nén",
+        ]
+    )
+    if is_storage:
+        return [
+            SceneDefinition(
+                id=1,
+                name="Hook - Giải pháp hành lý gọn gàng",
+                kind="FLOW_AI",
+                narrator_text=f"Chuẩn bị hành lý du lịch hay dọn tủ đồ mà chăn màn quần áo quá cồng kềnh? Trải nghiệm ngay {clean_title} này nhé!",
+                overlay_title="HÀNH LÝ GỌN GÀNG",
+                overlay_subtitle=clean_title,
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Shot on 35mm lens, 60fps real-time commercial look, crisp realistic motion. "
+                    f"Featuring {persona['intro']} in a modern bright bedroom, standing beside an open suitcase with a bulky pile of coats. "
+                    f"They energetically hold up the transparent vacuum compression bag with a confident, bright smile toward camera{idea_ctx}. "
+                    f"Fast snappy movement, brisk natural human speed, not slow motion, not floaty. Realistic natural daylight. NO text overlays, NO talking."
+                ),
+            ),
+            SceneDefinition(
+                id=2,
+                name="Hero Action - Hút xẹp 80% chỉ trong 10 giây",
+                kind="FLOW_AI",
+                narrator_text="Khóa zip đôi miết chặt, van silicon một chiều hút khí xẹp lép phẳng lì chỉ sau 10 giây, giảm ngay 80% diện tích!",
+                overlay_title="GIẢM 80% DIỆN TÍCH",
+                overlay_subtitle="Khóa zip đôi - Kín tuyệt đối",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial lighting. "
+                    f"Hands briskly sliding a thick puffy down jacket into the transparent vacuum compression bag, swiftly running the sealing clip along the double-track yellow zip lock. "
+                    f"Hands attach the suction nozzle to the circular one-way silicon valve; the bag instantly deflates in a fast satisfying compression, flattening down into a thin, firm, solid slab. "
+                    f"Brisk snappy hand movements, fast-forward deflation effect, natural real-life speed, not floaty. NO face, hands only. NO text overlays."
+                ),
+            ),
+            SceneDefinition(
+                id=3,
+                name="Feature - Xếp vừa in, rộng thêm nửa vali",
+                kind="FLOW_AI",
+                narrator_text=f"{feat1_desc}. Đống đồ cồng kềnh xếp gọn vào một góc, vali vẫn còn dư nửa khoảng trống tha hồ mang thêm đồ.",
+                overlay_title="VALI RỘNG THÊM 50%",
+                overlay_subtitle="Chất liệu dẻo dai - Tái sử dụng",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Medium close-up, sharp 35mm lens, 60fps real-time look. "
+                    f"Featuring {persona['cont']} in the sunlit room, excitedly holding up the ultra-thin, rock-firm compressed vacuum slab vertically toward the camera like a thin laptop to show how completely flat it is. "
+                    f"With a confident bright smile, they effortlessly slide the flat slab into one side of the open suitcase using just two fingers, revealing the rest of the suitcase completely spacious and empty. "
+                    f"Snappy confident gestures, natural brisk human motion, not slow motion, not floaty. Mouth closed, no dialogue. NO text overlays."
+                ),
+            ),
+            SceneDefinition(
+                id=4,
+                name="Lifestyle - Kéo khóa nhẹ tênh, tự tin lên đường",
+                kind="FLOW_AI",
+                narrator_text=f"{feat2_desc}. Kéo khóa vali nhẹ tênh, thảnh thơi lên đường tận hưởng trọn vẹn chuyến đi!",
+                overlay_title="TỰ TIN LÊN ĐƯỜNG",
+                overlay_subtitle="Bảo vệ chống ẩm mốc",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Medium shot, bright natural morning sunlight, 60fps real-time commercial look. "
+                    f"Featuring {persona['cont']}, standing beside the sleek, fully packed upright suitcase. In one swift, effortless motion, they glide the exterior zipper completely shut, "
+                    f"give the top of the suitcase a satisfied proud pat with their hand, and pull up the aluminum handle with a crisp click. "
+                    f"They look directly at camera with a beaming, confident smile and give a cheerful thumbs-up, ready to travel. "
+                    f"Crisp energetic movement, natural human speed, stable physics, not floaty. Mouth closed, no speaking. NO text overlays."
+                ),
+            ),
+        ]
 
     # GENERAL_LIFESTYLE Fallback
     return [
@@ -849,6 +930,86 @@ def _build_problem_solution_scenes(
                     ),
                 ),
             ]
+
+    # Storage, Compression Bags, Travel Organization
+    is_storage = any(
+        k in clean_title.lower()
+        for k in [
+            "túi hút chân không",
+            "túi nén",
+            "hút chân không",
+            "vali",
+            "chăn màn",
+            "tủ quần áo",
+            "gấp gọn",
+            "vali gia đình",
+            "nén",
+        ]
+    )
+    if is_storage:
+        return [
+            SceneDefinition(
+                id=1,
+                name="Hook - Đồ cồng kềnh chật chỗ",
+                kind="FLOW_AI",
+                narrator_text="Mỗi lần chuyển mùa hay chuẩn bị đi xa, nhìn đống chăn màn, áo phao cồng kềnh chất đống chiếm hết cả phòng mà phát ngợp đúng không? Thử ngay cách này nha!",
+                overlay_title="ĐỒ CỒNG KỀNH CHẬT CHỖ?",
+                overlay_subtitle="Tủ quần áo quá tải?",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Medium shot, 35mm lens, 60fps real-time look, bright modern bedroom. "
+                    f"Featuring {persona['intro']} sitting on the edge of the bed. In front of them, an enormous messy mountain of bulky winter puffer coats and thick folded blankets is piled high on the bed, overflowing everywhere. "
+                    f"The actor looks overwhelmed at the massive pile, looks directly into the camera, and shakes their head with an exasperated funny reaction{idea_ctx}. "
+                    f"Natural brisk human speed, crisp real-time movement, not slow motion, not floaty. Realistic morning natural lighting. NO text overlays, NO talking."
+                ),
+            ),
+            SceneDefinition(
+                id=2,
+                name="Hero Action - Hút xẹp 80% diện tích",
+                kind="FLOW_AI",
+                narrator_text=f"Dùng {clean_title} này xem. Khóa zip đôi kín khít, van silicon một chiều hút sạch không khí, nén xẹp phẳng lì chỉ sau 10 giây, giảm ngay 80% diện tích!",
+                overlay_title="HÚT XẸP 80% DIỆN TÍCH",
+                overlay_subtitle="Van silicon 1 chiều - Kín tuyệt đối",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial studio lighting. "
+                    f"A clear transparent vacuum compression bag rests flat on a modern wooden table, containing a thick puffy winter jacket. "
+                    f"A mini electric suction pump is attached to the circular one-way silicon valve on the bag. In a fast satisfying time-lapse compression, the air is rapidly sucked out, "
+                    f"and the puffy bag instantly deflates and flattens down into a rock-firm, paper-thin, rigid flat slab. "
+                    f"Crisp texture, bright clean studio lighting, natural speed, not floaty. NO face, NO hands in frame. NO text overlays."
+                ),
+            ),
+            SceneDefinition(
+                id=3,
+                name="Feature - Gọn gàng tủ quần áo",
+                kind="FLOW_AI",
+                narrator_text="Chất liệu PA PE dẻo dai dày dặn, tái sử dụng thoải mái. Đống chăn màn cồng kềnh giờ xếp gọn gàng trong ngăn tủ, vừa sạch sẽ chống ẩm mốc, vừa tiết kiệm không gian tối đa!",
+                overlay_title="GỌN GÀNG TỦ QUẦN ÁO",
+                overlay_subtitle="Chống ẩm mốc suốt 6-8 tháng",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Eye-level medium shot, sharp 35mm lens, 60fps real-time commercial look. "
+                    f"Featuring {persona['cont']} standing in front of a modern aesthetic wooden wardrobe closet. With a bright proud smile, "
+                    f"they place a neat stack of 4 ultra-thin compressed flat vacuum bags like books onto a closet shelf, leaving 80 percent of the wardrobe shelf completely open, spacious, and spotless. "
+                    f"Crisp confident movement, natural human speed, not slow motion, not floaty. Warm natural indoor daylight. Mouth closed, no dialogue. NO text overlays."
+                ),
+            ),
+            SceneDefinition(
+                id=4,
+                name="Lifestyle - Tự tin lên đường",
+                kind="FLOW_AI",
+                narrator_text="Dù dọn tủ gia đình hay chuẩn bị vali du lịch đều nhàn tênh. Hành lý gọn nhẹ, thảnh thơi lên đường tận hưởng chuyến đi thôi!",
+                overlay_title="TỰ TIN LÊN ĐƯỜNG",
+                overlay_subtitle="Hành lý gọn gàng - Thảnh thơi du lịch",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Medium hero shot, bright natural morning sunlight, 60fps real-time commercial look. "
+                    f"Featuring {persona['cont']} standing proudly in a stylish travel outfit beside a sleek, closed suitcase sitting neatly on a luggage rack. "
+                    f"They give the top of the suitcase a confident, satisfied double pat with their hand, look directly at the camera with a beaming warm smile, "
+                    f"and give an energetic cheerful thumbs-up, looking excited for vacation. Stable realistic physics, crisp human gestures, natural speed, not floaty. Mouth closed, no speaking. NO text overlays."
+                ),
+            ),
+        ]
 
     # GENERAL_LIFESTYLE Fallback
     return [
@@ -1374,6 +1535,91 @@ def _build_faceless_pov_scenes(
                 prompt=(
                     f"Vertical 9:16 RAW cinematic video. Hands slipping the sleek bottle into an aesthetic leather bag, aesthetic vanity setup in background. "
                     f"Warm natural light. NO face in frame. NO text overlays."
+                ),
+            ),
+        ]
+
+    # Storage, Compression Bags, Travel Organization
+    is_storage = any(
+        k in clean_title.lower()
+        for k in [
+            "túi hút chân không",
+            "túi nén",
+            "hút chân không",
+            "vali",
+            "chăn màn",
+            "tủ quần áo",
+            "gấp gọn",
+            "vali gia đình",
+            "nén",
+        ]
+    )
+    if is_storage:
+        return [
+            SceneDefinition(
+                id=1,
+                name="POV 1 - Mở hộp trên tay & Test chất liệu",
+                kind="FLOW_AI",
+                narrator_text=f"Mở hộp {clean_title}, chất liệu PA PE dày dặn dẻo dai, van silicon một chiều và khóa zip đôi cực kỳ chắc chắn.",
+                overlay_title="TRẢI NGHIỆM TRÊN TAY",
+                overlay_subtitle="Chất liệu PA+PE dẻo dai",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. First-person POV looking down at a clean modern wooden desk. "
+                    f"Two hands briskly unpack the clear transparent vacuum compression bag, unfolding it smoothly across the tabletop. "
+                    f"Macro focus on the thick tear-resistant PA PE material texture, the bright double-track zip lock, and the circular one-way silicone valve. "
+                    f"Hands firmly stretch the edge to demonstrate supreme flexibility and durability{idea_ctx}. "
+                    f"Brisk snappy movements, crisp commercial studio lighting, natural real-time speed, not slow motion, not floaty. "
+                    f"Completely faceless, NO human face, NO head in frame, hands only. NO text overlays, NO talking."
+                ),
+            ),
+            SceneDefinition(
+                id=2,
+                name="POV 2 - Khóa zip miết chặt & Hút xẹp 80%",
+                kind="FLOW_AI",
+                narrator_text="Khóa zip đôi miết chặt kín khít, van hút một chiều xẹp lép phẳng lì chỉ sau mười giây, giảm ngay 80% diện tích!",
+                overlay_title="HÚT XẸP 80% DIỆN TÍCH",
+                overlay_subtitle="Van 1 chiều - Kín tuyệt đối",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial studio lighting. "
+                    f"Hands briskly slide a thick puffy winter down jacket inside the transparent compression bag, then swiftly glide the white sealing clip firmly along the double-track yellow zip lock in one smooth motion. "
+                    f"Hands attach a compact electric pump to the round one-way valve; the bulky coat instantly deflates and flattens down into a rock-firm, paper-thin, rigid flat slab in seconds. "
+                    f"Fast-forward deflation effect, brisk snappy hand movements, natural real-life speed, not floaty. "
+                    f"Completely faceless, NO human face, hands only. NO text overlays."
+                ),
+            ),
+            SceneDefinition(
+                id=3,
+                name="POV 3 - Gọn gàng tủ quần áo",
+                kind="FLOW_AI",
+                narrator_text="Chất liệu dẻo dai tái sử dụng nhiều năm, bảo vệ chống ẩm mốc bụi bẩn suốt sáu đến tám tháng. Tủ quần áo gia đình luôn ngăn nắp gọn gàng!",
+                overlay_title="GỌN GÀNG TỦ QUẦN ÁO",
+                overlay_subtitle="Chống ẩm mốc suốt 6-8 tháng",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. First-person POV facing an open modern wooden wardrobe closet with warm interior lighting. "
+                    f"Two hands lift a neat vertical stack of 4 ultra-thin compressed flat vacuum slabs and slide them smoothly onto a wooden closet shelf, lined up neatly like books on a bookshelf. "
+                    f"The camera reveals the closet shelf is now 80 percent completely empty, spacious, and spotlessly organized. "
+                    f"Brisk confident hand movements, crisp natural lighting, real-time speed, not slow motion. "
+                    f"Completely faceless, NO human face, NO head in frame, hands only. NO text overlays."
+                ),
+            ),
+            SceneDefinition(
+                id=4,
+                name="POV 4 - Xếp gọn vali du lịch",
+                kind="FLOW_AI",
+                narrator_text="Chuẩn bị hành lý du lịch hay về quê đều nhàn tênh. Đồ đạc cồng kềnh xếp gọn trong nháy mắt, vali rộng thênh thang tự tin lên đường!",
+                overlay_title="VALI RỘNG THÊM 50%",
+                overlay_subtitle="Thảnh thơi lên đường",
+                image_index=0,
+                prompt=(
+                    f"Vertical 9:16 authentic fast-paced commercial ad video. Top-down POV flat-lay looking directly down at a sleek open suitcase on the floor. "
+                    f"Hands effortlessly drop two ultra-thin compressed flat slabs into the bottom compartment in one second, taking up barely any room. "
+                    f"The other half remains completely spacious and free for sneakers and travel pouches. "
+                    f"Hands smoothly fold the suitcase lid shut with a crisp satisfying click, then give a quick energetic thumbs-up over the closed luggage. "
+                    f"Fast snappy motions, natural commercial ad speed, stable realistic physics. "
+                    f"Completely faceless, NO human face, hands only. NO text overlays."
                 ),
             ),
         ]

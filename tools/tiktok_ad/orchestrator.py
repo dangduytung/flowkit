@@ -39,6 +39,9 @@ from tools.tiktok_ad.video_assembler import (
 from tools.tiktok_ad.caption_generator import generate_all_platform_captions
 from tools.tiktok_ad.cover_generator import create_cover_image
 from tools.tiktok_ad.publish_guide import create_publish_guide
+from tools.common.naming import build_variant_suffix as _build_variant_suffix
+from tools.common.watermarks import resolve_delogo_for_product
+from tools.tiktok_ad.flow_ad_generator import generate_flow_ad
 
 
 def check_flowkit_health() -> bool:
@@ -60,20 +63,13 @@ def build_variant_suffix(
     tag: Optional[str] = None,
 ) -> str:
     """Build a descriptive, collision-free variant suffix for multi-style export."""
-    parts = [style]
-    if no_overlay:
-        parts.append("clean")
-    if cta_mode and cta_mode != default_cta and cta_mode != "none":
-        parts.append(f"cta-{cta_mode}")
-    elif cta_mode == "none" and default_cta != "none":
-        parts.append("no-cta")
-    if tag:
-        clean_tag = "".join(
-            c if c.isalnum() or c in ("-", "_") else "_" for c in tag
-        ).strip("-_")
-        if clean_tag:
-            parts.append(clean_tag)
-    return "_".join(parts)
+    return _build_variant_suffix(
+        style=style,
+        no_overlay=no_overlay,
+        cta_mode=cta_mode,
+        default_cta=default_cta,
+        tag=tag,
+    )
 
 
 def run_pipeline(
@@ -90,6 +86,7 @@ def run_pipeline(
     no_voice: bool = False,
     no_overlay: bool = False,
     tag: Optional[str] = None,
+    delogo: Optional[str] = "auto",
 ) -> Path:
     """
     Execute the entire TikTok Ad production pipeline dynamically for ANY product zip.
@@ -241,6 +238,17 @@ def run_pipeline(
         except Exception as e:
             print(f"  [Video Gốc] Không thể đo thời lượng video gốc: {e}")
 
+    active_delogo = None
+    if delogo == "auto":
+        resolved, rule_name = resolve_delogo_for_product(product.url, video_path=raw_video if has_raw_video else None)
+        if resolved:
+            print(f"  [Delogo] Áp dụng quy tắc xóa logo ('{rule_name}'): {resolved}")
+            active_delogo = resolved
+        else:
+            print("  [Delogo] Không phát hiện quy tắc xóa logo nào cho sản phẩm này trong config/watermark_rules.json")
+    elif delogo and delogo.lower() != "none":
+        active_delogo = delogo
+
     curr_raw_time = 0.0
     for idx_sc, sc in enumerate(scenes):
         clip_out = clips_dir / f"{variant}_clip_{sc.id:02d}.mp4"
@@ -263,6 +271,7 @@ def run_pipeline(
                     clip_out,
                     mode=mode_9_16,
                     glitch_intervals=glitch_intervals,
+                    delogo=active_delogo,
                 )
             else:
                 raise RuntimeError(
@@ -270,17 +279,18 @@ def run_pipeline(
                 )
         else:
             # Biên tập cắt lát trực tiếp từ video gốc của Shop
-            if sc.real_start_sec and sc.real_start_sec > 0:
-                start_sec = sc.real_start_sec
-            elif smart_starts and idx_sc < len(smart_starts):
+            if smart_starts and idx_sc < len(smart_starts):
                 start_sec = smart_starts[idx_sc]
+            elif sc.real_start_sec is not None and sc.real_start_sec >= 0:
+                start_sec = sc.real_start_sec
             else:
                 start_sec = curr_raw_time
-                if raw_video_dur > 0 and start_sec + dur > raw_video_dur:
-                    start_sec = max(
-                        0.0, (curr_raw_time % max(1.0, raw_video_dur - dur))
-                    )
                 curr_raw_time += dur
+
+            if raw_video_dur > 0 and start_sec >= raw_video_dur - 1.0:
+                start_sec = max(
+                    0.0, raw_video_dur - min(dur, max(1.0, raw_video_dur - 1.0))
+                )
 
             print(
                 f"  • Scene {sc.id} (Video shop): Cắt từ {start_sec:.1f}s đến {start_sec + dur:.1f}s (dài {dur:.1f}s)..."
@@ -292,6 +302,7 @@ def run_pipeline(
                 clip_out,
                 mode=mode_9_16,
                 glitch_intervals=glitch_intervals,
+                delogo=active_delogo,
             )
 
         video_clips[sc.id] = clip_out
@@ -502,6 +513,12 @@ def main():
         default=None,
         help="Gắn nhãn/tag tùy chỉnh cho video xuất bản (ví dụ: --tag v2, --tag test1) để phân biệt các lần chạy",
     )
+    parser.add_argument(
+        "--delogo",
+        type=str,
+        default="auto",
+        help="Chế độ xóa logo shop: 'auto' (tự động phát hiện logo shop và xóa sạch), 'none' (tắt), hoặc tọa độ thủ công (ví dụ 'x=30:y=545:w=140:h=60')",
+    )
 
     args = parser.parse_args()
 
@@ -593,11 +610,11 @@ def main():
                 no_voice=args.no_voice,
                 no_overlay=args.no_overlay,
                 tag=args.tag,
+                delogo=args.delogo,
             )
 
         if run_flow:
             print("\n" + "▶" * 25 + f" SẢN XUẤT VIDEO GOOGLE FLOW AI ({cur_style}) " + "◀" * 25)
-            from tools.tiktok_ad.flow_ad_generator import generate_flow_ad
             generate_flow_ad(
                 zip_path=target_zip,
                 speed=args.speed,

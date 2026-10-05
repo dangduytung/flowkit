@@ -1,6 +1,6 @@
 """Multi-Platform Caption & Metadata Generator for TikTok Ads (TikTok, Facebook Reels, YouTube Shorts)."""
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 from tools.tiktok_ad.config import DEFAULT_CHANNEL_NAME, DEFAULT_CHANNEL_HANDLE
 from tools.tiktok_ad.product_parser import ProductInfo
 from tools.tiktok_ad.storyboard import (
@@ -10,7 +10,7 @@ from tools.tiktok_ad.storyboard import (
 )
 
 
-def _get_category_meta(category: str):
+def _get_category_meta(category: str) -> Tuple[str, str]:
     category_meta = {
         "BEAUTY_SKINCARE": ("💄", "Chăm sóc làn da rạng ngời & Tươi tắn"),
         "KITCHEN_HOME": ("🍳", "Gian bếp tinh tươm & Tiện nghi gia đình"),

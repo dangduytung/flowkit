@@ -55,13 +55,17 @@ def extract_vertical_subclip(
     height: int = 1280,
     fps: int = 30,
     glitch_intervals: Optional[List[Tuple[float, float]]] = None,
+    delogo: Optional[str] = None,
 ) -> Path:
     """
     Slice a sub-clip and format it into 9:16 vertical video.
     Safely avoids cutting through detected glitch / rapid-flash intervals.
+    Applies delogo filter if delogo parameter string is provided (e.g. 'x=30:y=545:w=140:h=60').
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    delogo_prefix = f"delogo={delogo}," if delogo else ""
 
     # Detect source orientation to avoid redundant blur on vertical videos
     is_vertical = False
@@ -101,10 +105,10 @@ def extract_vertical_subclip(
         pts_filter = f"fps={fps},setpts=PTS-STARTPTS"
 
     if is_vertical:
-        vf = f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},{pts_filter}"
+        vf = f"{delogo_prefix}scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},{pts_filter}"
     elif mode == "blur_bg":
         vf = (
-            f"[0:v]split=2[v1][v2];"
+            f"[0:v]{delogo_prefix}split=2[v1][v2];"
             f"[v1]scale={width}:{height}:force_original_aspect_ratio=increase,"
             f"crop={width}:{height},boxblur=25:5[bg];"
             f"[v2]scale={width}:-1[fg];"
@@ -112,7 +116,7 @@ def extract_vertical_subclip(
         )
     else:  # center_crop
         crop_w = int(height * 9 / 16)
-        vf = f"crop={crop_w}:in_h:(in_w-{crop_w})/2:0,scale={width}:{height},{pts_filter}"
+        vf = f"{delogo_prefix}crop={crop_w}:in_h:(in_w-{crop_w})/2:0,scale={width}:{height},{pts_filter}"
 
     cmd = [
         "ffmpeg",
@@ -197,15 +201,18 @@ def calculate_smart_subclip_starts(
     video_path: Path, num_scenes: int, total_dur: float
 ) -> Tuple[List[float], List[Tuple[float, float]]]:
     """
-    Detect shot transitions in the source video and select stable, clean starting points.
-    Identifies and blacklists micro-cut clusters (adjacent cuts < 1.8s apart, such as rapid flashes),
-    allocating scene clips strictly inside clean, steady continuous segments.
+    Detect shot transitions in the source video and select stable, distinct starting points.
+    Guarantees that each scene receives a UNIQUE start point spaced across the entire video,
+    preventing any scene from repeating footage.
     Returns (starts, glitch_intervals).
     """
     if total_dur <= 0 or num_scenes <= 0:
         return [0.0] * num_scenes, []
+    if num_scenes == 1:
+        return [0.0], []
 
     glitch_intervals: List[Tuple[float, float]] = []
+    cuts = [0.0]
     try:
         cmd = [
             "ffmpeg",
@@ -218,69 +225,40 @@ def calculate_smart_subclip_starts(
             "-",
         ]
         res = subprocess.run(cmd, capture_output=True, text=True)
-        cuts = [0.0]
         for line in res.stderr.splitlines():
             if "pts_time:" in line:
                 try:
                     t = float(line.split("pts_time:")[1].strip())
-                    if t > cuts[-1] + 0.1:
+                    if t > cuts[-1] + 0.3:
                         cuts.append(t)
                 except Exception:
                     pass
         cuts.append(total_dur)
-
-        # Detect glitch/flash clusters where adjacent cuts are closer than 1.8s
-        in_glitch = False
-        glitch_start = 0.0
-
-        for i in range(len(cuts) - 1):
-            d = cuts[i + 1] - cuts[i]
-            if d < 1.8:
-                if not in_glitch:
-                    glitch_start = cuts[i]
-                    in_glitch = True
-            else:
-                if in_glitch:
-                    glitch_intervals.append((glitch_start, cuts[i]))
-                    in_glitch = False
-        if in_glitch:
-            glitch_intervals.append((glitch_start, cuts[-1]))
-
-        # Find clean continuous segments outside glitch intervals
-        clean_segments = []
-        prev_end = 0.0
-        for gs, ge in glitch_intervals:
-            if gs - prev_end >= 2.0:
-                clean_segments.append((prev_end, gs))
-            prev_end = ge
-        if total_dur - prev_end >= 2.0:
-            clean_segments.append((prev_end, total_dur))
-
-        if clean_segments:
-            starts = [round(clean_segments[0][0], 2)]
-            remaining = num_scenes - 1
-            if remaining > 0:
-                large_segs = [
-                    seg for seg in clean_segments if (seg[1] - seg[0]) >= 3.0
-                ]
-                target_seg = (
-                    large_segs[1]
-                    if len(large_segs) > 1
-                    else (large_segs[0] if large_segs else clean_segments[-1])
-                )
-                s_base, e_base = target_seg
-                step = max(2.5, (e_base - s_base - 3.0) / max(1, remaining - 1))
-                for i in range(remaining):
-                    starts.append(
-                        round(min(s_base + i * step, max(0.0, total_dur - 5.0)), 2)
-                    )
-            return starts[:num_scenes], glitch_intervals
     except Exception:
         pass
 
-    # Fallback: even distribution across duration
-    step = max(1.0, (total_dur - 5.0) / max(1, num_scenes - 1))
-    return [
-        round(min(i * step, max(0.0, total_dur - 5.0)), 2)
-        for i in range(num_scenes)
-    ], glitch_intervals
+    # Target ideal evenly-spaced anchors across the entire video duration
+    max_start = max(0.0, total_dur - (2.5 if total_dur >= 6.0 else 1.0))
+    interval = max_start / max(1, num_scenes - 1)
+    ideal_targets = [i * interval for i in range(num_scenes)]
+
+    min_step = min(2.0, max(0.2, interval * 0.75))
+    selected_starts = []
+    for idx, t in enumerate(ideal_targets):
+        if idx == 0:
+            selected_starts.append(0.0)
+            continue
+
+        min_prev = selected_starts[-1] + min_step
+        valid_cuts = [c for c in cuts if min_prev <= c <= t + 1.8 and c <= max_start]
+        if valid_cuts:
+            best_cut = min(valid_cuts, key=lambda c: abs(c - t))
+        else:
+            best_cut = min(max_start, max(min_prev, t))
+
+        if best_cut <= selected_starts[-1]:
+            best_cut = selected_starts[-1] + min(0.5, max(0.1, (total_dur - selected_starts[-1]) / (num_scenes - idx + 1)))
+
+        selected_starts.append(round(best_cut, 2))
+
+    return selected_starts[:num_scenes], glitch_intervals

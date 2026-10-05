@@ -1,7 +1,7 @@
 """Cover / Thumbnail Generator for Facebook Reels."""
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from tools.shopee_ad.product_parser import ProductInfo
 from tools.shopee_ad.storyboard import SceneDefinition, clean_product_title
@@ -33,6 +33,7 @@ def create_cover_image(
     output_cover_path: Path,
     channel_badge: str = "",
     time_offset_s: float = 1.2,
+    delogo: Optional[str] = None,
 ) -> Path:
     """
     Extract a high-impact 9:16 frame from the video/scene and burn an eye-catching
@@ -81,11 +82,13 @@ def create_cover_image(
     sub_file.write_text(subtitle.strip(), encoding="utf-8")
     sub_ff = _format_ffmpeg_path(sub_file)
 
-    filters = [
-        "delogo=x=568:y=1120:w=64:h=64",
+    filters = []
+    if delogo:
+        filters.append(delogo)
+    filters.extend([
         f"drawtext=textfile='{title_ff}':{font_spec}:fontsize={hook_fontsize}:fontcolor=yellow:borderw=4:bordercolor=black:box=1:boxcolor=black@0.75:boxborderw=16:x=(w-text_w)/2:y=180",
         f"drawtext=textfile='{sub_ff}':{font_spec}:fontsize={sub_fontsize}:fontcolor=white:borderw=3:bordercolor=black:box=1:boxcolor=black@0.65:boxborderw=12:x=(w-text_w)/2:y=280",
-    ]
+    ])
 
     vf_str = ",".join(filters)
     cmd = [

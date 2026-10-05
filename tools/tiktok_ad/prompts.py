@@ -2,6 +2,9 @@
 Dedicated to viral hooks, physical product categories, macro POV B-roll, KOC personas, and TikTok Shop CTAs.
 """
 from typing import List, Optional
+
+from tools.common.models import SceneDefinition
+from tools.shopee_ad.prompts import _build_flow_cinematic_scenes
 from tools.tiktok_ad.product_parser import ProductInfo
 
 
@@ -42,10 +45,8 @@ def build_viral_hook_scenes(
     social_proof_title: str,
     custom_idea: Optional[str] = None,
     product: Optional[ProductInfo] = None,
-) -> list:
+) -> List[SceneDefinition]:
     """Generate 4 fast-paced viral TikTok scenes with an instant hook in the first 2-3 seconds."""
-    from tools.tiktok_ad.storyboard import SceneDefinition
-
     has_video = bool(product and product.video_name)
     num_images = len(product.image_names) if product and product.image_names else 1
 
@@ -69,7 +70,10 @@ def build_viral_hook_scenes(
     elif category == "FASHION_APPAREL":
         hook_text = f"Mỗi sáng đứng trước tủ đồ không biết mặc gì vừa đẹp vừa tôn dáng? Khám phá ngay mẫu {clean_title} này nhé!"
         hook_title = "ĐAU ĐẦU CHỌN OUTFIT?"
-        hook_sub = "Tôn Dáng Tự Nhiên"
+    elif any(k in clean_title.lower() for k in ["túi hút chân không", "túi nén", "hút chân không", "vali", "chăn màn", "tủ quần áo", "gấp gọn", "vali gia đình", "nén"]):
+        hook_text = f"Chuẩn bị đi du lịch hay dọn tủ mà quần áo cồng kềnh nhét mãi không vừa vali? Dùng ngay {clean_title} này xẹp 80% nha!"
+        hook_title = "VALI CHẬT NÍCH?"
+        hook_sub = "Hút Xẹp 80% Diện Tích"
     else:
         hook_text = f"Ai đang gặp phiền toái mỗi ngày mà chưa tìm được cách xử lý? Trải nghiệm ngay {clean_title} cực kỳ hữu ích này nhé!"
         hook_title = "BẠN ĐANG TÌM GIẢI PHÁP?"
@@ -159,10 +163,8 @@ def build_faceless_pov_scenes(
     social_proof_title: str,
     custom_idea: Optional[str] = None,
     product: Optional[ProductInfo] = None,
-) -> list:
+) -> List[SceneDefinition]:
     """Generate 4 100% Faceless First-Person POV scenes (hands/feet only, macro close-ups)."""
-    from tools.tiktok_ad.storyboard import SceneDefinition
-
     has_video = bool(product and product.video_name)
     num_images = len(product.image_names) if product and product.image_names else 1
 
@@ -205,6 +207,14 @@ def build_faceless_pov_scenes(
         pov_summary_prompt = (
             f"Vertical 9:16 RAW POV mirror shot or flat-lay outfit presentation with {clean_title}. "
             f"Chic aesthetic room lighting, stylish wardrobe background. Completely faceless."
+        )
+    elif any(k in clean_title.lower() for k in ["túi hút chân không", "túi nén", "hút chân không", "vali", "chăn màn", "tủ quần áo", "gấp gọn", "vali gia đình", "nén"]):
+        pov_summary_text = "Bảo vệ quần áo chống ẩm mốc bụi bẩn suốt 6-8 tháng, kéo khóa vali nhẹ tênh, đi du lịch cực kỳ thảnh thơi!"
+        pov_summary_title = "KÉO KHÓA NHẸ TÊNH"
+        pov_summary_sub = "Bảo Vệ Chống Ẩm Mốc"
+        pov_summary_prompt = (
+            f"Vertical 9:16 RAW POV shot of closed suitcase with zipper neatly pulled, neat luggage ready for travel. "
+            f"Warm natural morning light. Completely faceless."
         )
     else:
         pov_summary_text = "Một món đồ nhỏ nhưng mang lại tiện ích vượt trội, nâng cấp chất lượng cuộc sống mỗi ngày!"
@@ -281,10 +291,8 @@ def build_problem_solution_scenes(
     feat2_desc: str,
     custom_idea: Optional[str] = None,
     product: Optional[ProductInfo] = None,
-) -> list:
+) -> List[SceneDefinition]:
     """Generate 4 Problem-Solution drama scenes."""
-    from tools.tiktok_ad.storyboard import SceneDefinition
-
     has_video = bool(product and product.video_name)
     num_images = len(product.image_names) if product and product.image_names else 1
 
@@ -311,8 +319,11 @@ def build_problem_solution_scenes(
     elif category == "FASHION_APPAREL":
         prob_title = "LOAY HOAY CHỌN ĐỒ?"
         prob_text = f"Mỗi sáng đứng trước tủ đồ không biết mặc gì vừa vặn, chỉn chu? Đừng tốn thời gian loay hoay nữa!"
-        sol_text = f"Mẫu {clean_title} này chính là giải pháp hoàn hảo, lên form cực chuẩn và tôn dáng tự nhiên."
-        satisfaction_text = "Tự tin diện đẹp đi làm hay dạo phố, thu hút mọi ánh nhìn xung quanh!"
+    elif any(k in clean_title.lower() for k in ["túi hút chân không", "túi nén", "hút chân không", "vali", "chăn màn", "tủ quần áo", "gấp gọn", "vali gia đình", "nén"]):
+        prob_title = "ĐỒ CỒNG KỀNH CHẬT CHỖ?"
+        prob_text = "Mỗi lần chuyển mùa hay chuẩn bị đi xa, nhìn đống chăn màn, áo phao cồng kềnh chất đống chiếm hết cả phòng mà phát ngợp đúng không? Thử ngay cách này nha!"
+        sol_text = f"Dùng {clean_title} này xem. Khóa zip đôi kín khít, van silicon một chiều hút sạch không khí, nén xẹp phẳng lì chỉ sau 10 giây, giảm ngay 80% diện tích!"
+        satisfaction_text = "Chất liệu PA PE dẻo dai dày dặn, dọn tủ hay xếp vali đều gọn gàng, thảnh thơi lên đường tận hưởng chuyến đi!"
     else:
         prob_title = "BẤT TIỆN HÀNG NGÀY?"
         prob_text = f"Những phiền toái nhỏ trong cuộc sống làm bạn mất thời gian và khó chịu? Đừng để kéo dài nữa!"
@@ -372,12 +383,9 @@ def build_flow_cinematic_scenes(
     feat2_desc: str,
     social_proof_title: str,
     custom_idea: Optional[str] = None,
-) -> list:
+) -> List[SceneDefinition]:
     """Generate 4 cinematic AI scenes tailored to category with character consistency."""
-    from tools.shopee_ad.prompts import _build_flow_cinematic_scenes
-    from tools.tiktok_ad.storyboard import SceneDefinition
-
-    raw_scenes = _build_flow_cinematic_scenes(
+    return _build_flow_cinematic_scenes(
         category=category,
         clean_title=clean_title,
         feat1_title=feat1_title,
@@ -387,21 +395,6 @@ def build_flow_cinematic_scenes(
         social_proof_title=social_proof_title,
         custom_idea=custom_idea,
     )
-    return [
-        SceneDefinition(
-            id=s.id,
-            name=s.name,
-            kind=s.kind,
-            narrator_text=s.narrator_text,
-            overlay_title=s.overlay_title,
-            overlay_subtitle=s.overlay_subtitle,
-            real_start_sec=s.real_start_sec,
-            image_index=s.image_index,
-            prompt=s.prompt,
-            video_prompt=s.video_prompt,
-        )
-        for s in raw_scenes
-    ]
 
 
 def build_lifestyle_edc_scenes(
@@ -413,10 +406,8 @@ def build_lifestyle_edc_scenes(
     feat2_desc: str,
     custom_idea: Optional[str] = None,
     product: Optional[ProductInfo] = None,
-) -> list:
+) -> List[SceneDefinition]:
     """Generate 4 active lifestyle scenes tailored to category."""
-    from tools.tiktok_ad.storyboard import SceneDefinition
-
     has_video = bool(product and product.video_name)
     num_images = len(product.image_names) if product and product.image_names else 1
     idea_ctx = f" ({custom_idea})" if custom_idea else ""

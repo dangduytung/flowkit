@@ -2,28 +2,31 @@
 import json
 import logging
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from tools.common.models import SceneDefinition
 from tools.shopee_ad.config import DEFAULT_CHANNEL_NAME
 from tools.shopee_ad.product_parser import ProductInfo
+from tools.shopee_ad.prompts import (
+    _build_cta_scene,
+    _build_faceless_pov_scenes,
+    _build_flow_cinematic_scenes,
+    _build_lifestyle_edc_scenes,
+    _build_problem_solution_scenes,
+)
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class SceneDefinition:
-    id: int
-    name: str
-    kind: str  # "FLOW_AI", "PRODUCT_PHOTO", "REAL_FOOTAGE", or "IMAGE_SLIDE"
-    narrator_text: str
-    overlay_title: str
-    overlay_subtitle: str
-    real_start_sec: float = 0.0
-    image_index: int = 0
-    prompt: Optional[str] = None
-    video_prompt: Optional[str] = None
+__all__ = [
+    "SceneDefinition",
+    "clean_product_title",
+    "detect_product_category",
+    "extract_product_features",
+    "generate_default_storyboard",
+    "load_or_create_storyboard",
+]
 
 
 def clean_product_title(raw_name: str) -> str:
@@ -80,10 +83,7 @@ def clean_product_title(raw_name: str) -> str:
             core_words = [w for w in words[:3] if w.upper() != brand.upper()]
             short = " ".join(core_words) + " " + brand
         else:
-            if len(words) >= 5 and words[3].lower() in ["văn", "công", "tiện", "đa", "thông", "chống", "siêu"]:
-                short = " ".join(words[:5])
-            else:
-                short = " ".join(words[:4])
+            short = " ".join(words[:5])
 
     # Capitalize brand nicely if all-caps
     res_words = []
@@ -206,12 +206,21 @@ def detect_product_category(name: str, description_text: str = "") -> str:
     if _matches(beauty_kw):
         return "BEAUTY_SKINCARE"
 
+    # 1.5 Storage & Home Organization & Travel
+    storage_kw = [
+        "túi hút chân không", "túi nén hút chân không", "túi nén", "túi đựng", "hộp đựng đồ",
+        "giá treo", "tủ vải", "kệ để giày", "vali", "sắp xếp tủ", "chăn màn"
+    ]
+    if _matches(storage_kw):
+        return "GENERAL_LIFESTYLE"
+
     # 2. Kitchen & Home Appliances
     kitchen_kw = [
         "chảo", "chảo chống dính", "nồi", "nồi chiên", "nồi cơm", "nồi áp suất",
         "bếp từ", "bếp ga", "bếp hồng ngoại", "dao bếp", "thớt", "máy xay",
         "máy ép", "máy làm sữa hạt", "ấm đun", "ấm siêu tốc", "bình giữ nhiệt",
         "cốc giữ nhiệt", "hộp cơm", "hộp giữ nhiệt", "máy hút bụi", "robot hút bụi",
+        "máy hút chân không", "hút chân không thực phẩm",
         "cây lau nhà", "bàn ủi", "bàn là", "máy lọc không khí", "quạt tích điện",
         "quạt mini", "ga trải giường", "khăn tắm", "đồ gia dụng"
     ]
@@ -310,13 +319,6 @@ def generate_default_storyboard(
             pass
 
     num_images = len(info.image_names) if info.image_names else 1
-
-    from tools.shopee_ad.prompts import (
-        _build_flow_cinematic_scenes,
-        _build_problem_solution_scenes,
-        _build_lifestyle_edc_scenes,
-        _build_faceless_pov_scenes,
-    )
 
     if style in ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov"):
         scenes = _build_faceless_pov_scenes(
@@ -420,7 +422,6 @@ def generate_default_storyboard(
                 narrator_text=f"Bạn đang tìm một món đồ vừa chất lượng vừa tiện lợi cho {clean_title}? Cùng mình khám phá trải nghiệm thực tế ngay trong video này nhé!",
                 overlay_title="TRẢI NGHIỆM THỰC TẾ",
                 overlay_subtitle=clean_title,
-                real_start_sec=0.0,
                 image_index=0,
             ),
             SceneDefinition(
@@ -430,7 +431,6 @@ def generate_default_storyboard(
                 narrator_text=f"Đây là chiếc {clean_title}, thiết kế tối giản thông minh, cầm đầm tay chắc chắn và cực kỳ tiện dụng mỗi ngày.",
                 overlay_title=clean_title[:28].upper(),
                 overlay_subtitle="Nhỏ gọn - Cực kỳ tiện dụng",
-                real_start_sec=5.0,
                 image_index=min(1, num_images - 1),
             ),
             SceneDefinition(
@@ -440,7 +440,6 @@ def generate_default_storyboard(
                 narrator_text=f"{feat1_desc}. Mọi chi tiết hoàn thiện chỉn chu, mang lại cảm giác an tâm và hài lòng tuyệt đối khi sử dụng.",
                 overlay_title=feat1_title,
                 overlay_subtitle="Hiệu năng mượt mà",
-                real_start_sec=15.0,
                 image_index=min(2, num_images - 1),
             ),
             SceneDefinition(
@@ -450,13 +449,11 @@ def generate_default_storyboard(
                 narrator_text=f"{feat2_desc}. Sản phẩm được rất nhiều bạn đánh giá cao và tin dùng sau khi trực tiếp trải nghiệm.",
                 overlay_title=social_proof_title,
                 overlay_subtitle=feat2_title[:28],
-                real_start_sec=25.0,
                 image_index=min(3, num_images - 1),
             ),
         ]
 
     # Optional CTA Scene 5
-    from tools.shopee_ad.prompts import _build_cta_scene
     cta_scene = _build_cta_scene(
         scene_id=len(scenes) + 1,
         cta_mode=cta_mode,
