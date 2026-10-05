@@ -1,9 +1,13 @@
-"""Multi-Platform Caption & Metadata Generator (Facebook Reels, TikTok, YouTube Shorts)."""
+"""Multi-Platform Caption & Metadata Generator for TikTok Ads (TikTok, Facebook Reels, YouTube Shorts)."""
 from pathlib import Path
 from typing import Dict, List
-from tools.shopee_ad.config import DEFAULT_CHANNEL_NAME, DEFAULT_CHANNEL_HANDLE
-from tools.shopee_ad.product_parser import ProductInfo
-from tools.shopee_ad.storyboard import SceneDefinition, clean_product_title, detect_product_category
+from tools.tiktok_ad.config import DEFAULT_CHANNEL_NAME, DEFAULT_CHANNEL_HANDLE
+from tools.tiktok_ad.product_parser import ProductInfo
+from tools.tiktok_ad.storyboard import (
+    SceneDefinition,
+    clean_product_title,
+    detect_product_category,
+)
 
 
 def _get_category_meta(category: str):
@@ -29,62 +33,6 @@ def _extract_bullets(scenes: List[SceneDefinition]) -> str:
     return "\n".join(feat_lines[:3])
 
 
-def create_facebook_caption(
-    product: ProductInfo,
-    scenes: List[SceneDefinition],
-    output_path: Path,
-    channel_name: str = DEFAULT_CHANNEL_NAME,
-    channel_handle: str = DEFAULT_CHANNEL_HANDLE,
-) -> str:
-    """Generate anti-reach-suppression Facebook Reels copy (caption + pinned comment)."""
-    clean_title = clean_product_title(product.name)
-    category = detect_product_category(product.name, product.description_text)
-    icon, theme = _get_category_meta(category)
-    bullets_text = _extract_bullets(scenes)
-
-    if product.rating:
-        social_proof = f"⭐ Đánh giá uy tín {product.rating} sao từ người tiêu dùng!"
-    else:
-        social_proof = "⭐ Sản phẩm chất lượng được đông đảo khách hàng tin dùng!"
-
-    channel_header = f"[{channel_name.upper()}] " if channel_name else ""
-    follow_target = f" {channel_handle}" if channel_handle else " kênh"
-    bio_target = f" trang {channel_handle}" if channel_handle else " trang"
-
-    caption = f"""======================================================================
-📘 FACEBOOK REELS & WATCH POST
-======================================================================
-📌 PHẦN 1: DÁN VÀO PHẦN MÔ TẢ (CAPTION) KHI ĐĂNG BÀI
-(Không chứa link ngoài -> Giữ 100% phân phối thuật toán Reels, không bị bóp reach)
-----------------------------------------------------------------------
-{icon} {channel_header}{clean_title.upper()} - {theme.upper()}! 💡
-
-Bạn đang tìm kiếm giải pháp giúp cuộc sống tiện nghi, ngăn nắp và tiết kiệm thời gian hơn? Xem ngay món đồ cực hot này nhé!
-
-✨ Điểm nổi bật không thể bỏ qua:
-{bullets_text}
-{f'{social_proof}' if social_proof else ''}
-
-👉 Link tham khảo và săn deal chính hãng mình để dưới phần BÌNH LUẬN (Comment ghim) nhé cả nhà!
-👉 Bấm Follow{follow_target} để bỏ túi thêm nhiều món đồ tiện ích thông minh và mẹo hay cho không gian sống mỗi ngày!
-
-#giadungthongminh #meovatcuocsong #decorphong #review #lifestyle #xuhuong #reelsvn #tienich
-
-
-----------------------------------------------------------------------
-📌 PHẦN 2: DÁN VÀO BÌNH LUẬN ĐẦU TIÊN (VÀ BẤM GHIM BÌNH LUẬN / PIN COMMENT)
-(Cách chuẩn của các KOC triệu view để điều hướng mua hàng an toàn)
-----------------------------------------------------------------------
-👉 Link sản phẩm chính hãng và mã giảm giá hôm nay ở đây nhé cả nhà:
-🔗 {product.url or 'Đang cập nhật link Shopee...'}
-(Nếu link không bấm được trên điện thoại, các bạn có thể vào Bio{bio_target} để lấy link nha!)
-"""
-    output_path = Path(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(caption.strip(), encoding="utf-8")
-    return caption.strip()
-
-
 def create_tiktok_caption(
     product: ProductInfo,
     scenes: List[SceneDefinition],
@@ -92,27 +40,71 @@ def create_tiktok_caption(
     channel_name: str = DEFAULT_CHANNEL_NAME,
     channel_handle: str = DEFAULT_CHANNEL_HANDLE,
 ) -> str:
-    """Generate high-CTR TikTok video description and hashtags (under 150 chars for mobile fit)."""
+    """Generate high-CTR TikTok video description and hashtags for TikTok Shop."""
     clean_title = clean_product_title(product.name)
     category = detect_product_category(product.name, product.description_text)
     icon, theme = _get_category_meta(category)
 
+    price_str = f" với giá chỉ {product.price}" if product.price else ""
     bio_target = f"Bio {channel_handle}" if channel_handle else "Bio kênh"
 
     caption = f"""======================================================================
 🎵 TIKTOK VIDEO & TIKTOK SHOP
 ======================================================================
 📌 PHẦN 1: DÁN VÀO PHẦN MÔ TẢ (CAPTION TIKTOK)
-(Ngắn gọn, giật tít, kích thích bấm vào xem và vào Bio)
+(Ngắn gọn, giật tít, kích thích bấm vào giỏ hàng màu vàng)
 ----------------------------------------------------------------------
-{icon} {clean_title} - Món đồ tiện ích cứu cánh không thể thiếu! 💡 Xem chi tiết và săn deal tại link {bio_target} nhé cả nhà! #review #gocreview #learnontiktok #giadungthongminh #tienich #xuhuong #fyp #dcgr
+{icon} {clean_title}{price_str} - {theme}! 💡 Bấm ngay vào giỏ hàng màu vàng góc trái màn hình hoặc xem thêm tại {bio_target} nhé cả nhà! #TikTokShop #review #gocreview #learnontiktok #tienich #xuhuong #fyp #dcgr
 
 
 ----------------------------------------------------------------------
 📌 PHẦN 2: BÌNH LUẬN ĐẦU TIÊN (GHIM COMMENT HOẶC GẮN GIỎ HÀNG)
 ----------------------------------------------------------------------
-👉 Link săn sale chính hãng: {product.url or 'Xem tại link Bio đầu trang nha cả nhà!'}
-(Nếu có TikTok Shop: Bấm nút 'Thêm liên kết sản phẩm' vào giỏ hàng màu vàng ở góc dưới video)
+👉 Link sản phẩm chính hãng: {product.url or 'Xem tại link Bio đầu trang nha cả nhà!'}
+(Khi đăng video: Nhớ bấm nút 'Thêm liên kết sản phẩm' để hiện Giỏ Hàng Màu Vàng ở góc dưới bên trái)
+"""
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(caption.strip(), encoding="utf-8")
+    return caption.strip()
+
+
+def create_facebook_caption(
+    product: ProductInfo,
+    scenes: List[SceneDefinition],
+    output_path: Path,
+    channel_name: str = DEFAULT_CHANNEL_NAME,
+    channel_handle: str = DEFAULT_CHANNEL_HANDLE,
+) -> str:
+    """Generate anti-reach-suppression Facebook Reels copy."""
+    clean_title = clean_product_title(product.name)
+    category = detect_product_category(product.name, product.description_text)
+    icon, theme = _get_category_meta(category)
+    bullets_text = _extract_bullets(scenes)
+
+    follow_target = f" {channel_handle}" if channel_handle else " kênh"
+    bio_target = f" trang {channel_handle}" if channel_handle else " trang"
+
+    caption = f"""======================================================================
+📘 FACEBOOK REELS & WATCH POST
+======================================================================
+📌 PHẦN 1: NỘI DUNG BÀI ĐĂNG (CAPTION BÀI VIẾT)
+----------------------------------------------------------------------
+{icon} {clean_title.upper()} - {theme.upper()}!
+
+Khám phá trải nghiệm thực tế với món đồ tiện ích không thể thiếu:
+{bullets_text}
+
+👉 Chi tiết sản phẩm mình để ở phần BÌNH LUẬN ĐẦU TIÊN phía dưới bài viết nhé!
+(Follow{follow_target} để săn thêm nhiều món đồ tiện ích mỗi ngày)
+#reels #review #tienich #cuocsong
+
+----------------------------------------------------------------------
+📌 PHẦN 2: BÌNH LUẬN ĐẦU TIÊN (COMMENT GHIM)
+----------------------------------------------------------------------
+👉 Link sản phẩm và ưu đãi hôm nay ở đây nhé cả nhà:
+🔗 {product.url or 'Đang cập nhật link...'}
+(Hoặc xem tại link Bio{bio_target} nha!)
 """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -129,8 +121,6 @@ def create_youtube_shorts_caption(
 ) -> str:
     """Generate SEO-rich YouTube Shorts title, description, tags, and pinned comment."""
     clean_title = clean_product_title(product.name)
-    category = detect_product_category(product.name, product.description_text)
-    icon, theme = _get_category_meta(category)
     bullets_text = _extract_bullets(scenes)
 
     caption = f"""======================================================================
@@ -144,30 +134,25 @@ def create_youtube_shorts_caption(
 ----------------------------------------------------------------------
 📌 PHẦN 2: MÔ TẢ VIDEO (DESCRIPTION)
 ----------------------------------------------------------------------
-{icon} Khám phá {clean_title} - {theme}!
+Review trải nghiệm thực tế {clean_title} - Giải pháp cực kỳ tiện lợi cho cuộc sống và không gian của bạn.
 
-✨ Tính năng nổi bật:
+Điểm nổi bật:
 {bullets_text}
 
-🛒 Mua hàng chính hãng kèm mã giảm giá hôm nay:
-🔗 {product.url or 'Xem link mua hàng tại bình luận ghim bên dưới!'}
+👉 Link sản phẩm chính hãng: Xem ở bình luận đã ghim phía dưới nhé!
 
-Đừng quên bấm LIKE và ĐĂNG KÝ KÊNH để cập nhật thêm nhiều video review đồ gia dụng & công nghệ tiện ích mỗi ngày nhé!
-
-#Shorts #Review #GiaDungThongMinh #TienIch #CongNghe
-
+#shorts #review #tienich #{clean_title.replace(' ', '').lower()}
 
 ----------------------------------------------------------------------
 📌 PHẦN 3: BÌNH LUẬN GHIM (PINNED COMMENT)
 ----------------------------------------------------------------------
-👉 Link mua sản phẩm chính hãng và nhận ưu đãi ở đây nhé cả nhà:
-🔗 {product.url or 'Đang cập nhật link mua hàng...'}
-
+👉 Mọi người xem chi tiết sản phẩm và săn sale tại link này nha:
+🔗 {product.url or 'Xem tại link mô tả kênh nha!'}
 
 ----------------------------------------------------------------------
-📌 PHẦN 4: THẺ TAGS YOUTUBE (COPY DÁN VÀO Ô TAGS)
+📌 PHẦN 4: THẺ TAGS YOUTUBE
 ----------------------------------------------------------------------
-review, review đồ gia dụng, đồ gia dụng thông minh, tiện ích đời sống, {clean_title.lower()}, mua hàng shopee, review shopee, shorts
+review, review đồ tiện ích, tiện ích đời sống, {clean_title.lower()}, tiktok shop, shorts
 """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -183,19 +168,21 @@ def generate_all_platform_captions(
     channel_handle: str = DEFAULT_CHANNEL_HANDLE,
     variant_suffix: Optional[str] = None,
 ) -> Dict[str, Path]:
-    """Generate all captions for Facebook Reels, TikTok, and YouTube Shorts."""
+    """Generate all captions for TikTok, Facebook Reels, and YouTube Shorts."""
     final_dir = Path(final_dir)
     prefix = f"{product.slug}_{variant_suffix}" if variant_suffix else product.slug
-    fb_path = final_dir / f"{prefix}_facebook_caption.txt"
     tt_path = final_dir / f"{prefix}_tiktok_caption.txt"
+    fb_path = final_dir / f"{prefix}_facebook_caption.txt"
     yt_path = final_dir / f"{prefix}_youtube_shorts.txt"
 
-    create_facebook_caption(product, scenes, fb_path, channel_name, channel_handle)
     create_tiktok_caption(product, scenes, tt_path, channel_name, channel_handle)
-    create_youtube_shorts_caption(product, scenes, yt_path, channel_name, channel_handle)
+    create_facebook_caption(product, scenes, fb_path, channel_name, channel_handle)
+    create_youtube_shorts_caption(
+        product, scenes, yt_path, channel_name, channel_handle
+    )
 
     return {
-        "facebook": fb_path,
         "tiktok": tt_path,
+        "facebook": fb_path,
         "youtube": yt_path,
     }
