@@ -94,6 +94,12 @@ def create_cover_image(
     filters = []
     if delogo:
         filters.append(delogo)
+    else:
+        filters.append("delogo=x=546:y=1120:w=68:h=104")
+
+    # Add subtle sensor grain to cover delogo boundary and match realistic photography
+    filters.append("noise=alls=5:allf=t")
+
     filters.extend([
         f"drawtext=textfile='{title_ff}':{font_spec}:fontsize={hook_fontsize}:fontcolor=yellow:borderw=4:bordercolor=black:box=1:boxcolor=black@0.75:boxborderw=16:x=(w-text_w)/2:y=180",
         f"drawtext=textfile='{sub_ff}':{font_spec}:fontsize={sub_fontsize}:fontcolor=white:borderw=3:bordercolor=black:box=1:boxcolor=black@0.65:boxborderw=12:x=(w-text_w)/2:y=280",
@@ -107,6 +113,7 @@ def create_cover_image(
         "-vf", vf_str,
         "-frames:v", "1",
         "-q:v", "2",
+        "-map_metadata", "-1",
         str(output_cover_path),
     ]
 
