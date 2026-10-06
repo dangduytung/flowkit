@@ -108,6 +108,8 @@ def assemble_scene_clip(
             f"box=1:boxcolor=black@0.5:boxborderw=8:x=(w-text_w)/2:y=210"
         )
 
+    # Subtle camera sensor grain to remove synthetic AI plasticity
+    filters.append("noise=alls=4:allf=t")
     vf_str = ",".join(filters)
 
     cmd = ["ffmpeg", "-y"]
@@ -115,22 +117,52 @@ def assemble_scene_clip(
         cmd.extend(["-stream_loop", "-1"])
     cmd.extend(["-i", str(video_path)])
 
-    if has_audio:
-        cmd.extend(["-i", str(audio_path)])
-    else:
-        # Standard silent stereo audio to guarantee TikTok/Reels container compatibility
-        cmd.extend(["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"])
+    # Check if video clip has native audio (e.g. Google Flow ambient sound/foley)
+    video_has_audio = False
+    try:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(video_path)],
+            capture_output=True, text=True,
+        )
+        video_has_audio = bool(probe.stdout.strip())
+    except Exception:
+        video_has_audio = False
 
-    cmd.extend([
-        "-vf", vf_str,
-        "-map", "0:v:0",
-        "-map", "1:a:0",
-        "-t", f"{total_duration:.2f}",
-        "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
-        "-shortest",
-        str(output_path)
-    ])
+    if has_audio and video_has_audio:
+        cmd.extend(["-i", str(audio_path)])
+        filter_complex = (
+            f"[0:v]{vf_str}[v];"
+            f"[0:a]volume=0.45,aresample=48000[amb];"
+            f"[1:a]volume=1.0,aresample=48000[voc];"
+            f"[amb][voc]amix=inputs=2:duration=first:dropout_transition=2[aout]"
+        )
+        cmd.extend([
+            "-filter_complex", filter_complex,
+            "-map", "[v]",
+            "-map", "[aout]",
+            "-t", f"{total_duration:.2f}",
+            "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+            "-shortest",
+            str(output_path)
+        ])
+    else:
+        if has_audio:
+            cmd.extend(["-i", str(audio_path)])
+        else:
+            # Standard silent stereo audio to guarantee TikTok/Reels container compatibility
+            cmd.extend(["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"])
+
+        cmd.extend([
+            "-vf", vf_str,
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-t", f"{total_duration:.2f}",
+            "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+            "-shortest",
+            str(output_path)
+        ])
 
     subprocess.run(cmd, capture_output=True, text=True, check=True)
     return output_path

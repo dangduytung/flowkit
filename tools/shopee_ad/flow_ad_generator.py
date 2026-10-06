@@ -28,6 +28,7 @@ from tools.shopee_ad.config import (
     OUTPUT_ROOT,
     SHOPEE_DOWNLOADS_DIR,
     list_available_zips,
+    resolve_bgm_path,
 )
 from tools.shopee_ad.product_parser import ProductInfo, parse_product_zip
 from tools.shopee_ad.storyboard import SceneDefinition, load_or_create_storyboard
@@ -251,6 +252,7 @@ def generate_flow_ad(
     no_voice: bool = False,
     no_overlay: bool = False,
     tag: Optional[str] = None,
+    bgm_path: Optional[Path | str] = None,
 ) -> Path:
     """Execute Method 2 (Google Flow Omni 1.1 Flash AI Video + Real Product Photos)."""
     channel_name = channel_name or DEFAULT_CHANNEL_NAME
@@ -326,7 +328,7 @@ def generate_flow_ad(
         storyboard_file,
         style=style,
         cta_mode=cta_mode,
-        force=force_storyboard or regen,
+        force=force_storyboard,
         custom_idea=custom_idea,
         channel_name=channel_name,
     )
@@ -354,14 +356,27 @@ def generate_flow_ad(
             audio_files[sc.id] = None
             audio_durations[sc.id] = 5.0
 
+    ai_scenes = [sc for sc in scenes if sc.kind in ("FLOW_AI", "AI")]
+
     # 6. Generate AI Video with Character Consistency via Google Flow
-    is_faceless = style in ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov")
+    is_faceless = (
+        style in ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov")
+        or (
+            bool(ai_scenes)
+            and all(
+                (
+                    "no face" in (s.prompt or "").lower()
+                    or "hands only" in (s.prompt or "").lower()
+                    or "no human face" in (s.prompt or "").lower()
+                )
+                for s in ai_scenes
+            )
+        )
+    )
     if is_faceless:
         print("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow (Phong cách POV / Hands-On 100% Không Lộ Mặt)...")
     else:
         print("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow (Bảo đảm nhân vật nhất quán)...")
-
-    ai_scenes = [sc for sc in scenes if sc.kind in ("FLOW_AI", "AI")]
 
     # Find Scene 1 (the anchor scene that establishes the human character)
     scene_1 = next((sc for sc in ai_scenes if sc.id == 1), (ai_scenes[0] if ai_scenes else None))
@@ -458,7 +473,13 @@ def generate_flow_ad(
                 "project_id": project_id,
             })
             logger.info(f"Scene {idx} submitted (abra_r2v consistent character): op_name={op_name}")
-        elif ref_media_ids and (is_faceless_scene or "hands" in p_lower or "product" in p_lower or idx == 2):
+        elif (
+            ref_media_ids
+            and getattr(sc, "use_product_ref", True)
+            and getattr(sc, "image_index", 0) is not None
+            and getattr(sc, "image_index", 0) >= 0
+            and (is_faceless_scene or "hands" in p_lower or "product" in p_lower)
+        ):
             print(f"  • Đang gửi Scene {idx} (AI - Reference Sản Phẩm ZIP): {sc.overlay_title}...")
             ref_idx = sc.image_index % len(ref_media_ids) if ref_media_ids else 0
             payload = {
@@ -544,15 +565,19 @@ def generate_flow_ad(
         )
         assembled_scenes.append(scene_out)
 
+    effective_bgm = resolve_bgm_path(custom_bgm=bgm_path, style=style, product_assets_dir=assets_dir)
+    if effective_bgm:
+        print(f"🎵 [Nhạc Nền BGM] Tự động kích hoạt: {effective_bgm.name}...")
+
     if not no_voice:
         final_output = final_dir / f"{product.slug}_flow_{variant}.mp4"
         print(f"\n🎞️ Đang ghép toàn bộ các phân cảnh thành video {final_output.name}...")
-        concat_scenes(assembled_scenes, final_output)
+        concat_scenes(assembled_scenes, final_output, bgm_path=effective_bgm)
         video_map = {"flow": final_output}
     else:
         final_output = final_dir / f"{product.slug}_flow_{variant}_silent.mp4"
         print(f"\n🎞️ Đang ghép toàn bộ các phân cảnh thành video {final_output.name}...")
-        concat_scenes(assembled_scenes, final_output)
+        concat_scenes(assembled_scenes, final_output, bgm_path=effective_bgm)
         video_map = {"flow_silent": final_output}
 
     print("📝 Đang tạo bộ caption & metadata đa nền tảng (Facebook, TikTok, YouTube Shorts)...")
@@ -566,7 +591,8 @@ def generate_flow_ad(
     )
 
     # 8. Generate 9:16 Cover Image (Thumbnail)
-    cover_source = assembled_scenes[0] if assembled_scenes else (clips_dir / f"{style}_raw_01.mp4")
+    raw_s1 = clips_dir / f"{style}_raw_01.mp4"
+    cover_source = raw_s1 if (raw_s1.exists() and raw_s1.stat().st_size > 1000) else (assembled_scenes[0] if assembled_scenes else final_output)
     if not cover_source.exists() or cover_source.stat().st_size < 1000:
         cover_source = final_output
     cover_path = final_dir / f"{product.slug}_{variant}_cover.jpg"
@@ -636,6 +662,13 @@ def main():
     parser.add_argument("--channel-name", type=str, default=DEFAULT_CHANNEL_NAME, help="Tên kênh xuất bản")
     parser.add_argument("--channel-handle", type=str, default=DEFAULT_CHANNEL_HANDLE, help="Handle/ID kênh")
     parser.add_argument("--tag", type=str, default=None, help="Gắn nhãn/tag tùy chỉnh cho video xuất bản (ví dụ: --tag v2)")
+    parser.add_argument(
+        "--bgm",
+        nargs="?",
+        const="auto",
+        default=None,
+        help="Bật nhạc nền BGM (mặc định tắt): gõ --bgm để ngẫu nhiên từ assets/bgm/ hoặc --bgm <path> chỉ định file",
+    )
 
     args = parser.parse_args()
     target_zip = Path(args.zip) if args.zip else None
@@ -654,6 +687,7 @@ def main():
         channel_name=args.channel_name,
         channel_handle=args.channel_handle,
         tag=args.tag,
+        bgm_path=args.bgm,
     )
 
 

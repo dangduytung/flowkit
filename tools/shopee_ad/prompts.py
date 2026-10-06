@@ -461,8 +461,8 @@ def _build_flow_cinematic_scenes(
                     f"Vertical 9:16 authentic fast-paced commercial ad video. Medium shot, bright natural morning sunlight, 60fps real-time commercial look. "
                     f"Featuring {persona['cont']}, standing beside the sleek, fully packed upright suitcase. In one swift, effortless motion, they glide the exterior zipper completely shut, "
                     f"give the top of the suitcase a satisfied proud pat with their hand, and pull up the aluminum handle with a crisp click. "
-                    f"They look directly at camera with a beaming, confident smile and give a cheerful thumbs-up, ready to travel. "
-                    f"Crisp energetic movement, natural human speed, stable physics, not floaty. Mouth closed, no speaking. NO text overlays."
+                    f"They look directly at camera with a beaming, confident smile and relaxed nod, ready to travel. "
+                    f"Crisp energetic movement, natural human speed, stable physics, not floaty. Mouth closed, no speaking. NO thumbs-up, NO distorted fingers. NO text overlays."
                 ),
             ),
         ]
@@ -1006,7 +1006,7 @@ def _build_problem_solution_scenes(
                     f"Vertical 9:16 authentic fast-paced commercial ad video. Medium hero shot, bright natural morning sunlight, 60fps real-time commercial look. "
                     f"Featuring {persona['cont']} standing proudly in a stylish travel outfit beside a sleek, closed suitcase sitting neatly on a luggage rack. "
                     f"They give the top of the suitcase a confident, satisfied double pat with their hand, look directly at the camera with a beaming warm smile, "
-                    f"and give an energetic cheerful thumbs-up, looking excited for vacation. Stable realistic physics, crisp human gestures, natural speed, not floaty. Mouth closed, no speaking. NO text overlays."
+                    f"and look directly into camera with a beaming confident smile, feeling completely ready for vacation. Stable realistic physics, crisp human gestures, natural speed, not floaty. Mouth closed, no speaking. NO thumbs-up, NO distorted fingers. NO text overlays."
                 ),
             ),
         ]
@@ -1617,9 +1617,9 @@ def _build_faceless_pov_scenes(
                     f"Vertical 9:16 authentic fast-paced commercial ad video. Top-down POV flat-lay looking directly down at a sleek open suitcase on the floor. "
                     f"Hands effortlessly drop two ultra-thin compressed flat slabs into the bottom compartment in one second, taking up barely any room. "
                     f"The other half remains completely spacious and free for sneakers and travel pouches. "
-                    f"Hands smoothly fold the suitcase lid shut with a crisp satisfying click, then give a quick energetic thumbs-up over the closed luggage. "
+                    f"Hands smoothly fold the suitcase lid shut with a crisp satisfying click, resting palms flat on the luggage with a calm satisfied feel. "
                     f"Fast snappy motions, natural commercial ad speed, stable realistic physics. "
-                    f"Completely faceless, NO human face, hands only. NO text overlays."
+                    f"Completely faceless, NO human face, hands only. NO thumbs-up, NO distorted fingers. NO text overlays."
                 ),
             ),
         ]
@@ -1676,7 +1676,7 @@ def _build_faceless_pov_scenes(
             image_index=0,
             prompt=(
                 f"Vertical 9:16 RAW cinematic video. Aesthetic shot of {clean_title} resting neatly in place in a clean modern room. "
-                f"Hand giving a subtle gesture of satisfaction, neck-down angle. Warm natural light. NO face. NO text overlays."
+                f"Hand resting naturally beside the product, neck-down angle. Warm natural light. NO face, NO thumbs-up, NO distorted fingers. NO text overlays."
             ),
         ),
     ]
@@ -1708,8 +1708,8 @@ def _build_cta_scene(
 
         if is_faceless:
             follow_prompt = (
-                "Vertical 9:16 RAW cinematic video. First-person POV looking down at clean aesthetic table, hand giving a subtle thumbs-up or peace sign. "
-                "Warm modern ambient lighting. NO human face, NO head in frame, hands only. NO text overlays."
+                "Vertical 9:16 RAW cinematic video. First-person POV looking down at clean aesthetic table, hands resting calmly beside the neat setup. "
+                "Warm modern ambient lighting. NO human face, NO head in frame, hands only. NO thumbs-up, NO peace sign, strictly exactly 5 fingers. NO text overlays."
             )
         else:
             follow_prompt = (
@@ -1732,12 +1732,12 @@ def _build_cta_scene(
         if is_faceless:
             shopee_prompt = (
                 "Vertical 9:16 RAW cinematic video. Macro POV shot looking down at product neatly displayed on desk, hand pointing down toward comments. "
-                "Bright commercial aesthetic lighting. NO human face, hands only. NO text overlays."
+                "Bright commercial aesthetic lighting. NO human face, hands only. NO thumbs-up, strictly 5 fingers. NO text overlays."
             )
         else:
             shopee_prompt = (
-                "Vertical 9:16 RAW cinematic video. Happy young Vietnamese creator smiling warmly at the camera, raising a cheerful thumbs-up. "
-                "Mouth closed, no speaking, bright vibrant ambient lighting. NO text overlays."
+                "Vertical 9:16 RAW cinematic video. Happy young Vietnamese creator smiling warmly at the camera, giving a polite welcoming nod. "
+                "Mouth closed, no speaking, bright vibrant ambient lighting. NO thumbs-up. NO text overlays."
             )
 
         return SceneDefinition(

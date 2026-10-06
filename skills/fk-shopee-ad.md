@@ -24,6 +24,10 @@ python -m tools.shopee_ad.orchestrator --mode flow --style flow_cinematic
 # Problem-Solution Drama style with Shopee / TikTok Shop CTA
 python -m tools.shopee_ad.orchestrator --style problem_solution --cta shopee
 python -m tools.shopee_ad.orchestrator --style problem_solution --cta tiktok
+
+# Background Music (BGM is OFF by default; opt-in with --bgm)
+python -m tools.shopee_ad.orchestrator --style problem_solution --bgm         # Random track from assets/bgm/
+python -m tools.shopee_ad.orchestrator --style problem_solution --bgm path/to/music.mp3
 ```
 
 ## Modes (`--mode`)
@@ -39,6 +43,7 @@ python -m tools.shopee_ad.orchestrator --style problem_solution --cta tiktok
 - `lifestyle_edc`: Active everyday carry lifestyle.
 
 ## Key Flags
+- `--bgm [path]`: Bật nhạc nền BGM (**mặc định TẮT** - chỉ giữ âm thanh môi trường Foley + voiceover). Gõ `--bgm` (không tham số) để tự chọn ngẫu nhiên bài nhạc từ kho `assets/bgm/`, hoặc `--bgm <path>` để chỉ định file nhạc cụ thể.
 - `--no-voice` / `--silent`: Silent 20s video with stereo silent audio track for trending audio pairing.
 - `--no-overlay` / `--clean`: 100% clean footage without burned text overlays.
 - `--tag <name>`: Optional custom tag suffix (e.g. `--tag v2`, `--tag test1`) to isolate output deliverables for A/B testing.

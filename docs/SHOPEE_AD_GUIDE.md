@@ -67,12 +67,15 @@ Hệ thống hoạt động theo cơ chế **Dynamic Universal** (tự động t
 
 ## 4. Các Tùy Chọn Âm Thanh & Lời Kêu Gọi Hành Động (CTA)
 
+* **`--bgm [đường_dẫn]`**: Bật nhạc nền BGM (**MẶC ĐỊNH LÀ TẮT** - chỉ giữ âm thanh môi trường vật lý Google Flow Foley và giọng đọc OmniVoice trong trẻo). Khi bạn muốn có nhạc nền:
+  * Truyền `--bgm` (không kèm tham số): Hệ thống tự động bốc ngẫu nhiên 1 bài từ kho nhạc chung `assets/bgm/`.
+  * Truyền `--bgm <đường_dẫn_hoặc_tên_file>`: Sử dụng đúng file nhạc mong muốn.
 * **`--no-voice`** (hoặc `--silent`): Tắt giọng đọc OmniVoice, xuất video chuẩn 20 giây (4 cảnh x 5 giây) với track âm thanh silent stereo sẵn sàng để bạn ném vào TikTok/CapCut ghép nhạc trend.
 * **`--no-overlay`** (hoặc `--clean`): Tắt chữ Text Overlay vàng/trắng, xuất video sạch 100% để bạn tự chèn chữ font yêu thích.
 * **`--tag <tên>`**: Gắn nhãn/tag tùy chỉnh vào tên file (ví dụ: `--tag v2`, `--tag test1`) để thoải mái xuất thử nghiệm nhiều biến thể mà không bị ghi đè.
 * **`--cta {none, follow, shopee, tiktok}`**:
   * `none` (mặc định 4 cảnh): Thích hợp video review tự nhiên hoặc chạy ads không lộ tính thương mại.
-  * `follow` (5 cảnh): Cảnh cuối kêu gọi bấm follow kênh (ở dạng `faceless_pov` cảnh cuối vẫn chỉ xuất hiện bàn tay giơ ngón tay like/thân thiện).
+  * `follow` (5 cảnh): Cảnh cuối kêu gọi bấm follow kênh (ở dạng `faceless_pov` cảnh cuối vẫn chỉ xuất hiện bàn tay thân thiện, không làm động tác peace sign/thumbs up gượng gạo).
   * `shopee` (5 cảnh): Cảnh cuối kêu gọi bấm vào link giỏ hàng hoặc xem bình luận ghim.
   * `tiktok` (5 cảnh): Cảnh cuối kêu gọi bấm vào giỏ hàng màu vàng ở góc dưới bên trái màn hình.
 * **`--idea "nội dung"`**: Thêm ý tưởng/bối cảnh riêng (ví dụ: `--idea "bàn làm việc tone gỗ sồi ấm cúng"`).
@@ -128,6 +131,17 @@ python -m tools.shopee_ad.orchestrator --style faceless_pov --idea "phòng làm 
 python -m tools.shopee_ad.orchestrator --zip "path/to/shopee_product_file.zip" --style faceless_pov --no-voice
 ```
 
+### 🎵 Trường hợp 7: Thêm nhạc nền BGM (MẶC ĐỊNH LÀ TẮT)
+*(Mặc định video chỉ có tiếng môi trường Foley + voiceover. Muốn ghép thêm nhạc nền thì truyền `--bgm`)*
+* **Chọn ngẫu nhiên 1 bài từ kho `assets/bgm/`**:
+  ```powershell
+  python -m tools.shopee_ad.orchestrator --mode flow --style problem_solution --bgm
+  ```
+* **Chỉ định file nhạc tùy chọn**:
+  ```powershell
+  python -m tools.shopee_ad.orchestrator --mode flow --style problem_solution --bgm "assets/bgm/01_Cheerful_Glow_general_household_ad.mp3"
+  ```
+
 ---
 
 ## 6. Hướng Dẫn Giao Tiếp Với AI Agent (Nhắn Bằng Tiếng Việt Tự Nhiên)
@@ -136,6 +150,9 @@ Khi làm việc với AI Agent (như Antigravity), bạn **không cần phải g
 
 | Mục tiêu của bạn | Câu bạn có thể nhắn cho Agent | Hành động Agent sẽ tự động thực hiện |
 |---|---|---|
+| **Video sạch, không nhạc nền (Mặc định)** | *"Tạo video cho sản phẩm móc dán tường nhé"* | Mặc định KHÔNG truyền `--bgm` (chỉ có Foley + Voiceover) |
+| **Thêm nhạc nền ngẫu nhiên** | *"Tạo video có nhạc nền nhé"* hoặc *"Thêm nhạc nền BGM ngẫu nhiên"* | Tự động kích hoạt: `--bgm` (chọn ngẫu nhiên từ kho `assets/bgm/`) |
+| **Dùng bài nhạc cụ thể** | *"Dùng bài Cheerful Glow làm nhạc nền nhé"* | Tự động kích hoạt: `--bgm 01_Cheerful_Glow_general_household_ad.mp3` |
 | **Dạng POV không mặt, không tiếng** | *"Tạo video POV không lộ mặt, không voice, không chữ cho sản phẩm quần kaki vừa tải nhé"* | Tự động kích hoạt: `--style faceless_pov --no-voice --no-overlay` |
 | **Xuất nhiều bản để so sánh** | *"Xuất cho tôi 2 bản: 1 bản POV và 1 bản cinematic để tôi xem cái nào đẹp hơn"* | Tự động kích hoạt: `--style faceless_pov --tag v1` và `--style flow_cinematic --tag v2` |
 | **Dựng nhanh từ video shop có sẵn** | *"Cắt video local cho tôi chiếc quần kaki, kiểu POV hướng dẫn sử dụng không tiếng"* | Tự động kích hoạt: `--mode local --style faceless_pov --no-voice --no-overlay` |

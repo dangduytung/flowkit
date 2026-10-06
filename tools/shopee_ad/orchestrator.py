@@ -18,6 +18,7 @@ from tools.shopee_ad.config import (
     OUTPUT_ROOT,
     SHOPEE_DOWNLOADS_DIR,
     list_available_zips,
+    resolve_bgm_path,
 )
 from tools.shopee_ad.product_parser import parse_product_zip
 from tools.shopee_ad.storyboard import load_or_create_storyboard
@@ -86,6 +87,7 @@ def run_pipeline(
     no_overlay: bool = False,
     tag: Optional[str] = None,
     delogo: Optional[str] = "auto",
+    bgm: Optional[Path | str] = None,
 ) -> Path:
     """
     Execute the entire Shopee Ad production pipeline dynamically for ANY product zip.
@@ -278,13 +280,17 @@ def run_pipeline(
 
     # 9. Ghép toàn bộ thành video thành phẩm theo định danh variant độc lập
     print("\n🎞️ [Bước 5/5] Ghép các phân cảnh thành video cuối cùng...")
+    effective_bgm = resolve_bgm_path(custom_bgm=bgm, style=style, product_assets_dir=assets_dir)
+    if effective_bgm:
+        print(f"🎵 [Nhạc Nền BGM] Tự động kích hoạt: {effective_bgm.name}...")
+
     if not no_voice:
         final_output = final_dir / f"{product.slug}_local_{variant}.mp4"
-        concat_scenes(assembled_scenes, final_output)
+        concat_scenes(assembled_scenes, final_output, bgm_path=effective_bgm)
         video_map = {"local": final_output}
     else:
         final_output = final_dir / f"{product.slug}_local_{variant}_silent.mp4"
-        concat_scenes(assembled_scenes, final_output)
+        concat_scenes(assembled_scenes, final_output, bgm_path=effective_bgm)
         video_map = {"local_silent": final_output}
 
     print("📝 Đang tạo bộ caption & metadata đa nền tảng (Facebook, TikTok, YouTube Shorts)...")
@@ -440,6 +446,13 @@ def main():
         default="auto",
         help="Chế độ xóa logo shop: 'auto' (tự động phát hiện logo như Pi home và xóa sạch), 'none' (tắt), hoặc tọa độ thủ công (ví dụ 'x=30:y=545:w=140:h=60')",
     )
+    parser.add_argument(
+        "--bgm",
+        nargs="?",
+        const="auto",
+        default=None,
+        help="Bật nhạc nền BGM (MẶC ĐỊNH LÀ TẮT): gõ --bgm để tự chọn ngẫu nhiên từ assets/bgm/; hoặc --bgm <path> để chỉ định file",
+    )
 
     args = parser.parse_args()
 
@@ -537,6 +550,7 @@ def main():
                 no_overlay=args.no_overlay,
                 tag=args.tag,
                 delogo=args.delogo,
+                bgm=args.bgm,
             )
 
         if run_flow:
@@ -555,6 +569,7 @@ def main():
                 no_voice=args.no_voice,
                 no_overlay=args.no_overlay,
                 tag=args.tag,
+                bgm_path=args.bgm,
             )
 
 

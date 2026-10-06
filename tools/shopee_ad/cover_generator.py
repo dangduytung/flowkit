@@ -20,10 +20,17 @@ def _format_cover_text(text: str, max_chars: int = 38) -> str:
     text = text.strip()
     if len(text) <= max_chars:
         return text.upper()
+    has_question = text.endswith("?")
+    has_exclamation = text.endswith("!")
     truncated = text[:max_chars]
     if " " in truncated:
         truncated = truncated.rsplit(" ", 1)[0]
-    return truncated.upper().strip()
+    res = truncated.upper().strip()
+    if has_question and not res.endswith("?"):
+        res += "?"
+    elif has_exclamation and not res.endswith("!"):
+        res += "!"
+    return res
 
 
 def create_cover_image(
@@ -50,13 +57,15 @@ def create_cover_image(
         hook_title = scenes[0].overlay_title
 
     # Keep text concise for bold cover typography without cutting words mid-spelling
-    hook_title = _format_cover_text(hook_title, max_chars=26)
+    hook_title = _format_cover_text(hook_title, max_chars=34)
     subtitle = _format_cover_text(clean_title, max_chars=38)
 
     # Dynamic font sizing to ensure text never overflows 720px width
-    if len(hook_title) > 22:
-        hook_fontsize = 44
-    elif len(hook_title) > 16:
+    if len(hook_title) > 26:
+        hook_fontsize = 40
+    elif len(hook_title) > 20:
+        hook_fontsize = 46
+    elif len(hook_title) > 14:
         hook_fontsize = 50
     else:
         hook_fontsize = 54

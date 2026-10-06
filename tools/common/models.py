@@ -15,3 +15,4 @@ class SceneDefinition:
     image_index: int = 0
     prompt: Optional[str] = None
     video_prompt: Optional[str] = None
+    use_product_ref: bool = True
