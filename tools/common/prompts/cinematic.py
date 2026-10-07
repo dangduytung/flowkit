@@ -46,8 +46,8 @@ def build_flow_cinematic_scenes(
                 overlay_subtitle="Mỏng nhẹ - Mát lạnh",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Macro close-up shot of gentle hands dispensing smooth silky drops of the product onto skin, gently patting and blending it smoothly. "
-                    f"Dewy glowing skin reflection, water droplet moisture, crisp texture commercial B-roll lighting, 4K resolution. NO text overlays, NO face."
+                    "Vertical 9:16 RAW cinematic video. Macro close-up shot of gentle hands dispensing smooth silky drops of the product onto skin, gently patting and blending it smoothly. "
+                    "Dewy glowing skin reflection, water droplet moisture, crisp texture commercial B-roll lighting, 4K resolution. NO text overlays, NO face."
                 ),
             ),
             SceneDefinition(
@@ -59,8 +59,8 @@ def build_flow_cinematic_scenes(
                 overlay_subtitle="Căng bóng rạng ngời",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. The young woman looks at her reflection in the mirror with pure satisfaction, gently touching her glowing smooth cheek. "
-                    f"Natural radiant dewy complexion, subtle satisfied smile, mouth closed, no speaking. Soft warm indoor vanity lighting. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. The young woman looks at her reflection in the mirror with pure satisfaction, gently touching her glowing smooth cheek. "
+                    "Natural radiant dewy complexion, subtle satisfied smile, mouth closed, no speaking. Soft warm indoor vanity lighting. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -72,8 +72,8 @@ def build_flow_cinematic_scenes(
                 overlay_subtitle="Đồng hành mỗi ngày",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Woman slipping the sleek cosmetic bottle into her stylish leather handbag, standing up and smiling warmly before heading out. "
-                    f"Calm confident posture, mouth closed, no speaking, vibrant natural aesthetic. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Woman slipping the sleek cosmetic bottle into her stylish leather handbag, standing up and smiling warmly before heading out. "
+                    "Calm confident posture, mouth closed, no speaking, vibrant natural aesthetic. NO text overlays."
                 ),
             ),
         ]
@@ -84,7 +84,7 @@ def build_flow_cinematic_scenes(
                 id=1,
                 name="Hook - Nỗi ngán ngẩm chùi rửa bếp núc",
                 kind="FLOW_AI",
-                narrator_text=f"Ai nấu ăn mà ghét nhất cảnh chảo dính chặt, chùi rửa cực hình thì xem ngay cái này nha!",
+                narrator_text="Ai nấu ăn mà ghét nhất cảnh chảo dính chặt, chùi rửa cực hình thì xem ngay cái này nha!",
                 overlay_title="CHÙI RỬA PHÁT NGÁN?",
                 overlay_subtitle=clean_title,
                 image_index=0,
@@ -116,8 +116,8 @@ def build_flow_cinematic_scenes(
                 overlay_subtitle="Chín đều thơm ngon",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Plating a mouth-watering delicious hot meal onto a ceramic dish, creator leaning back with a genuine satisfied smile. "
-                    f"Mouth closed, no speaking, cozy warm home ambiance, cinematic lighting. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Plating a mouth-watering delicious hot meal onto a ceramic dish, creator leaning back with a genuine satisfied smile. "
+                    "Mouth closed, no speaking, cozy warm home ambiance, cinematic lighting. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -172,8 +172,8 @@ def build_flow_cinematic_scenes(
                 overlay_subtitle="Thoải mái vận động cả ngày",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person checking their look in a full-length mirror, adjusting outfit naturally with an appreciative smile of confidence. "
-                    f"Flattering fit, modern silhouette, mouth closed, no speaking. Chic indoor aesthetic. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Person checking their look in a full-length mirror, adjusting outfit naturally with an appreciative smile of confidence. "
+                    "Flattering fit, modern silhouette, mouth closed, no speaking. Chic indoor aesthetic. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -185,8 +185,8 @@ def build_flow_cinematic_scenes(
                 overlay_subtitle="Đi làm, dạo phố cực xinh",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. The model walking confidently down a trendy sunlit city street or outdoor cafe, with natural poise and chic energy. "
-                    f"Golden hour sunlight, shallow depth of field. Mouth closed, no speaking. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. The model walking confidently down a trendy sunlit city street or outdoor cafe, with natural poise and chic energy. "
+                    "Golden hour sunlight, shallow depth of field. Mouth closed, no speaking. NO text overlays."
                 ),
             ),
         ]
@@ -197,7 +197,7 @@ def build_flow_cinematic_scenes(
                 id=1,
                 name="Hook - Cổ vai gáy cứng đờ ê ẩm",
                 kind="FLOW_AI",
-                narrator_text=f"Ngồi làm việc cả ngày, cổ vai gáy cứng đờ ê ẩm phát mệt đúng không? Mình chỉ cho cách này nha!",
+                narrator_text="Ngồi làm việc cả ngày, cổ vai gáy cứng đờ ê ẩm phát mệt đúng không? Mình chỉ cho cách này nha!",
                 overlay_title="CỔ VAI GÁY CỨNG ĐỜ?",
                 overlay_subtitle=clean_title,
                 image_index=0,
@@ -228,8 +228,8 @@ def build_flow_cinematic_scenes(
                 overlay_subtitle="Thư giãn sâu từng tế bào",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person leaning back on comfortable mat, feeling tension melt away, taking a deep breath of relief with a peaceful smile. "
-                    f"Mouth closed, no speaking, calm zen lighting. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Person leaning back on comfortable mat, feeling tension melt away, taking a deep breath of relief with a peaceful smile. "
+                    "Mouth closed, no speaking, calm zen lighting. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -255,7 +255,7 @@ def build_flow_cinematic_scenes(
                     id=1,
                     name="Hook - Ức chế vì đầy ổ cứng giữa deadline",
                     kind="FLOW_AI",
-                    narrator_text=f"Laptop đang làm việc gấp mà cứ báo đầy bộ nhớ đỏ lòm, nhìn ức chế thật sự đúng không?",
+                    narrator_text="Laptop đang làm việc gấp mà cứ báo đầy bộ nhớ đỏ lòm, nhìn ức chế thật sự đúng không?",
                     overlay_title="BÁO ĐỘNG ĐẦY Ổ CỨNG?",
                     overlay_subtitle=clean_title,
                     image_index=0,
@@ -343,8 +343,8 @@ def build_flow_cinematic_scenes(
                     overlay_subtitle="Hiệu năng vượt trội",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Person operating their tech setup with maximum efficiency, smiling approvingly at the smooth performance. "
-                        f"Calm focused expression, mouth closed, no speaking. Modern creative studio lighting. NO text overlays."
+                        "Vertical 9:16 RAW cinematic video. Person operating their tech setup with maximum efficiency, smiling approvingly at the smooth performance. "
+                        "Calm focused expression, mouth closed, no speaking. Modern creative studio lighting. NO text overlays."
                     ),
                 ),
                 SceneDefinition(
@@ -403,10 +403,10 @@ def build_flow_cinematic_scenes(
                 overlay_subtitle="Khóa zip đôi - Kín tuyệt đối",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial lighting. "
-                    f"Hands briskly sliding a thick puffy down jacket into the transparent vacuum compression bag, swiftly running the sealing clip along the double-track yellow zip lock. "
-                    f"Hands attach the suction nozzle to the circular one-way silicon valve; the bag instantly deflates in a fast satisfying compression, flattening down into a thin, firm, solid slab. "
-                    f"Brisk snappy hand movements, fast-forward deflation effect, natural real-life speed, not floaty. NO face, hands only. NO text overlays."
+                    "Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial lighting. "
+                    "Hands briskly sliding a thick puffy down jacket into the transparent vacuum compression bag, swiftly running the sealing clip along the double-track yellow zip lock. "
+                    "Hands attach the suction nozzle to the circular one-way silicon valve; the bag instantly deflates in a fast satisfying compression, flattening down into a thin, firm, solid slab. "
+                    "Brisk snappy hand movements, fast-forward deflation effect, natural real-life speed, not floaty. NO face, hands only. NO text overlays."
                 ),
             ),
             SceneDefinition(

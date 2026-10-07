@@ -18,9 +18,9 @@ def build_hybrid_scenes(ctx: StoryContext) -> List[SceneDefinition]:
             overlay_subtitle=clean_title,
             image_index=0,
             prompt=(
-                f"Vertical 9:16 RAW cinematic video. Three stylish young Vietnamese friends hanging out in a modern cafe, "
-                f"putting phones down and showing great curiosity and energetic excitement. "
-                f"Warm cozy ambient lighting, shot on 35mm lens. Mouth closed, no speaking. NO fake packaging, NO cards."
+                "Vertical 9:16 RAW cinematic video. Three stylish young Vietnamese friends hanging out in a modern cafe, "
+                "putting phones down and showing great curiosity and energetic excitement. "
+                "Warm cozy ambient lighting, shot on 35mm lens. Mouth closed, no speaking. NO fake packaging, NO cards."
             ),
         ),
         SceneDefinition(
@@ -41,8 +41,8 @@ def build_hybrid_scenes(ctx: StoryContext) -> List[SceneDefinition]:
             overlay_subtitle="Trải nghiệm tiện lợi vượt trội",
             image_index=min(1, ctx.num_images - 1),
             prompt=(
-                f"Vertical 9:16 RAW cinematic video. Young expressive Vietnamese friends laughing and smiling happily, "
-                f"enjoying a fun moment together in a modern stylish setting. Natural cinematic lighting. Mouth closed, no speaking. NO fake packaging."
+                "Vertical 9:16 RAW cinematic video. Young expressive Vietnamese friends laughing and smiling happily, "
+                "enjoying a fun moment together in a modern stylish setting. Natural cinematic lighting. Mouth closed, no speaking. NO fake packaging."
             ),
         ),
         SceneDefinition(

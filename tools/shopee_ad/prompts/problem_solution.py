@@ -44,8 +44,8 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Thấm sâu - Căng mọng da",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Macro close-up shot of gentle hands applying the silky formula onto cheek and forehead, soothing absorbing motion. "
-                    f"Luminous moisture reflection, glowing aesthetic commercial lighting. NO text overlays, NO face."
+                    "Vertical 9:16 RAW cinematic video. Macro close-up shot of gentle hands applying the silky formula onto cheek and forehead, soothing absorbing motion. "
+                    "Luminous moisture reflection, glowing aesthetic commercial lighting. NO text overlays, NO face."
                 ),
             ),
             SceneDefinition(
@@ -57,8 +57,8 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Tươi tắn rạng rỡ",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. The woman smiles radiant with sheer relief and joy, admiring her glowing dewy face in the sunlit mirror. "
-                    f"Mouth closed, no speaking, warm golden lighting. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. The woman smiles radiant with sheer relief and joy, admiring her glowing dewy face in the sunlit mirror. "
+                    "Mouth closed, no speaking, warm golden lighting. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -70,8 +70,8 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Tự tin - Rạng ngời",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Confident woman stepping into an evening party or sunny street, glowing skin turning heads with natural elegance. "
-                    f"Mouth closed, no speaking. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Confident woman stepping into an evening party or sunny street, glowing skin turning heads with natural elegance. "
+                    "Mouth closed, no speaking. NO text overlays."
                 ),
             ),
         ]
@@ -113,8 +113,8 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Nấu nhanh trong vài phút",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person smiling warmly as they place a steaming appetizing meal on table, leaning back with immense satisfaction. "
-                    f"Mouth closed, no speaking, warm cozy dining ambiance. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Person smiling warmly as they place a steaming appetizing meal on table, leaning back with immense satisfaction. "
+                    "Mouth closed, no speaking, warm cozy dining ambiance. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -126,8 +126,8 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Thảnh thơi yêu việc bếp",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Gentle wipe of soft sponge cleans the pan completely sparkling clean in one second. "
-                    f"Bright aesthetic kitchen, calm peaceful vibe, mouth closed, no speaking. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Gentle wipe of soft sponge cleans the pan completely sparkling clean in one second. "
+                    "Bright aesthetic kitchen, calm peaceful vibe, mouth closed, no speaking. NO text overlays."
                 ),
             ),
         ]
@@ -169,8 +169,8 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Tự tin tràn đầy năng lượng",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person smiling genuinely into a full-length mirror, turning with confidence and effortless style. "
-                    f"Mouth closed, no speaking, chic interior light. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Person smiling genuinely into a full-length mirror, turning with confidence and effortless style. "
+                    "Mouth closed, no speaking, chic interior light. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -182,8 +182,8 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Đi làm, dạo phố cực xinh",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person stepping confidently down a vibrant modern sunlit street with stylish energy. "
-                    f"Mouth closed, no speaking. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Person stepping confidently down a vibrant modern sunlit street with stylish energy. "
+                    "Mouth closed, no speaking. NO text overlays."
                 ),
             ),
         ]
@@ -225,8 +225,8 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Lấy lại 100% năng lượng",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person rolling shoulders back with a huge smile of relief, stretching arms with renewed vitality. "
-                    f"Mouth closed, no speaking, bright natural sunlight. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Person rolling shoulders back with a huge smile of relief, stretching arms with renewed vitality. "
+                    "Mouth closed, no speaking, bright natural sunlight. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -285,8 +285,8 @@ def build_problem_solution_scenes(
                     overlay_subtitle="Lưu trữ an toàn tuyệt đối",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. The young professional leans back in their chair with a huge smile of relief and satisfaction as file transfer finishes instantly. "
-                        f"Taking a relaxed sip from their coffee cup, smooth productive vibe, mouth closed, no speaking, no dialogue. Warm bright ambient sunlight. NO text overlays."
+                        "Vertical 9:16 RAW cinematic video. The young professional leans back in their chair with a huge smile of relief and satisfaction as file transfer finishes instantly. "
+                        "Taking a relaxed sip from their coffee cup, smooth productive vibe, mouth closed, no speaking, no dialogue. Warm bright ambient sunlight. NO text overlays."
                     ),
                 ),
                 SceneDefinition(
@@ -327,8 +327,8 @@ def build_problem_solution_scenes(
                     overlay_subtitle="Không khoan đục - Giấu trọn dây",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Dramatic macro close-up shot of hands clamping the sleek minimalist metallic cable management tray securely onto the edge of a clean wooden desk, routing power cables neatly inside. "
-                        f"Smooth confident action, commercial tech interior lighting. NO text overlays, NO face."
+                        "Vertical 9:16 RAW cinematic video. Dramatic macro close-up shot of hands clamping the sleek minimalist metallic cable management tray securely onto the edge of a clean wooden desk, routing power cables neatly inside. "
+                        "Smooth confident action, commercial tech interior lighting. NO text overlays, NO face."
                     ),
                 ),
                 SceneDefinition(
@@ -395,8 +395,8 @@ def build_problem_solution_scenes(
                     overlay_subtitle="Năng suất đỉnh cao",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Professional smiling with satisfaction, typing swiftly and sipping coffee peacefully. "
-                        f"Mouth closed, no speaking, bright natural sunlight. NO text overlays."
+                        "Vertical 9:16 RAW cinematic video. Professional smiling with satisfaction, typing swiftly and sipping coffee peacefully. "
+                        "Mouth closed, no speaking, bright natural sunlight. NO text overlays."
                     ),
                 ),
                 SceneDefinition(
@@ -455,11 +455,11 @@ def build_problem_solution_scenes(
                 overlay_subtitle="Van silicon 1 chiều - Kín tuyệt đối",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial studio lighting. "
-                    f"A clear transparent vacuum compression bag rests flat on a modern wooden table, containing a thick puffy winter jacket. "
-                    f"A mini electric suction pump is attached to the circular one-way silicon valve on the bag. In a fast satisfying time-lapse compression, the air is rapidly sucked out, "
-                    f"and the puffy bag instantly deflates and flattens down into a rock-firm, paper-thin, rigid flat slab. "
-                    f"Crisp texture, bright clean studio lighting, natural speed, not floaty. NO face, NO hands in frame. NO text overlays."
+                    "Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial studio lighting. "
+                    "A clear transparent vacuum compression bag rests flat on a modern wooden table, containing a thick puffy winter jacket. "
+                    "A mini electric suction pump is attached to the circular one-way silicon valve on the bag. In a fast satisfying time-lapse compression, the air is rapidly sucked out, "
+                    "and the puffy bag instantly deflates and flattens down into a rock-firm, paper-thin, rigid flat slab. "
+                    "Crisp texture, bright clean studio lighting, natural speed, not floaty. NO face, NO hands in frame. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -531,8 +531,8 @@ def build_problem_solution_scenes(
             overlay_subtitle="Thảnh thơi tiện nghi",
             image_index=0,
             prompt=(
-                f"Vertical 9:16 RAW cinematic video. Person smiling with genuine relief, enjoying clean tidy comfortable space. "
-                f"Mouth closed, no speaking, warm sunny ambiance. NO text overlays."
+                "Vertical 9:16 RAW cinematic video. Person smiling with genuine relief, enjoying clean tidy comfortable space. "
+                "Mouth closed, no speaking, warm sunny ambiance. NO text overlays."
             ),
         ),
         SceneDefinition(

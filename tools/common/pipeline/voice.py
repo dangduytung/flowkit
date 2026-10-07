@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 # Smallest WAV that can hold any speech; anything below is a failed/truncated write.
 MIN_NARRATION_BYTES = 1000
 
+FULL_RUN = SceneSelection()
+
 # (text, output_path) -> duration in seconds
 SpeechSynthesizer = Callable[[str, Path], float]
 
@@ -34,7 +36,7 @@ def synthesize_narration(
     audio_dir: Path,
     variant: str,
     synthesize: SpeechSynthesizer,
-    selection: SceneSelection = SceneSelection(),
+    selection: SceneSelection = FULL_RUN,
 ) -> NarrationResult:
     """Voice every scene. On a partial run, scenes outside the selection keep their audio."""
     result = NarrationResult()
@@ -43,9 +45,9 @@ def synthesize_narration(
         # A full run always re-voices: narrator text may have been edited in the storyboard.
         if selection.keep_existing(scene.id, file_is_ready(out_wav, MIN_NARRATION_BYTES), force_rebuild=True):
             duration = probe_duration(out_wav)
-            print(f"  • Scene {scene.id}: Đã có audio sẵn ({duration:.2f}s), giữ nguyên.")
+            logger.info("  • Scene %s: Đã có audio sẵn (%.2fs), giữ nguyên.", scene.id, duration)
         else:
-            print(f"  • Scene {scene.id}: {scene.overlay_title}")
+            logger.info("  • Scene %s: %s", scene.id, scene.overlay_title)
             duration = synthesize(scene.narrator_text, out_wav)
         result.files[scene.id] = out_wav
         result.durations[scene.id] = duration

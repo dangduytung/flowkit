@@ -1,10 +1,13 @@
 """Multi-Platform Publishing Guide Generator for TikTok Ads (TikTok, Facebook Reels, YouTube Shorts)."""
+import logging
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from tools.tiktok_ad.config import DEFAULT_CHANNEL_HANDLE
 from tools.tiktok_ad.product_parser import ProductInfo
 from tools.tiktok_ad.storyboard import SceneDefinition, clean_product_title
+
+logger = logging.getLogger(__name__)
 
 
 def create_publish_guide(
@@ -113,5 +116,5 @@ def create_publish_guide(
 5. Bấm Đăng video!
 """
     output_guide_path.write_text(content.strip(), encoding="utf-8")
-    print(f"[PublishGuide] Đã tạo cẩm nang xuất bản: {output_guide_path.name}")
+    logger.info("[PublishGuide] Đã tạo cẩm nang xuất bản: %s", output_guide_path.name)
     return output_guide_path

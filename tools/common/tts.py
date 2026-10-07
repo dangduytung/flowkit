@@ -1,6 +1,7 @@
 """OmniVoice (VoiceStudio) text-to-speech client."""
 from __future__ import annotations
 
+import logging
 import urllib.error
 import urllib.request
 import uuid
@@ -9,6 +10,8 @@ from typing import Optional
 
 from tools.common.ffmpeg import try_probe_duration
 from tools.common.settings import service_settings
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT_S = 45
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) FlowKit/1.0"
@@ -86,7 +89,7 @@ def generate_speech(
     if duration <= 0:
         # A 200 response that is not audio (e.g. a JSON error) would otherwise yield a 0s scene.
         raise TTSError(f"OmniVoice returned unreadable audio for {output_path.name}")
-    print(f"[OmniVoice] Generated {output_path.name} ({duration:.2f}s) for text: '{text[:40]}...'")
+    logger.info("[OmniVoice] Generated %s (%.2fs) for text: '%s...'", output_path.name, duration, text[:40])
     return duration
 
 

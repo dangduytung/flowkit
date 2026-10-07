@@ -6,13 +6,10 @@ Tests cover:
 """
 import json
 import subprocess
-from pathlib import Path
 
-import pytest
 
 from tools.common.naming import build_variant_suffix
 from tools.common.watermarks import (
-    _get_video_dimensions,
     _normalize_product_url,
     get_watermark_rules_path,
     load_watermark_rules,
@@ -169,3 +166,16 @@ class TestNaming:
             tag="A/B-1",
         )
         assert res == "flow_cinematic_clean_cta-tiktok_A_B-1"
+
+
+class TestWatermarkUrlMatching:
+    def test_prefix_must_end_on_a_path_segment(self, tmp_path, monkeypatch):
+        """Substring matching used to apply product/1's rule to product/12345."""
+        rules = [{"name": "Short", "product_url": "https://shopee.vn/product/1", "delogo": "x=1:y=1:w=1:h=1"}]
+        rules_path = tmp_path / "rules.json"
+        rules_path.write_text(json.dumps(rules), encoding="utf-8")
+        monkeypatch.setenv("WATERMARK_RULES_PATH", str(rules_path))
+
+        assert resolve_delogo_for_product("https://shopee.vn/product/12345") == (None, None)
+        assert resolve_delogo_for_product("https://www.shopee.vn/product/1/")[1] == "Short"
+        assert resolve_delogo_for_product("https://shopee.vn/product/1/variant-a")[1] == "Short"

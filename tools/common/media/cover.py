@@ -27,6 +27,9 @@ class CoverStyle:
     subtitle_y: int = 280
 
 
+DEFAULT_COVER_STYLE = CoverStyle()
+
+
 def _font_size(text: str, tiers: FontTiers) -> int:
     return next(size for min_len, size in tiers if len(text) >= min_len)
 
@@ -52,7 +55,7 @@ def create_cover_frame(
     hook_title: str,
     subtitle: str,
     output_path: Path,
-    style: CoverStyle = CoverStyle(),
+    style: CoverStyle = DEFAULT_COVER_STYLE,
     time_offset_s: float = 1.2,
     delogo: Optional[str] = None,
 ) -> Path:

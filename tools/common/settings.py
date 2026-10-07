@@ -117,7 +117,8 @@ class PlatformProfile:
 
     @classmethod
     def from_env(cls, key: str, display_name: str, env_prefix: str, default_downloads_folder: str, **fields: Any) -> "PlatformProfile":
-        """Build a profile; ``<PREFIX>_DOWNLOADS_DIR`` and ``<PREFIX>_AD_CHANNEL_*`` come from the environment."""
+        """Build a profile; ``<PREFIX>_DOWNLOADS_DIR``, ``<PREFIX>_OUTPUT_DIR`` and
+        ``<PREFIX>_AD_CHANNEL_*`` come from the environment."""
         downloads_env = env_str(f"{env_prefix}_DOWNLOADS_DIR")
         if downloads_env:
             downloads_dir: Optional[Path] = Path(downloads_env)
@@ -128,7 +129,7 @@ class PlatformProfile:
             key=key,
             display_name=display_name,
             env_prefix=env_prefix,
-            output_root=OUTPUT_DIR / f"{key}_ads",
+            output_root=Path(env_str(f"{env_prefix}_OUTPUT_DIR") or OUTPUT_DIR / f"{key}_ads"),
             downloads_dir=downloads_dir,
             channel_name=env_str(f"{env_prefix}_AD_CHANNEL_NAME"),
             channel_handle=env_str(f"{env_prefix}_AD_CHANNEL_HANDLE"),

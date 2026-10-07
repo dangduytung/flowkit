@@ -49,9 +49,9 @@ def load_storyboard(hooks: PlatformHooks, workspace: ProductWorkspace, opts: Run
 
 def narrate(scenes: Sequence[SceneDefinition], workspace: ProductWorkspace, opts: RunOptions, silent_seconds: float, step: str) -> NarrationResult:
     if opts.no_voice:
-        print(f"\n🔇 [{step}] Chế độ Không Voiceover (Silent POV) - Nhịp cắt chuẩn {silent_seconds}s/cảnh...")
+        logger.info("\n🔇 [%s] Chế độ Không Voiceover (Silent POV) - Nhịp cắt chuẩn %ss/cảnh...", step, silent_seconds)
         return silent_timing(scenes, silent_seconds)
-    print(f"\n🎙️ [{step}] Sinh giọng đọc thuyết minh qua OmniVoice API cho {len(scenes)} phân cảnh...")
+    logger.info("\n🎙️ [%s] Sinh giọng đọc thuyết minh qua OmniVoice API cho %s phân cảnh...", step, len(scenes))
     return synthesize_narration(
         scenes,
         workspace.audio_dir,
@@ -76,7 +76,7 @@ def assemble_scenes(
     for scene in scenes:
         out = workspace.scenes_dir / output_name.format(variant=workspace.variant, id=scene.id)
         timing = f"Silent: {silent_seconds}s" if opts.no_voice else f"OmniVoice: {narration.durations[scene.id]:.2f}s"
-        print(f"  • Ráp Scene {scene.id}: {scene.overlay_title} ({timing})")
+        logger.info("  • Ráp Scene %s: %s (%s)", scene.id, scene.overlay_title, timing)
         assemble_scene_clip(
             video_path=clips[scene.id],
             audio_path=narration.files[scene.id],
@@ -117,25 +117,25 @@ def package_outputs(
     final_video = workspace.final_video(method, silent=opts.no_voice)
     bgm = resolve_bgm_path(custom_bgm=opts.bgm, style=opts.style, product_assets_dir=workspace.assets_dir)
     if bgm:
-        print(f"🎵 [Nhạc Nền BGM] Tự động kích hoạt: {bgm.name}...")
-    print(f"\n🎞️ Đang ghép toàn bộ các phân cảnh thành video {final_video.name}...")
+        logger.info("🎵 [Nhạc Nền BGM] Tự động kích hoạt: %s...", bgm.name)
+    logger.info("\n🎞️ Đang ghép toàn bộ các phân cảnh thành video %s...", final_video.name)
     concat_scenes(list(assembled), final_video, bgm_path=bgm)
     videos = {method if not opts.no_voice else f"{method}_silent": final_video}
 
-    print("📝 Đang tạo bộ caption & metadata đa nền tảng...")
+    logger.info("📝 Đang tạo bộ caption & metadata đa nền tảng...")
     captions = hooks.write_captions(
         workspace.product, list(scenes), workspace.final_dir,
         channel_name=opts.channel_name, channel_handle=opts.channel_handle, variant_suffix=workspace.variant,
     )
 
     cover = workspace.final_file("cover.jpg")
-    print("🖼️ Đang tạo ảnh bìa (Cover / Thumbnail) 9:16...")
+    logger.info("🖼️ Đang tạo ảnh bìa (Cover / Thumbnail) 9:16...")
     try:
         hooks.create_cover(cover_source, workspace.product, list(scenes), cover)
     except Exception as exc:  # a missing cover must not cost the finished video
         logger.warning("Lỗi tạo ảnh bìa: %s", exc)
 
-    print("🎙️ Đang xuất file kịch bản text lời thoại...")
+    logger.info("🎙️ Đang xuất file kịch bản text lời thoại...")
     script = workspace.final_file("script.txt")
     hooks.export_script(list(scenes), narration.durations, script, product_name=workspace.product.name)
     voiced = [p for p in (narration.files.get(s.id) for s in scenes) if p and Path(p).exists()]
@@ -163,12 +163,12 @@ def print_summary(deliverables: Deliverables, storyboard: Path) -> None:
         ("Ảnh bìa thu nhỏ", deliverables.cover),
         ("Hướng dẫn xuất bản", deliverables.guide),
     ]
-    print("\n" + "=" * 65)
-    print("🎉 HOÀN THÀNH BỘ OUTPUT SẢN PHẨM:")
+    logger.info("%s", "\n" + "=" * 65)
+    logger.info("🎉 HOÀN THÀNH BỘ OUTPUT SẢN PHẨM:")
     for i, (label, path) in enumerate(rows, 1):
-        print(f"👉 {i}. {label + ':':<24}{Path(path).resolve()}")
-    print(f"📝 Kịch bản có thể tùy chỉnh tại: {storyboard.resolve()}")
-    print("=" * 65 + "\n")
+        logger.info("👉 %s. %-24s%s", i, label + ':', Path(path).resolve())
+    logger.info("📝 Kịch bản có thể tùy chỉnh tại: %s", storyboard.resolve())
+    logger.info("%s", "=" * 65 + "\n")
 
 
 __all__ = [

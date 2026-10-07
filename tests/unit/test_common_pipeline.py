@@ -43,10 +43,11 @@ class TestSceneSelection:
         assert not sel.keep_existing(2, artifact_ready=True)
         assert not sel.keep_existing(1, artifact_ready=False)
 
-    def test_unknown_ids_are_reported(self, capsys):
+    def test_unknown_ids_are_reported(self, caplog):
         sel = SceneSelection.from_ids([2, 9])
-        assert warn_unknown_scene_ids(sel, [1, 2, 3]) == [9]
-        assert "[9]" in capsys.readouterr().out
+        with caplog.at_level("WARNING", logger="tools"):
+            assert warn_unknown_scene_ids(sel, [1, 2, 3]) == [9]
+        assert "[9]" in caplog.text
         assert SceneSelection().unknown_ids([1]) == []
 
 

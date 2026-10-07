@@ -136,7 +136,7 @@ def refresh_targeted_scenes(
     refreshed = refresh_scenes(scenes, regenerate(), scene_ids)
     for scene in scenes:
         if scene.id in refreshed:
-            print(f"  • Cập nhật kịch bản chuẩn cho Scene {scene.id}: {scene.overlay_title}")
+            logger.info("  • Cập nhật kịch bản chuẩn cho Scene %s: %s", scene.id, scene.overlay_title)
     write_storyboard(path, scenes)
     return refreshed
 

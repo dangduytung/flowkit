@@ -1,6 +1,7 @@
 """Local pipeline: build every scene from the shop's own video and photos (no Flow)."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Sequence
@@ -14,6 +15,8 @@ from tools.common.pipeline.context import PlatformHooks, ProductWorkspace, RunOp
 from tools.common.pipeline.steps import assemble_scenes, load_storyboard, narrate, package_outputs, print_summary
 from tools.common.settings import PlatformProfile
 from tools.common.watermarks import resolve_delogo_for_product
+
+logger = logging.getLogger(__name__)
 
 # Scenes built from photos rather than footage.
 PHOTO_KINDS = ("PRODUCT_PHOTO",)
@@ -29,9 +32,9 @@ def resolve_delogo(spec: Optional[str], workspace: ProductWorkspace, raw_video: 
         return spec
     resolved, rule_name = resolve_delogo_for_product(workspace.product.url, video_path=raw_video)
     if resolved:
-        print(f"  [Delogo] Áp dụng quy tắc xóa logo ('{rule_name}'): {resolved}")
+        logger.info("  [Delogo] Áp dụng quy tắc xóa logo ('%s'): %s", rule_name, resolved)
     else:
-        print("  [Delogo] Không phát hiện quy tắc xóa logo nào cho sản phẩm này trong config/watermark_rules.json")
+        logger.info("  [Delogo] Không phát hiện quy tắc xóa logo nào cho sản phẩm này trong config/watermark_rules.json")
     return resolved
 
 
@@ -64,11 +67,11 @@ def plan_footage(raw_video: Optional[Path], needed: Sequence[float], source_labe
         return None
     duration = try_probe_duration(raw_video)
     if not duration:
-        print("  [Video Gốc] Không thể đo thời lượng video gốc, chuyển sang dựng từ ảnh.")
+        logger.info("  [Video Gốc] Không thể đo thời lượng video gốc, chuyển sang dựng từ ảnh.")
         return None
     starts, _ = calculate_smart_subclip_starts(raw_video, len(needed), duration, scene_durations=list(needed))
-    print(f"  [Video Gốc] Tìm thấy video mẫu từ {source_label} ({duration:.1f}s), sẵn sàng biên tập sub-clips.")
-    print(f"  [Smart Cuts] Phân bổ mốc thời gian không trùng lặp: {starts}")
+    logger.info("  [Video Gốc] Tìm thấy video mẫu từ %s (%.1fs), sẵn sàng biên tập sub-clips.", source_label, duration)
+    logger.info("  [Smart Cuts] Phân bổ mốc thời gian không trùng lặp: %s", starts)
     return FootagePlan(video=raw_video, duration=duration, starts=starts)
 
 
@@ -86,12 +89,12 @@ def build_local_clips(
     delogo = resolve_delogo(opts.delogo, workspace, footage.video if footage else None)
 
     clips: dict[int, Path] = {}
-    for position, (scene, dur) in enumerate(zip(scenes, needed)):
+    for position, (scene, dur) in enumerate(zip(scenes, needed, strict=True)):
         out = workspace.clips_dir / f"{workspace.variant}_clip_{scene.id:02d}.mp4"
         image = pick_image(images, scene, position)
         if footage is None or scene.kind in PHOTO_KINDS:
             if image and image.exists():
-                print(f"  • Scene {scene.id}: Hiệu ứng Pan & Zoom từ ảnh {image.name} (dài {dur:.1f}s)...")
+                logger.info("  • Scene %s: Hiệu ứng Pan & Zoom từ ảnh %s (dài %.1fs)...", scene.id, image.name, dur)
                 create_image_slide_clip(image, dur, out)
             elif footage is not None:
                 start, _ = footage.slice_for(position, scene, dur)
@@ -101,14 +104,14 @@ def build_local_clips(
         else:
             start, available = footage.slice_for(position, scene, dur)
             if image and 0 < available < dur - HYBRID_SHORTFALL_SECONDS:
-                print(f"  • Scene {scene.id}: Ghép ảnh {image.name} {dur - available:.1f}s + video mẫu {available:.1f}s từ {start:.1f}s...")
+                logger.info("  • Scene %s: Ghép ảnh %s %.1fs + video mẫu %.1fs từ %.1fs...", scene.id, image.name, dur - available, available, start)
                 create_hybrid_subclip(
                     image_path=image, video_path=footage.video, img_duration=dur - available,
                     vid_start_sec=start, vid_duration=available, output_path=out, mode=opts.crop_mode, delogo=delogo,
                 )
             else:
                 cut = min(dur, available) if available > 0 else dur
-                print(f"  • Scene {scene.id}: Cắt video mẫu từ {start:.1f}s (dài {cut:.1f}s, mode {opts.crop_mode})...")
+                logger.info("  • Scene %s: Cắt video mẫu từ %.1fs (dài %.1fs, mode %s)...", scene.id, start, cut, opts.crop_mode)
                 extract_vertical_subclip(footage.video, start, cut, out, mode=opts.crop_mode, delogo=delogo)
         clips[scene.id] = out
     return clips
@@ -120,20 +123,20 @@ def run_local_pipeline(profile: PlatformProfile, hooks: PlatformHooks, opts: Run
     workspace = open_workspace(profile, opts)
     print_banner(f"BẮT ĐẦU SẢN XUẤT VIDEO QUẢNG CÁO {profile.display_name.upper()} (LOCAL)", workspace, opts.selection)
 
-    print("📋 [Bước 1/5] Nạp hoặc tạo kịch bản...")
+    logger.info("📋 [Bước 1/5] Nạp hoặc tạo kịch bản...")
     scenes = load_storyboard(hooks, workspace, opts)
     narration = narrate(scenes, workspace, opts, profile.silent_scene_seconds, "Bước 2/5")
 
-    print("\n🎬 [Bước 3/5] Chuẩn bị video clip 9:16 cho từng phân cảnh...")
+    logger.info("\n🎬 [Bước 3/5] Chuẩn bị video clip 9:16 cho từng phân cảnh...")
     clips = build_local_clips(scenes, narration.durations, workspace, opts, profile.display_name)
 
-    print("\n✨ [Bước 4/5] Ráp âm thanh, căn chỉnh độ dài và chèn Text Overlay...")
+    logger.info("\n✨ [Bước 4/5] Ráp âm thanh, căn chỉnh độ dài và chèn Text Overlay...")
     assembled = assemble_scenes(
         scenes, clips, narration, workspace, opts, profile.silent_scene_seconds,
         output_name="{variant}_scene_{id:02d}_assembled.mp4",
     )
 
-    print("\n🎞️ [Bước 5/5] Ghép các phân cảnh thành video cuối cùng...")
+    logger.info("\n🎞️ [Bước 5/5] Ghép các phân cảnh thành video cuối cùng...")
     cover_source = clips.get(scenes[0].id) if scenes else None
     deliverables = package_outputs(
         "local", "flow", assembled, cover_source or workspace.final_video("local", opts.no_voice),

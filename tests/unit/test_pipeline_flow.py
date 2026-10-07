@@ -139,10 +139,10 @@ class TestFlowRenderer:
         targeted.render(self.SCENES, product_refs=[])
         assert [p for _, p, _ in client.submitted] == [self.SCENES[2].prompt]
 
-    def test_failures_keep_finished_clips_and_name_the_scenes(self, renderer_factory, capsys):
+    def test_failures_keep_finished_clips_and_name_the_scenes(self, renderer_factory, caplog):
         client = FakeClient(fail_ids={2, 4})
         renderer, downloaded = renderer_factory(client)
         with pytest.raises(flow_client.FlowGenerationError, match="scene 2.*scene 4"):
             renderer.render(self.SCENES, product_refs=[])
         assert "flow_cinematic_raw_03.mp4" in downloaded
-        assert "--scene 2 4" in capsys.readouterr().out
+        assert "--scene 2 4" in caplog.text

@@ -114,21 +114,21 @@ class FlowRenderer:
     def _collect(self, jobs: Sequence[FlowJob]) -> PollResult:
         result = self.client.poll_jobs(jobs, poll_interval_s=POLL_INTERVAL_SECONDS, timeout_s=POLL_TIMEOUT_SECONDS)
         for sid, url in sorted(result.urls.items()):
-            print(f"  ⬇️ Đang tải AI clip Scene {sid} ({self.clip_path(sid).name})...")
+            logger.info("  ⬇️ Đang tải AI clip Scene %s (%s)...", sid, self.clip_path(sid).name)
             download(url, self.clip_path(sid))
         return result
 
     def render_character_anchor(self, scene: SceneDefinition) -> Optional[str]:
         """Render scene 1 first and upload a frame of it as the identity reference for later scenes."""
         if self._needs_render(scene.id):
-            print(f"  • Đang gửi Scene {scene.id} (Anchor Nhân Vật): {scene.overlay_title}...")
-            print("  ⏳ Chờ sinh video Scene 1 để trích xuất khuôn mặt nhân vật chuẩn (~35s)...")
+            logger.info("  • Đang gửi Scene %s (Anchor Nhân Vật): %s...", scene.id, scene.overlay_title)
+            logger.info("  ⏳ Chờ sinh video Scene 1 để trích xuất khuôn mặt nhân vật chuẩn (~35s)...")
             self._collect([self._submit(scene, reference=None)]).raise_for_failures()
         try:
-            print("  🎯 [Nhân Vật Nhất Quán] Đang trích xuất frame chân dung nhân vật từ Scene 1...")
+            logger.info("  🎯 [Nhân Vật Nhất Quán] Đang trích xuất frame chân dung nhân vật từ Scene 1...")
             anchor = extract_frame(self.clip_path(scene.id), self.workspace.clips_dir / f"{self.opts.style}_character_anchor.jpg", ANCHOR_FRAME_SECONDS)
             media_id = self.client.upload_image(anchor, project_id=self.project_id)
-            print(f"  ✅ [Nhân Vật Nhất Quán] Đã upload Anchor Frame lên Flow -> media_id: {media_id}")
+            logger.info("  ✅ [Nhân Vật Nhất Quán] Đã upload Anchor Frame lên Flow -> media_id: %s", media_id)
             return media_id
         except Exception as exc:  # anchor is best-effort: scenes still render without it
             logger.warning("Không thể trích xuất / upload character anchor: %s", exc)
@@ -137,7 +137,7 @@ class FlowRenderer:
     def render(self, ai_scenes: Sequence[SceneDefinition], product_refs: Sequence[str]) -> None:
         faceless = is_faceless_storyboard(self.opts.style, ai_scenes)
         mode = "Phong cách POV / Hands-On 100% Không Lộ Mặt" if faceless else "Bảo đảm nhân vật nhất quán"
-        print(f"\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow ({mode})...")
+        logger.info("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow (%s)...", mode)
 
         anchor_scene = next((s for s in ai_scenes if s.id == 1), ai_scenes[0] if ai_scenes else None)
         character = self.render_character_anchor(anchor_scene) if anchor_scene and not faceless else None
@@ -147,32 +147,32 @@ class FlowRenderer:
             if not faceless and scene is anchor_scene:
                 continue
             if not self._needs_render(scene.id):
-                print(f"  • Scene {scene.id} (AI): Đã có clip sẵn ({self.clip_path(scene.id).name}), bỏ qua.")
+                logger.info("  • Scene %s (AI): Đã có clip sẵn (%s), bỏ qua.", scene.id, self.clip_path(scene.id).name)
                 continue
             if character and is_human_scene(scene, faceless):
-                print(f"  • Đang gửi Scene {scene.id} (AI - Reference Nhân Vật Nhất Quán): {scene.overlay_title}...")
+                logger.info("  • Đang gửi Scene %s (AI - Reference Nhân Vật Nhất Quán): %s...", scene.id, scene.overlay_title)
                 jobs.append(self._submit(scene, reference=character))
             elif product_refs and wants_product_reference(scene, faceless):
-                print(f"  • Đang gửi Scene {scene.id} (AI - Reference Sản Phẩm ZIP): {scene.overlay_title}...")
+                logger.info("  • Đang gửi Scene %s (AI - Reference Sản Phẩm ZIP): %s...", scene.id, scene.overlay_title)
                 jobs.append(self._submit(scene, reference=product_refs[scene.image_index % len(product_refs)]))
             else:
-                print(f"  • Đang gửi Scene {scene.id} (AI Text-to-Video): {scene.overlay_title}...")
+                logger.info("  • Đang gửi Scene %s (AI Text-to-Video): %s...", scene.id, scene.overlay_title)
                 jobs.append(self._submit(scene, reference=None))
             time.sleep(SUBMIT_SPACING_SECONDS)
 
         if jobs:
-            print(f"\n⏳ Đang theo dõi tiến độ sinh {len(jobs)} AI clips từ Google Flow...")
+            logger.info("\n⏳ Đang theo dõi tiến độ sinh %s AI clips từ Google Flow...", len(jobs))
             result = self._collect(jobs)
             if not result.ok:
                 ids = sorted([*result.failed, *result.timed_out])
-                print(f"⚠️ Đã lưu các clip hoàn thành. Chạy lại riêng các cảnh lỗi với: --scene {' '.join(map(str, ids))}")
+                logger.warning("⚠️ Đã lưu các clip hoàn thành. Chạy lại riêng các cảnh lỗi với: --scene %s", ' '.join(map(str, ids)))
             result.raise_for_failures()
 
 
 def upload_product_references(client: FlowKitClient, images: Sequence[Path], project_id: str) -> list[str]:
     refs = []
     if images:
-        print("📸 [Tham Chiếu] Tải ảnh sản phẩm từ ZIP lên Google Flow làm hình ảnh tham chiếu...")
+        logger.info("📸 [Tham Chiếu] Tải ảnh sản phẩm từ ZIP lên Google Flow làm hình ảnh tham chiếu...")
     for image in images[:MAX_REFERENCE_UPLOADS]:
         try:
             refs.append(client.upload_image(image, project_id=project_id))
@@ -189,10 +189,10 @@ def build_non_ai_clip(scene: SceneDefinition, position: int, duration: float, ou
     if scene.kind not in PHOTO_KINDS and video and video.exists():
         video_len = try_probe_duration(video) or 0.0
         start = min(max(scene.real_start_sec or 0.0, 0.0), max(0.0, video_len - duration))
-        print(f"  • Scene {scene.id}: Cắt video thật của shop từ {start:.1f}s (dài {duration:.1f}s)...")
+        logger.info("  • Scene %s: Cắt video thật của shop từ %.1fs (dài %.1fs)...", scene.id, start, duration)
         extract_vertical_subclip(video, start, duration, out, mode=opts.crop_mode, delogo=delogo)
     elif image:
-        print(f"  • Tạo shot sản phẩm thật từ ảnh {image.name} (Scene {scene.id})...")
+        logger.info("  • Tạo shot sản phẩm thật từ ảnh %s (Scene %s)...", image.name, scene.id)
         create_image_slide_clip(image, duration, out)
     else:
         raise RuntimeError(f"Scene {scene.id} ({scene.kind}) cần ảnh hoặc video sản phẩm nhưng file zip không có.")
@@ -213,14 +213,14 @@ def run_flow_pipeline(
     workspace = open_workspace(profile, opts)
     print_banner(f"BẮT ĐẦU SẢN XUẤT VIDEO {profile.display_name.upper()} FLOW AI (HYBRID AI + ẢNH THẬT)", workspace, opts.selection)
 
-    print("🌐 [Bước 1/5] Tạo Project & nạp ảnh tham chiếu lên Google Flow...")
+    logger.info("🌐 [Bước 1/5] Tạo Project & nạp ảnh tham chiếu lên Google Flow...")
     project_id = client.create_project(
         name=f"{profile.display_name} Ad - {workspace.product.name[:35]}",
         story=f"Dynamic {profile.display_name} video ad for {workspace.product.name}. High conversion lifestyle showcase.",
     )
     product_refs = upload_product_references(client, workspace.assets.images, project_id)
 
-    print(f"\n📋 [Bước 2/5] Nạp hoặc tạo kịch bản động (storyboard_{opts.style}.json)...")
+    logger.info("\n📋 [Bước 2/5] Nạp hoặc tạo kịch bản động (storyboard_%s.json)...", opts.style)
     scenes = load_storyboard(hooks, workspace, opts)
     silent_seconds = profile.flow_silent_seconds
     narration = narrate(scenes, workspace, opts, silent_seconds, "Bước 3/5")
@@ -228,7 +228,7 @@ def run_flow_pipeline(
     renderer = FlowRenderer(client, workspace, opts, project_id)
     renderer.render([s for s in scenes if s.kind in AI_KINDS], product_refs)
 
-    print("\n✨ [Bước 5/5] Ráp video, ghép giọng thuyết minh và chèn Text Overlay...")
+    logger.info("\n✨ [Bước 5/5] Ráp video, ghép giọng thuyết minh và chèn Text Overlay...")
     delogo = resolve_delogo(opts.delogo, workspace, workspace.assets.video)
     clips: dict[int, Path] = {}
     for position, scene in enumerate(scenes):

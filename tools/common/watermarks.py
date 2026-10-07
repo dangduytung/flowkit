@@ -1,146 +1,142 @@
+"""Shop-logo removal rules (``config/watermark_rules.json``), matched by product URL.
+
+A rule's ``delogo`` is either a ``"x=..:y=..:w=..:h=.."`` string measured on a
+``ref_width`` x ``ref_height`` frame, or a dict with absolute ``x/y/w/h`` or a
+``ratio`` list of fractions. Boxes are rescaled to the actual video size.
+"""
+from __future__ import annotations
+
 import json
 import logging
-import re
+import os
 import subprocess
 from pathlib import Path
-from typing import Optional, Tuple, Dict, Any, List
+from typing import Any, Optional
 from urllib.parse import urlparse
 
-import os
+from tools.common.ffmpeg import probe_dimensions
 
 logger = logging.getLogger(__name__)
 
+RULES_PATH_ENV = "WATERMARK_RULES_PATH"
+RULES_RELATIVE_PATH = Path("config") / "watermark_rules.json"
+# Scraped shop videos are square 720p unless a rule says otherwise.
+DEFAULT_REFERENCE_SIZE = (720, 720)
+_REPO_SEARCH_DEPTH = 4
+_BOX_KEYS = ("x", "y", "w", "h")
+
 
 def get_watermark_rules_path() -> Path:
-    """Return the absolute path to config/watermark_rules.json, configurable via env."""
-    env_path = os.getenv("WATERMARK_RULES_PATH")
+    """``$WATERMARK_RULES_PATH``, else ``config/watermark_rules.json`` at the repo root."""
+    env_path = os.getenv(RULES_PATH_ENV)
     if env_path:
         return Path(env_path)
-
-    # Try traversing upwards from this file's location to the repo root
     current = Path(__file__).resolve().parent
-    for _ in range(4):
-        candidate = current / "config" / "watermark_rules.json"
-        if candidate.exists():
+    for _ in range(_REPO_SEARCH_DEPTH):
+        candidate = current / RULES_RELATIVE_PATH
+        if candidate.exists() or (current / ".git").exists():
             return candidate
-        if (current / ".git").exists():
-            return current / "config" / "watermark_rules.json"
         current = current.parent
-    return Path("config/watermark_rules.json")
+    return RULES_RELATIVE_PATH
 
 
-def load_watermark_rules() -> List[Dict[str, Any]]:
-    """Load list of watermark rules from config/watermark_rules.json."""
+def load_watermark_rules() -> list[dict[str, Any]]:
+    """All rules, or an empty list when the file is missing or malformed."""
     path = get_watermark_rules_path()
     if not path.exists():
         return []
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-            return data if isinstance(data, list) else []
-    except Exception as e:
-        logger.warning(f"Không thể đọc file cấu hình watermark {path}: {e}")
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.warning("Không thể đọc file cấu hình watermark %s: %s", path, exc)
         return []
+    return data if isinstance(data, list) else []
 
 
-def _normalize_product_url(url: str) -> str:
-    """Strip protocol, query parameters, and trailing slashes for stable matching."""
+def _normalize_product_url(url: Optional[str]) -> str:
+    """Host (without www) + path, lower-cased, without scheme, query or trailing slash."""
     if not url:
         return ""
-    try:
-        parsed = urlparse(url.strip())
-        netloc = parsed.netloc.lower().replace("www.", "")
-        path = parsed.path.rstrip("/")
-        return f"{netloc}{path}"
-    except Exception:
-        clean = url.split("?")[0].strip().rstrip("/").lower()
-        clean = re.sub(r"^https?://(?:www\.)?", "", clean)
-        return clean
+    parsed = urlparse(url.strip() if "://" in url else f"//{url.strip()}")
+    host = parsed.netloc.lower().removeprefix("www.")
+    return f"{host}{parsed.path.rstrip('/')}"
 
 
-def _get_video_dimensions(video_path: Path) -> Tuple[int, int]:
-    """Retrieve (width, height) of video using ffprobe."""
+def _urls_match(rule_url: str, target_url: str) -> bool:
+    """Equal, or one is a path-prefix of the other on a ``/`` boundary.
+
+    Plain substring matching let ``.../product/1`` match ``.../product/12345``.
+    """
+    if not rule_url or not target_url:
+        return False
+    shorter, longer = sorted((rule_url, target_url), key=len)
+    return longer == shorter or longer.startswith(shorter + "/")
+
+
+def _get_video_dimensions(video_path: Path) -> tuple[int, int]:
+    """(width, height), or the reference size when the video cannot be probed."""
     try:
-        cmd = [
-            "ffprobe", "-v", "error", "-select_streams", "v:0",
-            "-show_entries", "stream=width,height", "-of", "csv=p=0",
-            str(video_path),
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        w, h = [int(x) for x in res.stdout.strip().split(",")]
-        return w, h
-    except Exception:
-        return 720, 720
+        return probe_dimensions(video_path)
+    except (subprocess.CalledProcessError, OSError, ValueError):
+        return DEFAULT_REFERENCE_SIZE
+
+
+def _parse_box(spec: str) -> dict[str, float]:
+    box = {}
+    for part in spec.split(":"):
+        key, sep, value = part.partition("=")
+        if sep:
+            try:
+                box[key.strip()] = float(value)
+            except ValueError:
+                continue
+    return box
+
+
+def _format_box(x: float, y: float, w: float, h: float) -> str:
+    return f"x={int(x)}:y={int(y)}:w={int(w)}:h={int(h)}"
+
+
+def _find_rule(product_url: str) -> Optional[dict[str, Any]]:
+    target = _normalize_product_url(product_url)
+    return next((r for r in load_watermark_rules() if _urls_match(_normalize_product_url(r.get("product_url", "")), target)), None)
 
 
 def resolve_delogo_for_product(
-    product_url: str,
+    product_url: Optional[str],
     video_path: Optional[Path] = None,
-) -> Tuple[Optional[str], Optional[str]]:
-    """
-    Look up watermark rules in config/watermark_rules.json matching the product_url.
-    Returns (delogo_filter_string, rule_name) or (None, None).
-    Automatically adapts coordinates if video resolution differs from standard reference (720x720).
-    """
-    if not product_url:
+) -> tuple[Optional[str], Optional[str]]:
+    """``(delogo_spec, rule_name)`` for the product, scaled to ``video_path``; ``(None, None)`` if no rule."""
+    if not product_url or not _normalize_product_url(product_url):
+        return None, None
+    rule = _find_rule(product_url)
+    if rule is None:
         return None, None
 
-    norm_target = _normalize_product_url(product_url)
-    if not norm_target:
-        return None, None
+    name = rule.get("name", "Quy tắc không tên")
+    raw = rule.get("delogo")
+    has_video = bool(video_path and Path(video_path).exists())
 
-    rules = load_watermark_rules()
-    matched_rule = None
-    for r in rules:
-        rule_url = r.get("product_url", "")
-        norm_rule = _normalize_product_url(rule_url)
-        if norm_rule and (norm_rule == norm_target or norm_rule in norm_target or norm_target in norm_rule):
-            matched_rule = r
-            break
-
-    if not matched_rule:
-        return None, None
-
-    rule_name = matched_rule.get("name", "Quy tắc không tên")
-    raw_delogo = matched_rule.get("delogo")
-    if not raw_delogo:
-        return None, rule_name
-
-    # If delogo is specified as a direct string like "x=30:y=545:w=140:h=60"
-    if isinstance(raw_delogo, str):
-        # Check if resolution scaling is required
-        coords = {}
-        for part in raw_delogo.split(":"):
-            if "=" in part:
-                k, v = part.split("=", 1)
-                try:
-                    coords[k.strip()] = float(v.strip())
-                except ValueError:
-                    pass
-
-        if video_path and video_path.exists() and len(coords) == 4 and all(k in coords for k in ["x", "y", "w", "h"]):
+    if isinstance(raw, str):
+        box = _parse_box(raw)
+        if has_video and all(k in box for k in _BOX_KEYS):
             vw, vh = _get_video_dimensions(video_path)
-            ref_w = matched_rule.get("ref_width", 720)
-            ref_h = matched_rule.get("ref_height", 720)
-            if (vw != ref_w or vh != ref_h) and ref_w > 0 and ref_h > 0:
-                sx = vw / ref_w
-                sy = vh / ref_h
-                scaled_x = int(coords["x"] * sx)
-                scaled_y = int(coords["y"] * sy)
-                scaled_w = int(coords["w"] * sx)
-                scaled_h = int(coords["h"] * sy)
-                return f"x={scaled_x}:y={scaled_y}:w={scaled_w}:h={scaled_h}", rule_name
+            ref_w = rule.get("ref_width", DEFAULT_REFERENCE_SIZE[0])
+            ref_h = rule.get("ref_height", DEFAULT_REFERENCE_SIZE[1])
+            if (vw, vh) != (ref_w, ref_h) and ref_w > 0 and ref_h > 0:
+                sx, sy = vw / ref_w, vh / ref_h
+                return _format_box(box["x"] * sx, box["y"] * sy, box["w"] * sx, box["h"] * sy), name
+        return raw, name
 
-        return raw_delogo, rule_name
+    if isinstance(raw, dict):
+        vw, vh = _get_video_dimensions(video_path) if has_video else DEFAULT_REFERENCE_SIZE
+        if "ratio" in raw:
+            rx, ry, rw, rh = raw["ratio"]
+            return _format_box(rx * vw, ry * vh, rw * vw, rh * vh), name
+        if all(k in raw for k in _BOX_KEYS):
+            return _format_box(*(raw[k] for k in _BOX_KEYS)), name
 
-    # If delogo is specified as a dictionary
-    if isinstance(raw_delogo, dict):
-        vw, vh = _get_video_dimensions(video_path) if (video_path and video_path.exists()) else (720, 720)
-        if "ratio" in raw_delogo:
-            # [x_ratio, y_ratio, w_ratio, h_ratio]
-            rx, ry, rw, rh = raw_delogo["ratio"]
-            return f"x={int(rx*vw)}:y={int(ry*vh)}:w={int(rw*vw)}:h={int(rh*vh)}", rule_name
-        if all(k in raw_delogo for k in ["x", "y", "w", "h"]):
-            return f"x={int(raw_delogo['x'])}:y={int(raw_delogo['y'])}:w={int(raw_delogo['w'])}:h={int(raw_delogo['h'])}", rule_name
+    return None, name
 
-    return None, rule_name
+
+__all__ = ["get_watermark_rules_path", "load_watermark_rules", "resolve_delogo_for_product"]

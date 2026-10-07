@@ -16,7 +16,7 @@ class TestPlanSubclipStarts:
     def _assert_invariants(starts, total, n):
         assert len(starts) == n
         assert starts[0] == 0.0
-        assert all(b > a for a, b in zip(starts, starts[1:])), starts
+        assert all(b > a for a, b in zip(starts, starts[1:], strict=False)), starts
         assert all(0.0 <= s < total for s in starts), starts
 
     def test_degenerate_inputs(self):
@@ -29,7 +29,7 @@ class TestPlanSubclipStarts:
         starts = plan_subclip_starts([0.0, 5.8, 10.9, 16.2, 23.0], 23.0, 4, durations)
         self._assert_invariants(starts, 23.0, 4)
         ends = starts[1:] + [23.0]
-        assert all(end - start >= d - 1e-6 for start, end, d in zip(starts, ends, durations))
+        assert all(end - start >= d - 1e-6 for start, end, d in zip(starts, ends, durations, strict=True))
 
     def test_fitting_narration_snaps_forward_to_cuts(self):
         starts = plan_subclip_starts([0.0, 4.5, 9.2, 30.0], 30.0, 3, [4.0, 4.0, 4.0])
@@ -57,11 +57,11 @@ class TestPlanSubclipStarts:
         self._assert_invariants(starts, total, n)
         if durations is None or sum(durations) > total:
             min_slice = min(MIN_SLICE_SECONDS, total / n)
-            slices = [b - a for a, b in zip(starts, starts[1:] + [total])]
+            slices = [b - a for a, b in zip(starts, starts[1:] + [total], strict=True)]
             assert min(slices) >= min_slice - 0.011  # rounding to 2 decimals
         else:
             ends = starts[1:] + [total]
-            assert all(e - s >= d - 0.011 for s, e, d in zip(starts, ends, durations))
+            assert all(e - s >= d - 0.011 for s, e, d in zip(starts, ends, durations, strict=True))
 
 
 class TestAssemblerBuilders:

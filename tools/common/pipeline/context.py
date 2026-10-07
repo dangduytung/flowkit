@@ -1,6 +1,7 @@
 """Inputs shared by the local and Flow pipelines: run options, platform hooks, workspace."""
 from __future__ import annotations
 
+import logging
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -12,6 +13,8 @@ from tools.common.naming import build_variant_suffix
 from tools.common.pipeline.selection import SceneSelection
 from tools.common.product import ProductInfo, parse_product_zip
 from tools.common.settings import PlatformProfile
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -124,8 +127,8 @@ def resolve_zip(profile: PlatformProfile, zip_path: Optional[Path]) -> Path:
     available = profile.list_zips()
     if not available:
         raise RuntimeError(f"Không tìm thấy file zip nào trong thư mục: {directory}")
-    print(f"[Orchestrator] Quét thư mục {profile.display_name} ({directory})")
-    print(f"[Orchestrator] Tự động chọn file zip mới nhất: {available[0].name}")
+    logger.info("[Orchestrator] Quét thư mục %s (%s)", profile.display_name, directory)
+    logger.info("[Orchestrator] Tự động chọn file zip mới nhất: %s", available[0].name)
     return available[0]
 
 
@@ -142,24 +145,24 @@ def open_workspace(profile: PlatformProfile, opts: RunOptions) -> ProductWorkspa
     archived = workspace.root / zip_path.name
     if not archived.exists():
         shutil.copy2(zip_path, archived)
-        print(f"📥 [Lưu trữ] Đã copy file zip vào thư mục sản phẩm: {archived.name}")
+        logger.info("📥 [Lưu trữ] Đã copy file zip vào thư mục sản phẩm: %s", archived.name)
     workspace.assets = extract_zip(zip_path, workspace.assets_dir)
     return workspace
 
 
 def print_banner(title: str, workspace: ProductWorkspace, selection: SceneSelection) -> None:
     product = workspace.product
-    print("\n" + "=" * 65)
-    print(f"🚀 {title}")
-    print(f"📦 Sản phẩm: {product.name}")
+    logger.info("%s", "\n" + "=" * 65)
+    logger.info("🚀 %s", title)
+    logger.info("📦 Sản phẩm: %s", product.name)
     if product.price:
-        print(f"💰 Giá bán: {product.price}")
+        logger.info("💰 Giá bán: %s", product.price)
     if product.sold_count:
-        print(f"🔥 Đã bán: {product.sold_count} | Đánh giá: {product.rating} sao")
-    print(f"📁 Slug thư mục: {product.slug}")
+        logger.info("🔥 Đã bán: %s | Đánh giá: %s sao", product.sold_count, product.rating)
+    logger.info("📁 Slug thư mục: %s", product.slug)
     if selection.is_partial:
-        print(f"🎯 Chế độ tái tạo phân cảnh chọn lọc: Scenes {sorted(selection.target_ids)}")
-    print("=" * 65 + "\n")
+        logger.info("🎯 Chế độ tái tạo phân cảnh chọn lọc: Scenes %s", sorted(selection.target_ids))
+    logger.info("%s", "=" * 65 + "\n")
 
 
 __all__ = [

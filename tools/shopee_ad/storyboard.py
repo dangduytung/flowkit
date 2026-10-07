@@ -285,7 +285,7 @@ def generate_default_storyboard(
     channel_name = channel_name or DEFAULT_CHANNEL_NAME
     clean_title = clean_product_title(info.name)
     category = detect_product_category(info.name, info.description_text)
-    logger.info(f"[Storyboard] Đã phát hiện ngành hàng: {category} cho sản phẩm '{clean_title}'")
+    logger.info("[Storyboard] Đã phát hiện ngành hàng: %s cho sản phẩm '%s'", category, clean_title)
 
     has_video = bool(info.video_name)
     features = extract_product_features(info.description_text)

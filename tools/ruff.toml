@@ -1,0 +1,10 @@
+# Lint settings for the ad pipelines (tools/common, tools/shopee_ad, tools/tiktok_ad).
+# Run: uvx ruff check tools
+target-version = "py311"
+line-length = 140
+# The review board server predates these rules and is out of scope here.
+extend-exclude = ["review_server.py"]
+
+[lint]
+# pyflakes, syntax errors, bugbear, logging-format, pylint errors
+select = ["F", "E9", "B", "G", "PLE"]

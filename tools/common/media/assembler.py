@@ -260,7 +260,7 @@ def concat_scenes(
         joined.unlink(missing_ok=True)
         list_file.unlink(missing_ok=True)
 
-    print(f"[Assembler] Video successfully assembled to: {output_path}")
+    logger.info("[Assembler] Video successfully assembled to: %s", output_path)
     return output_path
 
 
@@ -277,7 +277,7 @@ def concat_audio_files(audio_paths: Sequence[Path], output_path: Path, encode: E
         ])
     finally:
         list_file.unlink(missing_ok=True)
-    print(f"[Assembler] Exported full narration audio: {output_path.name}")
+    logger.info("[Assembler] Exported full narration audio: %s", output_path.name)
     return output_path
 
 
@@ -294,7 +294,7 @@ def create_silent_version(video_path: Path, silent_output_path: Path, encode: En
         "-shortest",
         str(silent_output_path),
     ])
-    print(f"[Assembler] Exported silent version: {silent_output_path.name}")
+    logger.info("[Assembler] Exported silent version: %s", silent_output_path.name)
     return silent_output_path
 
 
@@ -360,7 +360,7 @@ def export_voiceover_script(
         render_voiceover_script(scenes, audio_durations, product_name, heading, default_scene_seconds),
         encoding="utf-8",
     )
-    print(f"[Assembler] Exported script & timecode text: {output_path.name}")
+    logger.info("[Assembler] Exported script & timecode text: %s", output_path.name)
     return output_path
 
 

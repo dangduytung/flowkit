@@ -1,6 +1,6 @@
 """Shopee closing call-to-action scene (follow / Shopee cart / TikTok cart).
 """
-from typing import List, Optional
+from typing import Optional
 
 from tools.common.models import SceneDefinition
 from tools.common.prompts.personas import character_persona

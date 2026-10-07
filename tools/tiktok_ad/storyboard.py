@@ -272,8 +272,8 @@ def generate_dynamic_storyboard(
                 social_proof_title = f"ĐÁNH GIÁ {product.rating} SAO"
             elif r_val >= 4.0:
                 social_proof_title = "ĐÁNH GIÁ CỰC TỐT"
-        except Exception:
-            pass
+        except ValueError:
+            pass  # non-numeric rating: keep the generic badge
 
     ctx = StoryContext(
         product=product,

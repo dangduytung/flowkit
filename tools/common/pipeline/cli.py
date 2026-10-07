@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 from typing import Callable, Optional, Sequence
 
 from tools.common.flow_client import FlowKitClient
+from tools.common.log import configure_cli_logging
 from tools.common.pipeline.context import PlatformHooks, RunOptions, resolve_zip
 from tools.common.pipeline.flow import run_flow_pipeline
 from tools.common.pipeline.local import run_local_pipeline
 from tools.common.product import parse_product_zip
 from tools.common.settings import AutoModePolicy, PlatformProfile, ensure_utf8_console
+
+logger = logging.getLogger(__name__)
 
 MODES = ("auto", "both", "flow", "local", "zip")
 CROP_MODES = ("blur_bg", "center_crop")
@@ -91,28 +95,29 @@ def select_runs(
         return False, True
     if profile.auto_mode is AutoModePolicy.BY_ASSETS:
         if zip_has_video:
-            print("💡 File ZIP có video gốc: tạo CẢ HAI bản (_local.mp4 & _flow.mp4).")
+            logger.info("💡 File ZIP có video gốc: tạo CẢ HAI bản (_local.mp4 & _flow.mp4).")
             return True, True
-        print("💡 File ZIP chỉ có hình ảnh: tạo bản Google Flow AI (_flow.mp4).")
+        logger.info("💡 File ZIP chỉ có hình ảnh: tạo bản Google Flow AI (_flow.mp4).")
         return False, True
     if flowkit_ready():
-        print("💡 FlowKit đang kết nối: tạo CẢ HAI bản (_local.mp4 & _flow.mp4).")
+        logger.info("💡 FlowKit đang kết nối: tạo CẢ HAI bản (_local.mp4 & _flow.mp4).")
         return True, True
-    print("💡 Tạo bản Local (_local.mp4). Kết nối FlowKit để tạo thêm bản Flow AI (_flow.mp4).")
+    logger.info("💡 Tạo bản Local (_local.mp4). Kết nối FlowKit để tạo thêm bản Flow AI (_flow.mp4).")
     return True, False
 
 
 def _print_zip_list(profile: PlatformProfile) -> None:
-    print(f"\n📂 Các file zip {profile.display_name} tìm thấy trong máy:")
+    logger.info("\n📂 Các file zip %s tìm thấy trong máy:", profile.display_name)
     zips = profile.list_zips()
     if not zips:
-        print(f"  (Không có file zip nào trong {profile.downloads_dir})")
+        logger.info("  (Không có file zip nào trong %s)", profile.downloads_dir)
     for i, z in enumerate(zips, 1):
-        print(f"  [{i}] {z.name} ({z.stat().st_size / 1024 / 1024:.1f} MB)")
+        logger.info("  [%s] %s (%.1f MB)", i, z.name, z.stat().st_size / 1024 / 1024)
 
 
 def run_cli(profile: PlatformProfile, hooks: PlatformHooks, argv: Optional[Sequence[str]] = None) -> None:
     ensure_utf8_console()
+    configure_cli_logging()
     args = build_parser(profile).parse_args(argv)
     if args.list:
         _print_zip_list(profile)
@@ -130,16 +135,16 @@ def run_cli(profile: PlatformProfile, hooks: PlatformHooks, argv: Optional[Seque
 
     styles = profile.resolve_styles(args.style)
     if len(styles) > 1:
-        print(f"\n🎬 XUẤT HÀNG LOẠT {len(styles)} PHONG CÁCH: {', '.join(styles)}")
+        logger.info("\n🎬 XUẤT HÀNG LOẠT %s PHONG CÁCH: %s", len(styles), ', '.join(styles))
     for i, style in enumerate(styles, 1):
         if len(styles) > 1:
-            print(f"\n{'=' * 65}\n▶ [{i}/{len(styles)}] PHONG CÁCH: {style.upper()}\n{'=' * 65}")
+            logger.info("\n%s\n▶ [%s/%s] PHONG CÁCH: %s\n%s", '=' * 65, i, len(styles), style.upper(), '=' * 65)
         opts = options_from_args(args, zip_path, style)
         if run_local:
-            print("\n" + "▶" * 25 + f" SẢN XUẤT VIDEO LOCAL ({style}) " + "◀" * 25)
+            logger.info("%s", "\n" + "▶" * 25 + f" SẢN XUẤT VIDEO LOCAL ({style}) " + "◀" * 25)
             run_local_pipeline(profile, hooks, opts)
         if run_flow:
-            print("\n" + "▶" * 25 + f" SẢN XUẤT VIDEO GOOGLE FLOW AI ({style}) " + "◀" * 25)
+            logger.info("%s", "\n" + "▶" * 25 + f" SẢN XUẤT VIDEO GOOGLE FLOW AI ({style}) " + "◀" * 25)
             run_flow_pipeline(profile, hooks, opts)
 
 

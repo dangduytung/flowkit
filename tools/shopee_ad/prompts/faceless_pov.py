@@ -48,11 +48,11 @@ def build_vacuum_faceless_pov_scenes(
             overlay_subtitle=sc2_sub,
             image_index=0,
             prompt=(
-                f"Vertical 9:16 authentic fast-paced commercial ad video. First-person POV looking down inside a sleek modern car interior. "
-                f"Hand holds the compact cordless handheld vacuum with a slim flat crevice nozzle attached, gliding firmly along the deep seat crevice and center console cup holder. "
-                f"Satisfying cleaning effect, debris instantly vanishes into nozzle. "
-                f"Crisp natural daylight through car window, snappy real-time motion, not slow motion, not floaty. "
-                f"Completely faceless, NO human face, hands only, strictly 5 fingers. NO text overlays."
+                "Vertical 9:16 authentic fast-paced commercial ad video. First-person POV looking down inside a sleek modern car interior. "
+                "Hand holds the compact cordless handheld vacuum with a slim flat crevice nozzle attached, gliding firmly along the deep seat crevice and center console cup holder. "
+                "Satisfying cleaning effect, debris instantly vanishes into nozzle. "
+                "Crisp natural daylight through car window, snappy real-time motion, not slow motion, not floaty. "
+                "Completely faceless, NO human face, hands only, strictly 5 fingers. NO text overlays."
             ),
         ),
         SceneDefinition(
@@ -64,10 +64,10 @@ def build_vacuum_faceless_pov_scenes(
             overlay_subtitle=sc3_sub,
             image_index=0,
             prompt=(
-                f"Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up POV. "
-                f"Hand firmly holds the compact handheld vacuum with the brush nozzle already securely attached, sweeping smoothly across an aesthetic textured fabric sofa and a mechanical computer keyboard, effortlessly picking up dust and pet hairs in one clean glide. "
-                f"Bright commercial aesthetic lighting, realistic stable physics, crisp suction action. "
-                f"Completely faceless, NO human face, hands only, strictly 5 fingers. NO text overlays."
+                "Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up POV. "
+                "Hand firmly holds the compact handheld vacuum with the brush nozzle already securely attached, sweeping smoothly across an aesthetic textured fabric sofa and a mechanical computer keyboard, effortlessly picking up dust and pet hairs in one clean glide. "
+                "Bright commercial aesthetic lighting, realistic stable physics, crisp suction action. "
+                "Completely faceless, NO human face, hands only, strictly 5 fingers. NO text overlays."
             ),
         ),
         SceneDefinition(
@@ -79,12 +79,12 @@ def build_vacuum_faceless_pov_scenes(
             overlay_subtitle="Vệ sinh nhanh gọn",
             image_index=0,
             prompt=(
-                f"Vertical 9:16 authentic commercial ad video. Satisfying macro POV shot over a clean modern sink. "
-                f"Hands hold the small circular white HEPA filter directly under a gentle stream of fresh tap water, washing it completely spotless and clean, water droplets splashing smoothly. "
-                f"Then pan smoothly to the sleek clean handheld vacuum resting neatly upright on a minimalist charging dock on a sunny desk. "
-                f"NO twisting, NO disassembly, NO pulling parts apart. "
-                f"Bright airy natural lighting, crisp 4K texture, realistic water physics. "
-                f"Completely faceless, NO human face, hands only, strictly exactly 5 fingers. NO thumbs-up, NO text overlays."
+                "Vertical 9:16 authentic commercial ad video. Satisfying macro POV shot over a clean modern sink. "
+                "Hands hold the small circular white HEPA filter directly under a gentle stream of fresh tap water, washing it completely spotless and clean, water droplets splashing smoothly. "
+                "Then pan smoothly to the sleek clean handheld vacuum resting neatly upright on a minimalist charging dock on a sunny desk. "
+                "NO twisting, NO disassembly, NO pulling parts apart. "
+                "Bright airy natural lighting, crisp 4K texture, realistic water physics. "
+                "Completely faceless, NO human face, hands only, strictly exactly 5 fingers. NO thumbs-up, NO text overlays."
             ),
         ),
     ]
@@ -234,8 +234,8 @@ def build_faceless_pov_scenes(
                     overlay_subtitle="Gọn gàng - Tinh tế",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Wide aesthetic pan across the spotless minimalist desk setup, zero dangling wires. "
-                        f"Hand gently placing an iced coffee cup on the clean wooden desk, neck-down angle only. Warm morning sunlight. NO face in frame. NO text overlays."
+                        "Vertical 9:16 RAW cinematic video. Wide aesthetic pan across the spotless minimalist desk setup, zero dangling wires. "
+                        "Hand gently placing an iced coffee cup on the clean wooden desk, neck-down angle only. Warm morning sunlight. NO face in frame. NO text overlays."
                     ),
                 ),
             ]
@@ -486,8 +486,8 @@ def build_faceless_pov_scenes(
                 overlay_subtitle="Cấp ẩm sâu tức thì",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Close-up hands gently patting product onto cheekbone and jawline, showing instant radiant glow and hydration. "
-                    f"Cheek and hands close-up only, NO full face, mouth not visible. Soft warm lighting. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Close-up hands gently patting product onto cheekbone and jawline, showing instant radiant glow and hydration. "
+                    "Cheek and hands close-up only, NO full face, mouth not visible. Soft warm lighting. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -499,8 +499,8 @@ def build_faceless_pov_scenes(
                 overlay_subtitle="Cấp ẩm mọi lúc mọi nơi",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Hands slipping the sleek bottle into an aesthetic leather bag, aesthetic vanity setup in background. "
-                    f"Warm natural light. NO face in frame. NO text overlays."
+                    "Vertical 9:16 RAW cinematic video. Hands slipping the sleek bottle into an aesthetic leather bag, aesthetic vanity setup in background. "
+                    "Warm natural light. NO face in frame. NO text overlays."
                 ),
             ),
         ]
@@ -548,11 +548,11 @@ def build_faceless_pov_scenes(
                 overlay_subtitle="Van 1 chiều - Kín tuyệt đối",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial studio lighting. "
-                    f"Hands briskly slide a thick puffy winter down jacket inside the transparent compression bag, then swiftly glide the white sealing clip firmly along the double-track yellow zip lock in one smooth motion. "
-                    f"Hands attach a compact electric pump to the round one-way valve; the bulky coat instantly deflates and flattens down into a rock-firm, paper-thin, rigid flat slab in seconds. "
-                    f"Fast-forward deflation effect, brisk snappy hand movements, natural real-life speed, not floaty. "
-                    f"Completely faceless, NO human face, hands only. NO text overlays."
+                    "Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial studio lighting. "
+                    "Hands briskly slide a thick puffy winter down jacket inside the transparent compression bag, then swiftly glide the white sealing clip firmly along the double-track yellow zip lock in one smooth motion. "
+                    "Hands attach a compact electric pump to the round one-way valve; the bulky coat instantly deflates and flattens down into a rock-firm, paper-thin, rigid flat slab in seconds. "
+                    "Fast-forward deflation effect, brisk snappy hand movements, natural real-life speed, not floaty. "
+                    "Completely faceless, NO human face, hands only. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -564,11 +564,11 @@ def build_faceless_pov_scenes(
                 overlay_subtitle="Chống ẩm mốc suốt 6-8 tháng",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 authentic fast-paced commercial ad video. First-person POV facing an open modern wooden wardrobe closet with warm interior lighting. "
-                    f"Two hands lift a neat vertical stack of 4 ultra-thin compressed flat vacuum slabs and slide them smoothly onto a wooden closet shelf, lined up neatly like books on a bookshelf. "
-                    f"The camera reveals the closet shelf is now 80 percent completely empty, spacious, and spotlessly organized. "
-                    f"Brisk confident hand movements, crisp natural lighting, real-time speed, not slow motion. "
-                    f"Completely faceless, NO human face, NO head in frame, hands only. NO text overlays."
+                    "Vertical 9:16 authentic fast-paced commercial ad video. First-person POV facing an open modern wooden wardrobe closet with warm interior lighting. "
+                    "Two hands lift a neat vertical stack of 4 ultra-thin compressed flat vacuum slabs and slide them smoothly onto a wooden closet shelf, lined up neatly like books on a bookshelf. "
+                    "The camera reveals the closet shelf is now 80 percent completely empty, spacious, and spotlessly organized. "
+                    "Brisk confident hand movements, crisp natural lighting, real-time speed, not slow motion. "
+                    "Completely faceless, NO human face, NO head in frame, hands only. NO text overlays."
                 ),
             ),
             SceneDefinition(
@@ -580,12 +580,12 @@ def build_faceless_pov_scenes(
                 overlay_subtitle="Thảnh thơi lên đường",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 authentic fast-paced commercial ad video. Top-down POV flat-lay looking directly down at a sleek open suitcase on the floor. "
-                    f"Hands effortlessly drop two ultra-thin compressed flat slabs into the bottom compartment in one second, taking up barely any room. "
-                    f"The other half remains completely spacious and free for sneakers and travel pouches. "
-                    f"Hands smoothly fold the suitcase lid shut with a crisp satisfying click, resting palms flat on the luggage with a calm satisfied feel. "
-                    f"Fast snappy motions, natural commercial ad speed, stable realistic physics. "
-                    f"Completely faceless, NO human face, hands only. NO thumbs-up, NO distorted fingers. NO text overlays."
+                    "Vertical 9:16 authentic fast-paced commercial ad video. Top-down POV flat-lay looking directly down at a sleek open suitcase on the floor. "
+                    "Hands effortlessly drop two ultra-thin compressed flat slabs into the bottom compartment in one second, taking up barely any room. "
+                    "The other half remains completely spacious and free for sneakers and travel pouches. "
+                    "Hands smoothly fold the suitcase lid shut with a crisp satisfying click, resting palms flat on the luggage with a calm satisfied feel. "
+                    "Fast snappy motions, natural commercial ad speed, stable realistic physics. "
+                    "Completely faceless, NO human face, hands only. NO thumbs-up, NO distorted fingers. NO text overlays."
                 ),
             ),
         ]

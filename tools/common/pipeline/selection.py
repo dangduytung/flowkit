@@ -1,8 +1,11 @@
 """Which scenes a pipeline run should (re)build."""
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Iterable, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -49,7 +52,7 @@ def warn_unknown_scene_ids(selection: SceneSelection, scene_ids: Iterable[int]) 
     """Tell the user about ``--scene`` ids the storyboard does not have; returns them."""
     unknown = selection.unknown_ids(scene_ids)
     if unknown:
-        print(f"⚠️ --scene: không có phân cảnh {unknown} trong storyboard, bỏ qua.")
+        logger.warning("⚠️ --scene: không có phân cảnh %s trong storyboard, bỏ qua.", unknown)
     return unknown
 
 

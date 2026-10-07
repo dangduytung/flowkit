@@ -29,8 +29,8 @@ def build_faceless_pov_scenes(
         pov_summary_title = "KÉO KHÓA NHẸ TÊNH"
         pov_summary_sub = "Bảo Vệ Chống Ẩm Mốc"
         pov_summary_prompt = (
-            f"Vertical 9:16 RAW POV shot of closed suitcase with zipper neatly pulled, neat luggage ready for travel. "
-            f"Warm natural morning light. Completely faceless."
+            "Vertical 9:16 RAW POV shot of closed suitcase with zipper neatly pulled, neat luggage ready for travel. "
+            "Warm natural morning light. Completely faceless."
         )
     elif archetype == ProductArchetype.VACUUM_CLEANER:
         pov_summary_text = "Hút sạch mọi bụi mịn và tóc rụng trong tích tắc, nhà cửa và xe hơi lúc nào cũng sạch bóng tinh tươm!"
@@ -90,7 +90,7 @@ def build_faceless_pov_scenes(
         )
 
     sc3_prompt = (
-        f"Vertical 9:16 RAW macro POV shot. A sleek handheld vacuum cleaner with the brush nozzle already securely attached, sweeping smoothly across textured sofa fabric, picking up crumbs cleanly. Sharp 4K detail, studio lighting. NO faces visible."
+        "Vertical 9:16 RAW macro POV shot. A sleek handheld vacuum cleaner with the brush nozzle already securely attached, sweeping smoothly across textured sofa fabric, picking up crumbs cleanly. Sharp 4K detail, studio lighting. NO faces visible."
         if archetype == ProductArchetype.VACUUM_CLEANER
         else (
             f"Vertical 9:16 RAW macro POV pan over texture, material finish and joints of {clean_title}. "

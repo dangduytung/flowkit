@@ -1,4 +1,4 @@
-import re
+"""Output-file naming shared by every pipeline."""
 from typing import Optional
 
 

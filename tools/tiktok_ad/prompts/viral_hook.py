@@ -92,8 +92,8 @@ def build_viral_hook_scenes(
             real_start_sec=4.0 if has_video else 0.0,
             image_index=min(1, num_images - 1),
             prompt=(
-                f"Vertical 9:16 RAW dynamic video. Macro close-up hands-on demonstration showing key feature in active use. "
-                f"Crisp texture details, smooth movement, commercial B-roll lighting, 4K resolution. NO text overlays, NO face."
+                "Vertical 9:16 RAW dynamic video. Macro close-up hands-on demonstration showing key feature in active use. "
+                "Crisp texture details, smooth movement, commercial B-roll lighting, 4K resolution. NO text overlays, NO face."
             ),
         ),
         SceneDefinition(

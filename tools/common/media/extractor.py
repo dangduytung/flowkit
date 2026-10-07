@@ -60,7 +60,7 @@ def extract_zip(zip_path: Path, dest_dir: Path) -> ExtractedAssets:
                 continue
             out_file.write_bytes(archive.read(name))
 
-    print(f"[Extractor] Extracted {len(assets.images)} images, video: {assets.video}, text: {assets.description}")
+    logger.info("[Extractor] Extracted %s images, video: %s, text: %s", len(assets.images), assets.video, assets.description)
     return assets
 
 

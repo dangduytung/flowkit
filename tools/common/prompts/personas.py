@@ -1,8 +1,6 @@
 """On-camera persona per product category, shared by cinematic and drama scenes.
 """
-from typing import List, Optional
 
-from tools.common.models import SceneDefinition
 
 
 def character_persona(category: str) -> dict:
