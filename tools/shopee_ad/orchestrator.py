@@ -43,6 +43,7 @@ from tools.shopee_ad.cover_generator import create_cover_image
 from tools.shopee_ad.publish_guide import create_publish_guide
 from tools.common import storyboard_io
 from tools.common.constants import SCENE_TAIL_PAD_SECONDS
+from tools.common.settings import ensure_utf8_console
 from tools.common.naming import build_variant_suffix as _build_variant_suffix
 from tools.common.pipeline.selection import SceneSelection, warn_unknown_scene_ids
 from tools.common.pipeline.voice import silent_timing, synthesize_narration
@@ -392,6 +393,7 @@ def run_pipeline(
 
 
 def main():
+    ensure_utf8_console()
     parser = argparse.ArgumentParser(description="Shopee Product Video Ad Generator")
     parser.add_argument("--zip", type=str, default=None, help="Đường dẫn đến file zip sản phẩm Shopee")
     parser.add_argument("--list", action="store_true", help="Liệt kê danh sách các file zip Shopee đang có")

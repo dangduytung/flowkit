@@ -8,14 +8,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Sequence
 
-from tools.common.constants import VERTICAL_720P, VideoSpec
+from tools.common.constants import IMAGE_SUFFIXES, TEXT_SUFFIXES, VERTICAL_720P, VIDEO_SUFFIXES, VideoSpec
 from tools.common.ffmpeg import DEFAULT_ENCODE, EncodeProfile, delogo_filter, probe_dimensions, run_ffmpeg
 
 logger = logging.getLogger(__name__)
-
-IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
-VIDEO_SUFFIXES = (".mp4",)
-TEXT_SUFFIXES = (".txt",)
 
 # Source is treated as already vertical when height >= width * this ratio.
 VERTICAL_ASPECT_THRESHOLD = 1.3

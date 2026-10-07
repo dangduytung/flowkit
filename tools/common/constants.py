@@ -40,6 +40,11 @@ VERTICAL_720P = VideoSpec()
 # Google Flow's sparkle mark, bottom-right of a 720x1280 render.
 FLOW_WATERMARK_BOX = DelogoBox(x=546, y=1120, w=68, h=104)
 
+# File types found in a scraped product zip.
+IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
+VIDEO_SUFFIXES = (".mp4",)
+TEXT_SUFFIXES = (".txt",)
+
 # A Flow/Omni clip smaller than this is a failed or partial download, not a video.
 MIN_FLOW_CLIP_BYTES = 100_000
 
@@ -49,8 +54,11 @@ SCENE_TAIL_PAD_SECONDS = 0.4
 __all__ = [
     "DelogoBox",
     "FLOW_WATERMARK_BOX",
+    "IMAGE_SUFFIXES",
     "MIN_FLOW_CLIP_BYTES",
     "SCENE_TAIL_PAD_SECONDS",
+    "TEXT_SUFFIXES",
     "VERTICAL_720P",
+    "VIDEO_SUFFIXES",
     "VideoSpec",
 ]

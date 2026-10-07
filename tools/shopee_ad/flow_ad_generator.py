@@ -52,6 +52,7 @@ from tools.shopee_ad.publish_guide import create_publish_guide
 from tools.common import storyboard_io
 from tools.common.constants import MIN_FLOW_CLIP_BYTES
 from tools.common.ffmpeg import file_is_ready
+from tools.common.settings import ensure_utf8_console
 from tools.common.naming import build_variant_suffix
 from tools.common.pipeline.selection import SceneSelection, warn_unknown_scene_ids
 from tools.common.pipeline.voice import silent_timing, synthesize_narration
@@ -665,6 +666,7 @@ def generate_flow_ad(
 
 
 def main():
+    ensure_utf8_console()
     import argparse
     parser = argparse.ArgumentParser(description="Google Flow AI Ad Generator for Shopee Products")
     parser.add_argument("--zip", type=str, default=None, help="Đường dẫn đến file zip sản phẩm Shopee")

@@ -1,141 +1,66 @@
-"""Configuration settings for TikTok Ad Production."""
-import os
-import sys
+"""TikTok ad pipeline configuration.
+
+Platform specifics live in ``PROFILE``; the module-level names below are kept for
+existing imports.
+"""
 from pathlib import Path
 from typing import Optional
 
-# Ensure UTF-8 output on Windows console
-if hasattr(sys.stdout, "reconfigure"):
-    try:
-        sys.stdout.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
-if hasattr(sys.stderr, "reconfigure"):
-    try:
-        sys.stderr.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
+from tools.common.bgm import resolve_bgm_path
+from tools.common.settings import (
+    DEFAULT_BGM_DIR,
+    REPO_ROOT,
+    AutoModePolicy,
+    PlatformProfile,
+    service_settings,
+)
 
-# Base directories
-REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-DEFAULT_ENV_FILE = REPO_ROOT / ".env"
+PROFILE = PlatformProfile.from_env(
+    key="tiktok",
+    display_name="TikTok",
+    env_prefix="TIKTOK",
+    default_downloads_folder="TikTok Downloads",
+    silent_scene_seconds=4.0,
+    default_cta="yellow_cart",
+    cta_choices=("yellow_cart", "profile_bio", "follow", "none"),
+    default_style="viral_hook",
+    batch_styles=("viral_hook", "faceless_pov", "problem_solution", "lifestyle_edc"),
+    style_aliases={"faceless": "faceless_pov", "pov": "faceless_pov", "hands_on_pov": "faceless_pov"},
+    auto_mode=AutoModePolicy.BY_FLOWKIT,
+)
 
+_services = service_settings()
+OMNIVOICE_URL = _services.omnivoice_url
+OMNIVOICE_API_KEY = _services.omnivoice_api_key
+OMNIVOICE_PROFILE_ID = _services.omnivoice_profile_id
+OMNIVOICE_SPEED = _services.omnivoice_speed
+FLOWKIT_API_URL = _services.flowkit_api_url
 
-def _load_env_file(path: Path):
-    if not path.exists():
-        return
-    with open(path, "r", encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, val = line.split("=", 1)
-            key, val = key.strip(), val.strip().strip("'\"")
-            if key and key not in os.environ:
-                os.environ[key] = val
-
-
-_load_env_file(DEFAULT_ENV_FILE)
-
-# OmniVoice Settings
-OMNIVOICE_URL = os.environ.get("OMNIVOICE_URL", "").strip()
-OMNIVOICE_API_KEY = os.environ.get("OMNIVOICE_API_KEY", "").strip()
-OMNIVOICE_PROFILE_ID = os.environ.get("OMNIVOICE_PROFILE_ID", "").strip()
-OMNIVOICE_SPEED = float(os.environ.get("OMNIVOICE_SPEED", "1.03"))
-
-# FlowKit API
-FLOWKIT_API_URL = os.environ.get("FLOWKIT_API_URL", "http://127.0.0.1:8100")
-
-# Input & Output Paths
-_tiktok_dir_env = os.environ.get("TIKTOK_DOWNLOADS_DIR", "").strip()
-if _tiktok_dir_env:
-    TIKTOK_DOWNLOADS_DIR = Path(_tiktok_dir_env)
-else:
-    _default_dl = Path.home() / "Downloads" / "TikTok Downloads"
-    TIKTOK_DOWNLOADS_DIR = _default_dl if _default_dl.exists() else None
-
-OUTPUT_ROOT = REPO_ROOT / "output" / "tiktok_ads"
-
-import random
-from typing import Optional, Union
-
-# BGM Settings
-BGM_DIR = REPO_ROOT / "assets" / "bgm"
+TIKTOK_DOWNLOADS_DIR = PROFILE.downloads_dir
+OUTPUT_ROOT = PROFILE.output_root
+BGM_DIR = DEFAULT_BGM_DIR
+SILENT_SCENE_SECONDS = PROFILE.silent_scene_seconds
+DEFAULT_CHANNEL_NAME = PROFILE.channel_name
+DEFAULT_CHANNEL_HANDLE = PROFILE.channel_handle
+DEFAULT_CHANNEL_BIO_LINK = PROFILE.channel_bio_link
 
 
-def resolve_bgm_path(
-    custom_bgm: Optional[Union[str, Path]] = None,
-    style: Optional[str] = None,
-    product_assets_dir: Optional[Path] = None,
-) -> Optional[Path]:
-    """
-    Resolve background music path.
-    Default behavior: NO BGM (returns None) unless explicitly enabled via custom_bgm.
-
-    Modes for custom_bgm:
-    - None or "": No background music (DEFAULT).
-    - "auto" / "random" / "true" / "1": Pick a random track from assets/bgm/ (or product_assets_dir).
-    - File path or filename: Use that specific audio file (direct path or relative to assets/bgm/).
-    """
-    if not custom_bgm:
-        return None
-
-    str_val = str(custom_bgm).strip().lower()
-    if str_val in ("none", "false", "0", "no", "off"):
-        return None
-
-    # Check direct path
-    p = Path(custom_bgm)
-    if p.exists() and p.is_file():
-        return p
-
-    # Check if filename exists inside assets/bgm/
-    if BGM_DIR.exists():
-        direct_bgm = BGM_DIR / custom_bgm
-        if direct_bgm.is_file():
-            return direct_bgm
-
-    # If requested auto/random selection
-    if str_val in ("auto", "random", "true", "1"):
-        if product_assets_dir:
-            for ext in [".mp3", ".wav", ".m4a"]:
-                p_cand = product_assets_dir / f"bgm{ext}"
-                if p_cand.exists() and p_cand.is_file():
-                    return p_cand
-
-        if BGM_DIR.exists() and BGM_DIR.is_dir():
-            audio_candidates = [
-                f for f in BGM_DIR.iterdir()
-                if f.is_file() and f.suffix.lower() in [".mp3", ".wav", ".m4a"]
-            ]
-            if audio_candidates:
-                if style:
-                    clean_style = style.lower().replace("-", "_")
-                    matched = [
-                        f for f in audio_candidates
-                        if clean_style in f.stem.lower()
-                    ]
-                    if matched:
-                        return random.choice(matched)
-                return random.choice(audio_candidates)
-
-    return None
+def list_available_zips(directory: Optional[Path] = None) -> list[Path]:
+    """TikTok product zips, newest first."""
+    return PROFILE.list_zips(directory)
 
 
-# Per-scene length of voiceless (--no-voice) cuts, in seconds
-SILENT_SCENE_SECONDS = 4.0
-
-# Channel Branding (Optional - empty by default for 100% white-label multi-channel distribution)
-DEFAULT_CHANNEL_NAME = os.environ.get("TIKTOK_AD_CHANNEL_NAME", "").strip()
-DEFAULT_CHANNEL_HANDLE = os.environ.get("TIKTOK_AD_CHANNEL_HANDLE", "").strip()
-DEFAULT_CHANNEL_BIO_LINK = os.environ.get("TIKTOK_AD_BIO_LINK", "").strip()
-
-
-def list_available_zips(directory: Optional[Path] = None) -> list:
-    """List all available TikTok zip files from TIKTOK_DOWNLOADS_DIR sorted by newest first."""
-    target = directory or TIKTOK_DOWNLOADS_DIR
-    if not target or not target.exists():
-        return []
-    zips = list(target.glob("*.zip"))
-    zips.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return zips
+__all__ = [
+    "BGM_DIR",
+    "DEFAULT_CHANNEL_BIO_LINK",
+    "DEFAULT_CHANNEL_HANDLE",
+    "DEFAULT_CHANNEL_NAME",
+    "FLOWKIT_API_URL",
+    "OUTPUT_ROOT",
+    "PROFILE",
+    "REPO_ROOT",
+    "SILENT_SCENE_SECONDS",
+    "TIKTOK_DOWNLOADS_DIR",
+    "list_available_zips",
+    "resolve_bgm_path",
+]
