@@ -65,7 +65,11 @@ def extract_vertical_subclip(
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    delogo_prefix = f"delogo={delogo}," if delogo else ""
+    if delogo:
+        delogo_clean = delogo[7:] if delogo.startswith("delogo=") else delogo
+        delogo_prefix = f"delogo={delogo_clean},"
+    else:
+        delogo_prefix = ""
 
     # Detect source orientation to avoid redundant blur on vertical videos
     is_vertical = False
@@ -197,13 +201,76 @@ def create_image_slide_clip(
     return output_path
 
 
+def create_hybrid_subclip(
+    image_path: Path,
+    video_path: Path,
+    img_duration: float,
+    vid_start_sec: float,
+    vid_duration: float,
+    output_path: Path,
+    width: int = 720,
+    height: int = 1280,
+    fps: int = 30,
+    mode: str = "blur_bg",
+    delogo: Optional[str] = None,
+) -> Path:
+    """
+    Seamlessly combines an animated Ken Burns product still slide with an authentic video subclip.
+    Used when raw video footage is shorter than narration to prevent repetitive looping.
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    temp_dir = output_path.parent / "_temp_hybrid"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    part1 = temp_dir / f"{output_path.stem}_slide.mp4"
+    part2 = temp_dir / f"{output_path.stem}_vid.mp4"
+
+    create_image_slide_clip(image_path, img_duration, part1, width=width, height=height, fps=fps)
+    extract_vertical_subclip(
+        video_path,
+        vid_start_sec,
+        vid_duration,
+        part2,
+        width=width,
+        height=height,
+        fps=fps,
+        mode=mode,
+        delogo=delogo,
+    )
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", str(part1),
+        "-i", str(part2),
+        "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[v]",
+        "-map", "[v]",
+        "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+        str(output_path),
+    ]
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+    try:
+        part1.unlink(missing_ok=True)
+        part2.unlink(missing_ok=True)
+        if not any(temp_dir.iterdir()):
+            temp_dir.rmdir()
+    except Exception:
+        pass
+
+    return output_path
+
+
 def calculate_smart_subclip_starts(
-    video_path: Path, num_scenes: int, total_dur: float
+    video_path: Path,
+    num_scenes: int,
+    total_dur: float,
+    scene_durations: Optional[List[float]] = None,
 ) -> Tuple[List[float], List[Tuple[float, float]]]:
     """
     Detect shot transitions in the source video and select stable, distinct starting points.
     Guarantees that each scene receives a UNIQUE start point spaced across the entire video,
-    preventing any scene from repeating footage.
+    preventing any scene from repeating footage (0% overlap).
     Returns (starts, glitch_intervals).
     """
     if total_dur <= 0 or num_scenes <= 0:
@@ -237,28 +304,38 @@ def calculate_smart_subclip_starts(
     except Exception:
         pass
 
-    # Target ideal evenly-spaced anchors across the entire video duration
-    max_start = max(0.0, total_dur - (2.5 if total_dur >= 6.0 else 1.0))
-    interval = max_start / max(1, num_scenes - 1)
-    ideal_targets = [i * interval for i in range(num_scenes)]
+    # If scene_durations are provided and fit within total_dur
+    total_required = sum(scene_durations) if scene_durations else 0.0
+    if scene_durations and len(scene_durations) == num_scenes and total_required <= total_dur:
+        selected_starts = []
+        current_cursor = 0.0
+        for idx in range(num_scenes):
+            if idx == 0:
+                selected_starts.append(0.0)
+                current_cursor += scene_durations[0]
+                continue
+            valid_cuts = [c for c in cuts if current_cursor - 0.8 <= c <= current_cursor + 1.2 and c + scene_durations[idx] <= total_dur]
+            if valid_cuts:
+                chosen = min(valid_cuts, key=lambda c: abs(c - current_cursor))
+            else:
+                chosen = current_cursor
+            selected_starts.append(round(chosen, 2))
+            current_cursor = chosen + scene_durations[idx]
+        return selected_starts[:num_scenes], glitch_intervals
 
-    min_step = min(2.0, max(0.2, interval * 0.75))
-    selected_starts = []
-    for idx, t in enumerate(ideal_targets):
-        if idx == 0:
-            selected_starts.append(0.0)
-            continue
-
-        min_prev = selected_starts[-1] + min_step
-        valid_cuts = [c for c in cuts if min_prev <= c <= t + 1.8 and c <= max_start]
+    # If total_dur is shorter than required narration, partition total_dur proportionally
+    # across num_scenes to strictly avoid overlapping footage
+    interval = total_dur / num_scenes
+    selected_starts = [0.0]
+    for idx in range(1, num_scenes):
+        target_t = idx * interval
+        min_bound = selected_starts[-1] + max(1.0, interval * 0.4)
+        max_bound = min(total_dur - 0.5, (idx + 1) * interval if idx + 1 < num_scenes else total_dur)
+        valid_cuts = [c for c in cuts if min_bound <= c <= max_bound]
         if valid_cuts:
-            best_cut = min(valid_cuts, key=lambda c: abs(c - t))
+            best_cut = min(valid_cuts, key=lambda c: abs(c - target_t))
         else:
-            best_cut = min(max_start, max(min_prev, t))
-
-        if best_cut <= selected_starts[-1]:
-            best_cut = selected_starts[-1] + min(0.5, max(0.1, (total_dur - selected_starts[-1]) / (num_scenes - idx + 1)))
-
+            best_cut = min(max_bound, max(min_bound, target_t))
         selected_starts.append(round(best_cut, 2))
 
     return selected_starts[:num_scenes], glitch_intervals

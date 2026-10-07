@@ -5,7 +5,7 @@ import subprocess
 import sys
 import urllib.request
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -27,6 +27,7 @@ from tools.shopee_ad.asset_extractor import (
     extract_zip,
     extract_vertical_subclip,
     create_image_slide_clip,
+    create_hybrid_subclip,
     calculate_smart_subclip_starts,
 )
 from tools.shopee_ad.video_assembler import (
@@ -88,6 +89,7 @@ def run_pipeline(
     tag: Optional[str] = None,
     delogo: Optional[str] = "auto",
     bgm: Optional[Path | str] = None,
+    target_scenes: Optional[List[int]] = None,
 ) -> Path:
     """
     Execute the entire Shopee Ad production pipeline dynamically for ANY product zip.
@@ -204,7 +206,10 @@ def run_pipeline(
             ]
             res_p = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
             raw_video_dur = float(res_p.stdout.strip())
-            smart_starts, glitch_intervals = calculate_smart_subclip_starts(raw_video, len(scenes), raw_video_dur)
+            scene_req_durs = [audio_durations[sc.id] + 0.4 for sc in scenes]
+            smart_starts, glitch_intervals = calculate_smart_subclip_starts(
+                raw_video, len(scenes), raw_video_dur, scene_durations=scene_req_durs
+            )
             print(f"  [Video Gốc] Tìm thấy video mẫu từ Shopee ({raw_video_dur:.1f}s), sẵn sàng biên tập sub-clips.")
             print(f"  [Smart Cuts] Phân bổ mốc thời gian mượt mà (tránh giật hình): {smart_starts}")
             if glitch_intervals:
@@ -240,20 +245,48 @@ def run_pipeline(
             else:
                 raise RuntimeError(f"Scene {sc.id} không có video lẫn hình ảnh để dựng!")
         else:
-            # Biên tập cắt lát trực tiếp từ video mẫu của Shop
+            # Biên tập cắt lát trực tiếp từ video mẫu của Shop (đảm bảo 100% không trùng lặp cảnh)
             if smart_starts and idx_sc < len(smart_starts):
                 start_sec = smart_starts[idx_sc]
+                next_sec = smart_starts[idx_sc + 1] if idx_sc + 1 < len(smart_starts) else raw_video_dur
+                avail_slice = max(0.0, next_sec - start_sec)
             elif sc.real_start_sec is not None and sc.real_start_sec >= 0:
                 start_sec = sc.real_start_sec
+                avail_slice = dur
             else:
                 start_sec = curr_raw_time
+                avail_slice = dur
                 curr_raw_time += dur
 
-            if raw_video_dur > 0 and start_sec >= raw_video_dur - 1.0:
-                start_sec = max(0.0, raw_video_dur - min(dur, max(1.0, raw_video_dur - 1.0)))
-
-            print(f"  • Scene {sc.id}: Cắt video mẫu từ {start_sec:.1f}s đến {start_sec + dur:.1f}s (dài {dur:.1f}s, mode {mode_9_16})...")
-            extract_vertical_subclip(raw_video, start_sec, dur, clip_out, mode=mode_9_16, glitch_intervals=glitch_intervals, delogo=active_delogo)
+            # Nếu lát cắt video ngắn hơn lời đọc (từ 0.5s trở lên) và có ảnh sản phẩm:
+            # Tự động ghép chuyển động ảnh Ken Burns vào đầu cảnh để không bị lặp lại video hay giật khung hình
+            if images and avail_slice > 0 and avail_slice < dur - 0.5:
+                img_idx = sc.image_index % len(images) if sc.image_index is not None else (idx_sc % len(images))
+                img_path = images[img_idx]
+                slide_dur = dur - avail_slice
+                print(f"  • Scene {sc.id}: Ghép linh hoạt (Ảnh {img_path.name} {slide_dur:.1f}s + Video mẫu {avail_slice:.1f}s từ {start_sec:.1f}s)...")
+                create_hybrid_subclip(
+                    image_path=img_path,
+                    video_path=raw_video,
+                    img_duration=slide_dur,
+                    vid_start_sec=start_sec,
+                    vid_duration=avail_slice,
+                    output_path=clip_out,
+                    mode=mode_9_16,
+                    delogo=active_delogo,
+                )
+            else:
+                cut_dur = min(dur, avail_slice) if avail_slice > 0 else dur
+                print(f"  • Scene {sc.id}: Cắt video mẫu từ {start_sec:.1f}s (dài {cut_dur:.1f}s, mode {mode_9_16})...")
+                extract_vertical_subclip(
+                    raw_video,
+                    start_sec,
+                    cut_dur,
+                    clip_out,
+                    mode=mode_9_16,
+                    glitch_intervals=glitch_intervals,
+                    delogo=active_delogo,
+                )
 
         video_clips[sc.id] = clip_out
 
@@ -447,6 +480,13 @@ def main():
         help="Chế độ xóa logo shop: 'auto' (tự động phát hiện logo như Pi home và xóa sạch), 'none' (tắt), hoặc tọa độ thủ công (ví dụ 'x=30:y=545:w=140:h=60')",
     )
     parser.add_argument(
+        "--scene",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Chỉ định ID phân cảnh cần tạo lại (ví dụ: --scene 3)",
+    )
+    parser.add_argument(
         "--bgm",
         nargs="?",
         const="auto",
@@ -551,6 +591,7 @@ def main():
                 tag=args.tag,
                 delogo=args.delogo,
                 bgm=args.bgm,
+                target_scenes=args.scene,
             )
 
         if run_flow:
@@ -563,6 +604,7 @@ def main():
                 style=cur_style,
                 regen=args.regen,
                 force_storyboard=args.force_storyboard or bool(args.idea),
+                target_scenes=args.scene,
                 custom_idea=args.idea,
                 channel_name=args.channel_name,
                 channel_handle=args.channel_handle,

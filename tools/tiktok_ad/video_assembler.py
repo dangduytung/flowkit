@@ -23,10 +23,12 @@ def assemble_scene_clip(
     pad_tail: float = 0.4,
     remove_watermark: bool = True,
     delogo: Optional[str] = None,
+    de_ai: bool = True,
 ) -> Path:
     """
     Combines video clip with audio, trims/loops video to fit audio, and burns text overlays.
     If audio_path is None, generates silent audio and uses target_duration or video duration.
+    Includes advanced de-AI realism filters (handheld breathing, color grading, acoustic room tone, and metadata scrubbing).
     """
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -77,19 +79,40 @@ def assemble_scene_clip(
     else:
         total_duration = 5.0
 
-    loop_input = video_duration > 0 and video_duration < total_duration
-
     # Filters for video processing and text overlays
     filters = []
+    if video_duration > 0 and video_duration < total_duration:
+        # Stretch video speed slightly (subtle slow-mo) or pad final frame to avoid repetitive looping
+        pts_factor = total_duration / video_duration
+        if pts_factor <= 1.30:
+            filters.append(f"setpts={pts_factor:.4f}*(PTS-STARTPTS)")
+        else:
+            filters.append("setpts=PTS-STARTPTS")
+            filters.append("tpad=stop_mode=clone:stop_duration=10")
+    else:
+        filters.append("setpts=PTS-STARTPTS")
+
     filters.append(f"trim=duration={total_duration:.2f}")
-    filters.append("setpts=PTS-STARTPTS")
     filters.append("fps=fps=30")
 
-    # Clean Google Flow watermark (sparkle icon at bottom right) or custom delogo filter
+    # Clean Google Flow watermark (exact 68x104 sparkle icon at bottom right) and/or custom delogo filter
+    if remove_watermark:
+        filters.append("delogo=x=546:y=1120:w=68:h=104")
     if delogo:
-        filters.append(delogo)
-    elif remove_watermark:
-        filters.append("delogo=x=568:y=1120:w=64:h=64")
+        delogo_clean = delogo[7:] if delogo.startswith("delogo=") else delogo
+        filters.append(f"delogo={delogo_clean}")
+
+    # De-AI Realism: Organic handheld camera movement & Analog color curve
+    if de_ai:
+        # Subtle organic handheld camera movement (breaks AI tripod stability & disrupts spatial SynthID lattices)
+        filters.append(
+            "crop=in_w-16:in_h-28:"
+            "8+4*sin(2*PI*t*0.8)+2*sin(2*PI*t*1.5):"
+            "14+5*cos(2*PI*t*0.6)+2*cos(2*PI*t*1.2),"
+            "scale=720:1280"
+        )
+        # Natural color curve (breaks synthetic digital color flatlining)
+        filters.append("eq=contrast=1.02:brightness=0.01:saturation=1.03")
 
     # Resolve fonts (Arial Bold for titles, Arial for subtitles)
     font_title_path = Path("C:/Windows/Fonts/arialbd.ttf")
@@ -128,48 +151,102 @@ def assemble_scene_clip(
             f"box=1:boxcolor=black@0.5:boxborderw=8:x=(w-text_w)/2:y=210"
         )
 
+    # Subtle camera sensor grain to remove synthetic AI plasticity and blend watermark boundaries
+    grain_strength = 5 if de_ai else 4
+    filters.append(f"noise=alls={grain_strength}:allf=t")
     vf_str = ",".join(filters)
 
-    cmd = ["ffmpeg", "-y"]
-    if loop_input:
-        cmd.extend(["-stream_loop", "-1"])
-    cmd.extend(["-i", str(video_path)])
+    cmd = ["ffmpeg", "-y", "-i", str(video_path)]
+
+    # Check if video clip has native audio (e.g. ambient sound / foley)
+    video_has_audio = False
+    try:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(video_path)],
+            capture_output=True, text=True,
+        )
+        video_has_audio = bool(probe.stdout.strip())
+    except Exception:
+        video_has_audio = False
 
     if has_audio:
         cmd.extend(["-i", str(audio_path)])
-    else:
-        # Generate clean silent audio stream for compatibility
-        cmd.extend([
-            "-f",
-            "lavfi",
-            "-i",
-            f"anullsrc=r=48000:cl=stereo:d={total_duration:.2f}",
-        ])
+        if de_ai:
+            # Generate organic room tone dither to eliminate 0dB digital silence between TTS words
+            cmd.extend(["-f", "lavfi", "-i", f"anoisesrc=d={total_duration:.2f}:c=brown:r=48000:a=0.003"])
 
-    cmd.extend([
-        "-vf",
-        vf_str,
-        "-map",
-        "0:v:0",
-        "-map",
-        "1:a:0",
-        "-t",
-        f"{total_duration:.2f}",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "fast",
-        "-pix_fmt",
-        "yuv420p",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
-        "-ar",
-        "48000",
-        "-shortest",
-        str(output_path),
-    ])
+            if video_has_audio:
+                filter_complex = (
+                    f"[0:v]{vf_str}[v];"
+                    f"[0:a]volume=0.45,aresample=48000[amb];"
+                    f"[1:a]volume=1.0,equalizer=f=3400:t=q:w=1.5:g=-1.8,aresample=48000[voc];"
+                    f"[2:a]volume=0.20,aresample=48000[room];"
+                    f"[amb][room][voc]amix=inputs=3:duration=first:dropout_transition=2[aout]"
+                )
+            else:
+                filter_complex = (
+                    f"[0:v]{vf_str}[v];"
+                    f"[1:a]volume=1.0,equalizer=f=3400:t=q:w=1.5:g=-1.8,aresample=48000[voc];"
+                    f"[2:a]volume=0.20,aresample=48000[room];"
+                    f"[room][voc]amix=inputs=2:duration=first:dropout_transition=2[aout]"
+                )
+
+            cmd.extend([
+                "-filter_complex", filter_complex,
+                "-map", "[v]",
+                "-map", "[aout]",
+                "-t", f"{total_duration:.2f}",
+                "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+                "-map_metadata", "-1", "-fflags", "+bitexact",
+                "-shortest",
+                str(output_path),
+            ])
+        else:
+            if video_has_audio:
+                filter_complex = (
+                    f"[0:v]{vf_str}[v];"
+                    f"[0:a]volume=0.45,aresample=48000[amb];"
+                    f"[1:a]volume=1.0,aresample=48000[voc];"
+                    f"[amb][voc]amix=inputs=2:duration=first:dropout_transition=2[aout]"
+                )
+                cmd.extend([
+                    "-filter_complex", filter_complex,
+                    "-map", "[v]",
+                    "-map", "[aout]",
+                    "-t", f"{total_duration:.2f}",
+                    "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+                    "-map_metadata", "-1", "-fflags", "+bitexact",
+                    "-shortest",
+                    str(output_path),
+                ])
+            else:
+                cmd.extend([
+                    "-vf", vf_str,
+                    "-map", "0:v:0",
+                    "-map", "1:a:0",
+                    "-t", f"{total_duration:.2f}",
+                    "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+                    "-map_metadata", "-1", "-fflags", "+bitexact",
+                    "-shortest",
+                    str(output_path),
+                ])
+    else:
+        # Standard silent stereo audio to guarantee TikTok/Reels container compatibility
+        cmd.extend(["-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=48000"])
+        cmd.extend([
+            "-vf", vf_str,
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-t", f"{total_duration:.2f}",
+            "-c:v", "libx264", "-preset", "fast", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
+            "-map_metadata", "-1", "-fflags", "+bitexact",
+            "-shortest",
+            str(output_path),
+        ])
 
     subprocess.run(cmd, capture_output=True, text=True, check=True)
     return output_path
@@ -210,6 +287,10 @@ def concat_scenes(
         "192k",
         "-ar",
         "48000",
+        "-map_metadata",
+        "-1",
+        "-fflags",
+        "+bitexact",
         str(temp_concat),
     ]
     subprocess.run(cmd_concat, capture_output=True, text=True, check=True)
@@ -235,6 +316,10 @@ def concat_scenes(
             "aac",
             "-b:a",
             "192k",
+            "-map_metadata",
+            "-1",
+            "-fflags",
+            "+bitexact",
             str(output_path),
         ]
         subprocess.run(cmd_bgm, capture_output=True, text=True, check=True)
@@ -272,11 +357,15 @@ def create_silent_version(video_path: Path, silent_output_path: Path) -> Path:
         "192k",
         "-ar",
         "48000",
+        "-map_metadata",
+        "-1",
+        "-fflags",
+        "+bitexact",
         "-shortest",
         str(silent_output_path),
     ]
     subprocess.run(cmd, capture_output=True, text=True, check=True)
-    print(f"[Assembler] Đã xuất bản video tắt tiếng (Silent): {silent_output_path.name}")
+    print(f"[Assembler] Exported silent version: {silent_output_path.name}")
     return silent_output_path
 
 
@@ -313,7 +402,7 @@ def concat_audio_files(audio_paths: List[Path], output_path: Path) -> Path:
     if concat_list_file.exists():
         concat_list_file.unlink()
 
-    print(f"[Assembler] Đã xuất file audio lời thoại đầy đủ: {output_path.name}")
+    print(f"[Assembler] Exported full narration audio: {output_path.name}")
     return output_path
 
 
@@ -383,5 +472,5 @@ def export_voiceover_script(
 {breakdown_str}
 """
     output_path.write_text(content.strip(), encoding="utf-8")
-    print(f"[Assembler] Đã xuất file text lời thoại & timecode: {output_path.name}")
+    print(f"[Assembler] Exported script & timecode text: {output_path.name}")
     return output_path

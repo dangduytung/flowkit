@@ -93,7 +93,8 @@ def create_cover_image(
 
     filters = []
     if delogo:
-        filters.append(delogo)
+        delogo_clean = delogo[7:] if delogo.startswith("delogo=") else delogo
+        filters.append(f"delogo={delogo_clean}")
     else:
         filters.append("delogo=x=546:y=1120:w=68:h=104")
 

@@ -67,19 +67,28 @@ def assemble_scene_clip(
     else:
         total_duration = 5.0
 
-    loop_input = (video_duration > 0 and video_duration < total_duration)
-
     # Filters for video processing and text overlays
     filters = []
+    if video_duration > 0 and video_duration < total_duration:
+        # Stretch video speed slightly (subtle slow-mo) or pad final frame to avoid repetitive looping
+        pts_factor = total_duration / video_duration
+        if pts_factor <= 1.30:
+            filters.append(f"setpts={pts_factor:.4f}*(PTS-STARTPTS)")
+        else:
+            filters.append("setpts=PTS-STARTPTS")
+            filters.append("tpad=stop_mode=clone:stop_duration=10")
+    else:
+        filters.append("setpts=PTS-STARTPTS")
+
     filters.append(f"trim=duration={total_duration:.2f}")
-    filters.append("setpts=PTS-STARTPTS")
     filters.append("fps=fps=30")
 
-    # Clean Google Flow watermark (exact 68x104 sparkle icon at bottom right) or custom delogo filter
-    if delogo:
-        filters.append(delogo)
-    elif remove_watermark:
+    # Clean Google Flow watermark (exact 68x104 sparkle icon at bottom right) and/or custom delogo filter
+    if remove_watermark:
         filters.append("delogo=x=546:y=1120:w=68:h=104")
+    if delogo:
+        delogo_clean = delogo[7:] if delogo.startswith("delogo=") else delogo
+        filters.append(f"delogo={delogo_clean}")
 
     # De-AI Realism: Organic handheld camera movement & Analog color curve
     if de_ai:
@@ -127,10 +136,7 @@ def assemble_scene_clip(
     filters.append(f"noise=alls={grain_strength}:allf=t")
     vf_str = ",".join(filters)
 
-    cmd = ["ffmpeg", "-y"]
-    if loop_input:
-        cmd.extend(["-stream_loop", "-1"])
-    cmd.extend(["-i", str(video_path)])
+    cmd = ["ffmpeg", "-y", "-i", str(video_path)]
 
     # Check if video clip has native audio (e.g. Google Flow ambient sound/foley)
     video_has_audio = False
@@ -299,7 +305,7 @@ def concat_audio_files(audio_paths: List[Path], output_path: Path) -> Path:
     if concat_list_file.exists():
         concat_list_file.unlink()
 
-    print(f"[Assembler] Đã xuất file audio lời thoại đầy đủ: {output_path.name}")
+    print(f"[Assembler] Exported full narration audio: {output_path.name}")
     return output_path
 
 
@@ -369,7 +375,7 @@ def export_voiceover_script(
 {breakdown_str}
 """
     output_path.write_text(content.strip(), encoding="utf-8")
-    print(f"[Assembler] Đã xuất file text lời thoại & timecode: {output_path.name}")
+    print(f"[Assembler] Exported script & timecode text: {output_path.name}")
     return output_path
 
 
@@ -390,9 +396,10 @@ def create_silent_version(video_path: Path, silent_output_path: Path) -> Path:
         "-c:a", "aac",
         "-b:a", "192k",
         "-ar", "48000",
+        "-map_metadata", "-1", "-fflags", "+bitexact",
         "-shortest",
         str(silent_output_path),
     ]
     subprocess.run(cmd, capture_output=True, text=True, check=True)
-    print(f"[Assembler] Đã xuất bản video tắt tiếng (Silent): {silent_output_path.name}")
+    print(f"[Assembler] Exported silent version: {silent_output_path.name}")
     return silent_output_path

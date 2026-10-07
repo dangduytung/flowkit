@@ -16,14 +16,23 @@ def _format_ffmpeg_path(path: Path) -> str:
 
 
 def _format_cover_text(text: str, max_chars: int = 38) -> str:
-    """Format and safely trim text to fit cover banner without cutting words in half."""
+    """Format and safely trim text to fit cover banner without cutting words in half.
+    Preserves trailing question marks or exclamations if originally present."""
     text = text.strip()
+    has_question = text.endswith("?")
+    has_exclaim = text.endswith("!")
+
     if len(text) <= max_chars:
         return text.upper()
     truncated = text[:max_chars]
     if " " in truncated:
         truncated = truncated.rsplit(" ", 1)[0]
-    return truncated.upper().strip()
+    res = truncated.upper().strip()
+    if has_question and not res.endswith("?"):
+        res = (res[:max_chars-1] + "?").strip()
+    elif has_exclaim and not res.endswith("!"):
+        res = (res[:max_chars-1] + "!").strip()
+    return res
 
 
 def create_cover_image(
@@ -84,7 +93,14 @@ def create_cover_image(
 
     filters = []
     if delogo:
-        filters.append(delogo)
+        delogo_clean = delogo[7:] if delogo.startswith("delogo=") else delogo
+        filters.append(f"delogo={delogo_clean}")
+    else:
+        filters.append("delogo=x=546:y=1120:w=68:h=104")
+
+    # Add subtle sensor grain to cover delogo boundary and match realistic photography
+    filters.append("noise=alls=5:allf=t")
+
     filters.extend([
         f"drawtext=textfile='{title_ff}':{font_spec}:fontsize={hook_fontsize}:fontcolor=yellow:borderw=4:bordercolor=black:box=1:boxcolor=black@0.75:boxborderw=16:x=(w-text_w)/2:y=180",
         f"drawtext=textfile='{sub_ff}':{font_spec}:fontsize={sub_fontsize}:fontcolor=white:borderw=3:bordercolor=black:box=1:boxcolor=black@0.65:boxborderw=12:x=(w-text_w)/2:y=280",
@@ -104,6 +120,8 @@ def create_cover_image(
         "1",
         "-q:v",
         "2",
+        "-map_metadata",
+        "-1",
         str(output_cover_path),
     ]
 

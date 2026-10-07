@@ -22,7 +22,16 @@ from tools.shopee_ad.prompts import (
     _build_flow_cinematic_scenes,
     _build_problem_solution_scenes,
 )
-from tools.shopee_ad.video_assembler import assemble_scene_clip, concat_scenes
+from tools.shopee_ad.asset_extractor import (
+    calculate_smart_subclip_starts,
+    create_image_slide_clip,
+)
+from tools.shopee_ad.video_assembler import (
+    assemble_scene_clip,
+    concat_audio_files,
+    concat_scenes,
+    create_silent_version,
+)
 
 FFMPEG_AVAILABLE = shutil.which("ffmpeg") is not None
 
@@ -54,6 +63,16 @@ def _make_test_audio(path: Path, duration: float = 0.5) -> Path:
         "ffmpeg", "-y", "-f", "lavfi", "-i", f"sine=frequency=880:duration={duration}",
         "-c:a", "pcm_s16le", "-ar", "48000",
         str(path),
+    ], capture_output=True, check=True, timeout=30)
+    return path
+
+
+def _make_test_image(path: Path) -> Path:
+    """Generate a synthetic test image."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run([
+        "ffmpeg", "-y", "-f", "lavfi", "-i", "color=c=orange:s=400x400:d=1",
+        "-frames:v", "1", str(path),
     ], capture_output=True, check=True, timeout=30)
     return path
 
@@ -336,3 +355,127 @@ class TestVideoAssembler:
         stream_types = probe.stdout.strip().splitlines()
         assert "video" in stream_types
         assert "audio" in stream_types
+
+    @pytest.mark.skipif(not FFMPEG_AVAILABLE, reason="FFmpeg not installed")
+    def test_assemble_clip_with_unprefixed_delogo(self, tmp_path):
+        """assemble_scene_clip should safely handle delogo string without 'delogo=' prefix."""
+        video_clip = _make_test_clip(tmp_path / "scene_delogo.mp4", duration=0.5, with_audio=False)
+        out_clip = tmp_path / "assembled_delogo.mp4"
+
+        res = assemble_scene_clip(
+            video_path=video_clip,
+            audio_path=None,
+            output_path=out_clip,
+            target_duration=0.5,
+            delogo="x=20:y=30:w=40:h=50",
+        )
+        assert res.exists()
+        assert res.stat().st_size > 1000
+
+    @pytest.mark.skipif(not FFMPEG_AVAILABLE, reason="FFmpeg not installed")
+    def test_cover_image_with_unprefixed_delogo(self, tmp_path):
+        """create_cover_image should safely handle delogo string without 'delogo=' prefix."""
+        video_clip = _make_test_clip(tmp_path / "cover_raw.mp4", duration=0.5, with_audio=False)
+        product = ProductInfo(
+            zip_path=tmp_path / "prod.zip",
+            slug="test_product",
+            name="Móc Dán Tường",
+        )
+        out_cover = tmp_path / "cover_delogo.jpg"
+
+        res = create_cover_image(
+            source_clip_or_video=video_clip,
+            product=product,
+            scenes=[],
+            output_cover_path=out_cover,
+            time_offset_s=0.1,
+            delogo="x=20:y=30:w=40:h=50",
+        )
+        assert res.exists()
+        assert res.stat().st_size > 1000
+
+    @pytest.mark.skipif(not FFMPEG_AVAILABLE, reason="FFmpeg not installed")
+    def test_assemble_clip_with_de_ai_disabled(self, tmp_path):
+        """assemble_scene_clip with de_ai=False should bypass breathing and room tone filters."""
+        video_clip = _make_test_clip(tmp_path / "scene_plain.mp4", duration=0.5, with_audio=False)
+        out_clip = tmp_path / "assembled_plain.mp4"
+
+        res = assemble_scene_clip(
+            video_path=video_clip,
+            audio_path=None,
+            output_path=out_clip,
+            target_duration=0.5,
+            de_ai=False,
+        )
+        assert res.exists()
+        assert res.stat().st_size > 1000
+
+    @pytest.mark.skipif(not FFMPEG_AVAILABLE, reason="FFmpeg not installed")
+    def test_create_silent_version(self, tmp_path):
+        """create_silent_version should produce a silent vertical video with stereo null track."""
+        video_clip = _make_test_clip(tmp_path / "master.mp4", duration=0.5, with_audio=True)
+        out_silent = tmp_path / "master_silent.mp4"
+
+        res = create_silent_version(video_clip, out_silent)
+        assert res.exists()
+        assert res.stat().st_size > 1000
+
+    @pytest.mark.skipif(not FFMPEG_AVAILABLE, reason="FFmpeg not installed")
+    def test_concat_audio_files(self, tmp_path):
+        """concat_audio_files should combine individual audio tracks into a master mp3."""
+        a1 = _make_test_audio(tmp_path / "a1.wav", duration=0.3)
+        a2 = _make_test_audio(tmp_path / "a2.wav", duration=0.3)
+        out_master = tmp_path / "master_voice.mp3"
+
+        res = concat_audio_files([a1, a2], out_master)
+        assert res.exists()
+        assert res.stat().st_size > 1000
+
+
+# ===========================================================================
+# 5. Test Asset Extractor (Image Animation & Smart Subclip Cutting)
+# ===========================================================================
+class TestAssetExtractor:
+    @pytest.mark.skipif(not FFMPEG_AVAILABLE, reason="FFmpeg not installed")
+    def test_create_image_slide_clip(self, tmp_path):
+        """create_image_slide_clip converts still image into Ken-Burns animated vertical video."""
+        img_path = _make_test_image(tmp_path / "product.jpg")
+        out_clip = tmp_path / "slide.mp4"
+
+        res = create_image_slide_clip(img_path, duration=0.5, output_path=out_clip)
+        assert res.exists()
+        assert res.stat().st_size > 1000
+
+    def test_calculate_smart_subclip_starts_basic(self, tmp_path):
+        """calculate_smart_subclip_starts generates valid start times."""
+        video_clip = _make_test_clip(tmp_path / "raw.mp4", duration=4.0, with_audio=False)
+        starts, glitches = calculate_smart_subclip_starts(video_clip, num_scenes=3, total_dur=4.0)
+        assert len(starts) == 3
+        assert starts[0] == 0.0
+
+    def test_vacuum_cleaner_archetype_prompts(self):
+        """Vacuum cleaner archetype should produce specialized prompts with attached nozzle."""
+        from tools.shopee_ad.prompts import build_faceless_pov_scenes
+        from tools.shopee_ad.product_parser import ProductInfo
+
+        scenes = build_faceless_pov_scenes(
+            category="KITCHEN_HOME",
+            clean_title="máy hút bụi cầm tay tamashio",
+            feat1_title="LỰC HÚT MẠNH MẼ",
+            feat1_desc="Lực hút 12000Pa",
+            feat2_title="ĐẦU HÚT ĐA NĂNG",
+            feat2_desc="6 đầu hút thông minh",
+        )
+        assert len(scenes) == 4
+        # Scene 1 must avoid attaching/plugging parts
+        assert "NO attaching parts" in scenes[0].prompt
+        # Scene 3 must specify nozzle is already attached (avoiding AI mechanical snap glitch)
+        sc3 = scenes[2]
+        assert "already securely attached" in sc3.prompt
+        assert "couch cushion" in sc3.prompt or "textured" in sc3.prompt
+        # Scene 4 must avoid twisting/pulling parts and show filter under running water
+        assert "NO twisting" in scenes[3].prompt
+        assert "gentle stream of fresh tap water" in scenes[3].prompt
+
+
+

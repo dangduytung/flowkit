@@ -4,6 +4,7 @@ Dedicated exclusively to physical product categories, macro POV B-roll, KOC pers
 from typing import List, Optional
 
 from tools.common.models import SceneDefinition
+from tools.common.archetypes import ProductArchetype, resolve_product_archetype
 
 def _get_character_persona(category: str) -> dict:
     """
@@ -1135,6 +1136,90 @@ def _build_lifestyle_edc_scenes(
     ]
 
 
+def _build_vacuum_faceless_pov_scenes(
+    clean_title: str,
+    feat1_title: str = "",
+    feat1_desc: str = "",
+    feat2_title: str = "",
+    feat2_desc: str = "",
+    idea_ctx: str = "",
+) -> List[SceneDefinition]:
+    """Build 4 authentic faceless POV scenes for handheld/cordless vacuum cleaners dynamically."""
+    sc2_title = feat1_title if feat1_title else "LỰC HÚT MẠNH MẼ"
+    sc2_sub = feat1_desc if feat1_desc else "Sạch bóng mọi khe kẹt"
+    sc3_title = feat2_title if feat2_title else "ĐẦU HÚT ĐA NĂNG"
+    sc3_sub = feat2_desc if feat2_desc else "Sofa - Bàn phím - Giường nệm"
+
+    return [
+        SceneDefinition(
+            id=1,
+            name="POV 1 - Mở hộp trên tay & Đầu hút đa năng",
+            kind="FLOW_AI",
+            narrator_text=f"Mở hộp chiếc {clean_title}, thiết kế không dây mini cầm nhẹ tênh, đi kèm trọn bộ đầu hút chuyên dụng cực kỳ tiện lợi.",
+            overlay_title="TRẢI NGHIỆM TRÊN TAY",
+            overlay_subtitle="Không dây mini - Đa năng",
+            image_index=0,
+            prompt=(
+                f"Vertical 9:16 authentic commercial ad video. First-person POV looking down at a tidy modern wooden desk. "
+                f"Two hands hold and rotate the sleek compact cordless handheld vacuum cleaner, showcasing its minimalist cylindrical body, premium matte texture, and ergonomic handle. "
+                f"Thumb gently presses the power button, a subtle modern blue LED light glows. "
+                f"Beside it on the desk, the various nozzle accessories rest neatly in background. "
+                f"Hands keep holding the vacuum body smoothly, NO attaching parts, NO plugging nozzles, NO assembly. "
+                f"Crisp studio lighting, smooth natural movement, sharp 4K detail{idea_ctx}. "
+                f"Completely faceless, NO human face, NO head in frame, hands only, strictly 5 fingers. NO text overlays, NO talking."
+            ),
+        ),
+        SceneDefinition(
+            id=2,
+            name="POV 2 - Lực hút lốc xoáy khe ghế ô tô",
+            kind="FLOW_AI",
+            narrator_text="Lực hút lốc xoáy cực mạnh, gắn đầu hút dẹt luồn sâu vào khe ghế ô tô và hộc để đồ, cuốn sạch vụn bánh đất cát trong một đường lia!",
+            overlay_title=sc2_title,
+            overlay_subtitle=sc2_sub,
+            image_index=0,
+            prompt=(
+                f"Vertical 9:16 authentic fast-paced commercial ad video. First-person POV looking down inside a sleek modern car interior. "
+                f"Hand holds the compact cordless handheld vacuum with a slim flat crevice nozzle attached, gliding firmly along the deep seat crevice and center console cup holder. "
+                f"Satisfying cleaning effect, debris instantly vanishes into nozzle. "
+                f"Crisp natural daylight through car window, snappy real-time motion, not slow motion, not floaty. "
+                f"Completely faceless, NO human face, hands only, strictly 5 fingers. NO text overlays."
+            ),
+        ),
+        SceneDefinition(
+            id=3,
+            name="POV 3 - Đổi đầu chải hút sạch sofa & giường nệm",
+            kind="FLOW_AI",
+            narrator_text="Dễ dàng đổi sang đầu chải lông để vệ sinh bàn phím máy tính, hút sạch lông thú cưng và bụi mịn bám chặt trên ghế sofa hay giường nệm.",
+            overlay_title=sc3_title,
+            overlay_subtitle=sc3_sub,
+            image_index=0,
+            prompt=(
+                f"Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up POV. "
+                f"Hand firmly holds the compact handheld vacuum with the brush nozzle already securely attached, sweeping smoothly across an aesthetic textured fabric sofa and a mechanical computer keyboard, effortlessly picking up dust and pet hairs in one clean glide. "
+                f"Bright commercial aesthetic lighting, realistic stable physics, crisp suction action. "
+                f"Completely faceless, NO human face, hands only, strictly 5 fingers. NO text overlays."
+            ),
+        ),
+        SceneDefinition(
+            id=4,
+            name="POV 4 - Đổ rác 1 chạm & Màng lọc xả nước",
+            kind="FLOW_AI",
+            narrator_text="Pin dùng bền bỉ tiện lợi. Cốc bụi tháo rời đổ một chạm sạch sẽ, màng lọc xả sạch dưới vòi nước tái sử dụng bền bỉ nhiều năm!",
+            overlay_title="MÀNG LỌC RỬA NƯỚC",
+            overlay_subtitle="Vệ sinh nhanh gọn",
+            image_index=0,
+            prompt=(
+                f"Vertical 9:16 authentic commercial ad video. Satisfying macro POV shot over a clean modern sink. "
+                f"Hands hold the small circular white HEPA filter directly under a gentle stream of fresh tap water, washing it completely spotless and clean, water droplets splashing smoothly. "
+                f"Then pan smoothly to the sleek clean handheld vacuum resting neatly upright on a minimalist charging dock on a sunny desk. "
+                f"NO twisting, NO disassembly, NO pulling parts apart. "
+                f"Bright airy natural lighting, crisp 4K texture, realistic water physics. "
+                f"Completely faceless, NO human face, hands only, strictly exactly 5 fingers. NO thumbs-up, NO text overlays."
+            ),
+        ),
+    ]
+
+
 def _build_faceless_pov_scenes(
     category: str,
     clean_title: str,
@@ -1154,6 +1239,17 @@ def _build_faceless_pov_scenes(
     - Designed specifically for silent TikTok/Reels upload (user adds trending BGM & native TikTok text in post).
     """
     idea_ctx = f" ({custom_idea})" if custom_idea else ""
+
+    archetype = resolve_product_archetype(clean_title)
+    if archetype == ProductArchetype.VACUUM_CLEANER:
+        return _build_vacuum_faceless_pov_scenes(
+            clean_title=clean_title,
+            feat1_title=feat1_title,
+            feat1_desc=feat1_desc,
+            feat2_title=feat2_title,
+            feat2_desc=feat2_desc,
+            idea_ctx=idea_ctx,
+        )
 
     if category == "TECH_GADGETS":
         is_footrest = any(k in clean_title.lower() for k in ["kê chân", "ke chan", "footrest"])
@@ -1775,3 +1871,7 @@ def _build_cta_scene(
         )
 
     return None
+
+
+build_faceless_pov_scenes = _build_faceless_pov_scenes
+

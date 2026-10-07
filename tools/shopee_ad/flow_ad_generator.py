@@ -14,8 +14,9 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from dataclasses import asdict
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -31,7 +32,11 @@ from tools.shopee_ad.config import (
     resolve_bgm_path,
 )
 from tools.shopee_ad.product_parser import ProductInfo, parse_product_zip
-from tools.shopee_ad.storyboard import SceneDefinition, load_or_create_storyboard
+from tools.shopee_ad.storyboard import (
+    SceneDefinition,
+    load_or_create_storyboard,
+    generate_default_storyboard,
+)
 from tools.shopee_ad.omnivoice_client import generate_speech
 from tools.shopee_ad.asset_extractor import extract_zip, create_image_slide_clip
 from tools.shopee_ad.video_assembler import (
@@ -253,6 +258,7 @@ def generate_flow_ad(
     no_overlay: bool = False,
     tag: Optional[str] = None,
     bgm_path: Optional[Path | str] = None,
+    target_scenes: Optional[List[int]] = None,
 ) -> Path:
     """Execute Method 2 (Google Flow Omni 1.1 Flash AI Video + Real Product Photos)."""
     channel_name = channel_name or DEFAULT_CHANNEL_NAME
@@ -282,6 +288,8 @@ def generate_flow_ad(
     print("🚀 BẮT ĐẦU SẢN XUẤT VIDEO AI HYBRID (GOOGLE FLOW + ẢNH THẬT SẢN PHẨM)")
     print(f"📦 Sản phẩm: {product.name}")
     print(f"📁 Slug thư mục: {product.slug}")
+    if target_scenes:
+        print(f"🎯 Chế độ tái tạo phân cảnh chọn lọc: Scenes {target_scenes}")
     print("=" * 65 + "\n")
 
     # 2. Setup product output directories
@@ -333,6 +341,28 @@ def generate_flow_ad(
         channel_name=channel_name,
     )
 
+    # If targeting specific scenes, refresh prompt definitions for target scenes from default builder
+    if target_scenes:
+        fresh_scenes = generate_default_storyboard(
+            product,
+            style=style,
+            cta_mode=cta_mode,
+            custom_idea=custom_idea,
+            channel_name=channel_name,
+        )
+        fresh_by_id = {fs.id: fs for fs in fresh_scenes}
+        for sc in scenes:
+            if sc.id in target_scenes and sc.id in fresh_by_id:
+                fs = fresh_by_id[sc.id]
+                sc.prompt = fs.prompt
+                sc.video_prompt = fs.video_prompt
+                sc.narrator_text = fs.narrator_text
+                sc.overlay_title = fs.overlay_title
+                sc.overlay_subtitle = fs.overlay_subtitle
+                print(f"  • Cập nhật kịch bản chuẩn cho Scene {sc.id}: {sc.overlay_title}")
+        with open(storyboard_file, "w", encoding="utf-8") as f:
+            json.dump([asdict(s) for s in scenes], f, ensure_ascii=False, indent=2)
+
     # 5. Generate Voiceover via OmniVoice (or Silent POV timing)
     audio_files = {}
     audio_durations = {}
@@ -341,6 +371,17 @@ def generate_flow_ad(
         for sc in scenes:
             idx = sc.id
             out_wav = audio_dir / f"{variant}_scene_{idx:02d}.wav"
+            is_target_scene = bool(target_scenes and idx in target_scenes)
+            if out_wav.exists() and out_wav.stat().st_size > 1000 and (target_scenes and not is_target_scene):
+                dur = float(subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(out_wav)],
+                    capture_output=True, text=True, check=True
+                ).stdout.strip())
+                audio_files[idx] = out_wav
+                audio_durations[idx] = dur
+                print(f"  • Scene {idx}: Đã có audio sẵn ({dur:.2f}s), giữ nguyên.")
+                continue
+
             print(f"  • Scene {idx}: {sc.overlay_title}")
             dur = generate_speech(
                 text=sc.narrator_text,
@@ -433,9 +474,17 @@ def generate_flow_ad(
         if not is_faceless and scene_1 and idx == scene_1.id and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
             continue
 
-        if not (regen or force_storyboard) and raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000:
-            print(f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua.")
-            continue
+        is_targeted = target_scenes is None or idx in target_scenes
+        clip_exists = raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000
+        if clip_exists:
+            if target_scenes is not None:
+                if not is_targeted:
+                    print(f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua (không trong danh sách --scene).")
+                    continue
+            else:
+                if not (regen or force_storyboard):
+                    print(f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua.")
+                    continue
 
         p_lower = (sc.prompt or "").lower()
         is_faceless_scene = (
@@ -663,6 +712,13 @@ def main():
     parser.add_argument("--channel-handle", type=str, default=DEFAULT_CHANNEL_HANDLE, help="Handle/ID kênh")
     parser.add_argument("--tag", type=str, default=None, help="Gắn nhãn/tag tùy chỉnh cho video xuất bản (ví dụ: --tag v2)")
     parser.add_argument(
+        "--scene",
+        nargs="+",
+        type=int,
+        default=None,
+        help="Chỉ định ID phân cảnh cần tạo lại (ví dụ: --scene 3)",
+    )
+    parser.add_argument(
         "--bgm",
         nargs="?",
         const="auto",
@@ -683,6 +739,7 @@ def main():
         no_overlay=args.no_overlay,
         regen=args.regen,
         force_storyboard=args.force_storyboard or bool(args.idea),
+        target_scenes=args.scene,
         custom_idea=args.idea,
         channel_name=args.channel_name,
         channel_handle=args.channel_handle,

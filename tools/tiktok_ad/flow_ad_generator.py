@@ -14,8 +14,9 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from dataclasses import asdict
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -28,9 +29,14 @@ from tools.tiktok_ad.config import (
     OUTPUT_ROOT,
     TIKTOK_DOWNLOADS_DIR,
     list_available_zips,
+    resolve_bgm_path,
 )
 from tools.tiktok_ad.product_parser import ProductInfo, parse_product_zip
-from tools.tiktok_ad.storyboard import SceneDefinition, load_or_create_storyboard
+from tools.tiktok_ad.storyboard import (
+    SceneDefinition,
+    generate_dynamic_storyboard,
+    load_or_create_storyboard,
+)
 from tools.tiktok_ad.omnivoice_client import generate_speech
 from tools.tiktok_ad.asset_extractor import extract_zip, create_image_slide_clip
 from tools.common.naming import build_variant_suffix
@@ -222,6 +228,8 @@ def generate_flow_ad(
     no_voice: bool = False,
     no_overlay: bool = False,
     tag: Optional[str] = None,
+    bgm_path: Optional[str] = None,
+    target_scenes: Optional[List[int]] = None,
 ) -> Path:
     """Execute Google Flow AI Video production for TikTok Ads."""
     channel_name = channel_name or DEFAULT_CHANNEL_NAME
@@ -311,6 +319,28 @@ def generate_flow_ad(
         channel_name=channel_name,
     )
 
+    # If targeting specific scenes, refresh prompt definitions for target scenes from default builder
+    if target_scenes:
+        fresh_scenes = generate_dynamic_storyboard(
+            product,
+            style=style,
+            cta_mode=cta_mode,
+            custom_idea=custom_idea,
+            channel_name=channel_name,
+        )
+        fresh_by_id = {fs.id: fs for fs in fresh_scenes}
+        for sc in scenes:
+            if sc.id in target_scenes and sc.id in fresh_by_id:
+                fs = fresh_by_id[sc.id]
+                sc.prompt = fs.prompt
+                sc.video_prompt = fs.video_prompt
+                sc.narrator_text = fs.narrator_text
+                sc.overlay_title = fs.overlay_title
+                sc.overlay_subtitle = fs.overlay_subtitle
+                print(f"  • Cập nhật kịch bản chuẩn cho Scene {sc.id}: {sc.overlay_title}")
+        with open(storyboard_file, "w", encoding="utf-8") as f:
+            json.dump([asdict(s) for s in scenes], f, ensure_ascii=False, indent=2)
+
     # 5. Generate Voiceover via OmniVoice
     audio_files = {}
     audio_durations = {}
@@ -321,6 +351,17 @@ def generate_flow_ad(
         for sc in scenes:
             idx = sc.id
             out_wav = audio_dir / f"{variant}_scene_{idx:02d}.wav"
+            is_target_scene = bool(target_scenes and idx in target_scenes)
+            if out_wav.exists() and out_wav.stat().st_size > 1000 and (target_scenes and not is_target_scene):
+                dur = float(subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", str(out_wav)],
+                    capture_output=True, text=True, check=True
+                ).stdout.strip())
+                audio_files[idx] = out_wav
+                audio_durations[idx] = dur
+                print(f"  • Scene {idx}: Đã có audio sẵn ({dur:.2f}s), giữ nguyên.")
+                continue
+
             print(f"  • Scene {idx}: {sc.overlay_title}")
             dur = generate_speech(
                 text=sc.narrator_text,
@@ -434,15 +475,21 @@ def generate_flow_ad(
         ):
             continue
 
-        if (
-            not (regen or force_storyboard)
-            and raw_clip_path.exists()
-            and raw_clip_path.stat().st_size > 100000
-        ):
-            print(
-                f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua."
-            )
-            continue
+        is_targeted = target_scenes is None or idx in target_scenes
+        clip_exists = raw_clip_path.exists() and raw_clip_path.stat().st_size > 100000
+        if clip_exists:
+            if target_scenes is not None:
+                if not is_targeted:
+                    print(
+                        f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua (không trong danh sách --scene)."
+                    )
+                    continue
+            else:
+                if not (regen or force_storyboard):
+                    print(
+                        f"  • Scene {idx} (AI): Đã có clip sẵn ({raw_clip_path.name}), bỏ qua."
+                    )
+                    continue
 
         p_lower = (sc.prompt or "").lower()
         is_faceless_scene = (
@@ -597,13 +644,17 @@ def generate_flow_ad(
         )
         assembled_scenes.append(scene_out)
 
+    effective_bgm = resolve_bgm_path(custom_bgm=bgm_path, style=style, product_assets_dir=assets_dir)
+    if effective_bgm:
+        print(f"🎵 [Nhạc Nền BGM] Tự động kích hoạt: {effective_bgm.name}...")
+
     if not no_voice:
         final_flow_output = final_dir / f"{product.slug}_flow_{variant}.mp4"
-        concat_scenes(assembled_scenes, final_flow_output)
+        concat_scenes(assembled_scenes, final_flow_output, bgm_path=effective_bgm)
         video_map = {"flow": final_flow_output}
     else:
         final_flow_output = final_dir / f"{product.slug}_flow_{variant}_silent.mp4"
-        concat_scenes(assembled_scenes, final_flow_output)
+        concat_scenes(assembled_scenes, final_flow_output, bgm_path=effective_bgm)
         video_map = {"flow_silent": final_flow_output}
 
     # Captions & Cover
