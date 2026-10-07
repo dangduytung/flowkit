@@ -289,7 +289,7 @@ def generate_flow_ad(
 
     # Extract assets from zip
     assets = extract_zip(zip_path, assets_dir)
-    images = assets["images"]
+    images = assets.images
 
     # 3. Create Flow Project and Upload Product Reference Images
     print("🌐 [Bước 1/5] Tạo Project & nạp ảnh tham chiếu lên Google Flow...")

@@ -156,8 +156,8 @@ def run_pipeline(
     # 4. Trích xuất tư liệu từ file zip Shopee
     print("📦 [Bước 1/5] Trích xuất hình ảnh và video từ file zip...")
     assets = extract_zip(zip_path, assets_dir)
-    raw_video = assets["video"]
-    images = assets["images"]
+    raw_video = assets.video
+    images = assets.images
 
     # 5. Nạp hoặc tự động sinh Storyboard độc lập theo style (tránh ghi đè khi thử nghiệm nhiều style)
     storyboard_file = product_dir / f"storyboard_{style}.json"
