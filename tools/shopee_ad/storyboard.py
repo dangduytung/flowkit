@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from tools.common import storyboard_io
+from tools.common.categories import Category, CategoryRules, classify
 from tools.common.models import SceneDefinition
 from tools.shopee_ad.config import DEFAULT_CHANNEL_NAME
 from tools.shopee_ad.product_parser import ProductInfo
@@ -174,91 +175,56 @@ def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
     return results
 
 
-def detect_product_category(name: str, description_text: str = "") -> str:
-    """
-    Intelligently classify ANY Shopee product into one of 6 core commercial categories.
-    Uses word boundaries to prevent substring collisions (e.g. 'bàn làm việc' vs 'bàn là').
-    """
-    text = f"{name} {description_text}".lower()
-
-    def _matches(keywords: list[str]) -> bool:
-        for kw in keywords:
-            pattern = r"(?:\b|\s|^)" + re.escape(kw) + r"(?:\b|\s|$)"
-            if re.search(pattern, text, re.IGNORECASE):
-                return True
-        return False
-
-    # 1. Beauty & Skincare
-    beauty_kw = [
-        "son", "son môi", "lipstick", "lip tint", "son dưỡng", "serum", "kem dưỡng",
-        "kem trị", "kem nám", "kem chống nắng", "sunscreen", "toner", "nước hoa hồng",
-        "nước hoa", "perfume", "sữa rửa mặt", "tẩy trang", "cleanser", "mặt nạ",
-        "sheet mask", "dầu gội", "dầu xả", "ủ tóc", "dưỡng tóc", "máy sấy tóc",
-        "máy uốn", "phấn phủ", "cushion", "mascara", "chì mày", "kẻ mắt", "trang điểm",
-        "makeup", "phục hồi da", "cấp ẩm", "dưỡng trắng", "mịn môi", "skincare", "mỹ phẩm"
-    ]
-    if _matches(beauty_kw):
-        return "BEAUTY_SKINCARE"
-
-    # 1.5 Storage & Home Organization & Travel
-    storage_kw = [
+# Checked top to bottom; the first category with a whole-word keyword match wins.
+CATEGORY_RULES: CategoryRules = (
+    (Category.BEAUTY_SKINCARE, (
+        "son", "son môi", "lipstick", "lip tint", "son dưỡng", "serum", "kem dưỡng", "kem trị",
+        "kem nám", "kem chống nắng", "sunscreen", "toner", "nước hoa hồng", "nước hoa", "perfume",
+        "sữa rửa mặt", "tẩy trang", "cleanser", "mặt nạ", "sheet mask", "dầu gội", "dầu xả", "ủ tóc",
+        "dưỡng tóc", "máy sấy tóc", "máy uốn", "phấn phủ", "cushion", "mascara", "chì mày", "kẻ mắt",
+        "trang điểm", "makeup", "phục hồi da", "cấp ẩm", "dưỡng trắng", "mịn môi", "skincare",
+        "mỹ phẩm",
+    )),
+    (Category.GENERAL_LIFESTYLE, (  # storage & travel organisers
         "túi hút chân không", "túi nén hút chân không", "túi nén", "túi đựng", "hộp đựng đồ",
-        "giá treo", "tủ vải", "kệ để giày", "vali", "sắp xếp tủ", "chăn màn"
-    ]
-    if _matches(storage_kw):
-        return "GENERAL_LIFESTYLE"
+        "giá treo", "tủ vải", "kệ để giày", "vali", "sắp xếp tủ", "chăn màn",
+    )),
+    (Category.KITCHEN_HOME, (
+        "chảo", "chảo chống dính", "nồi", "nồi chiên", "nồi cơm", "nồi áp suất", "bếp từ", "bếp ga",
+        "bếp hồng ngoại", "dao bếp", "thớt", "máy xay", "máy ép", "máy làm sữa hạt", "ấm đun",
+        "ấm siêu tốc", "bình giữ nhiệt", "cốc giữ nhiệt", "hộp cơm", "hộp giữ nhiệt", "máy hút bụi",
+        "robot hút bụi", "máy hút chân không", "hút chân không thực phẩm", "cây lau nhà", "bàn ủi",
+        "bàn là", "máy lọc không khí", "quạt tích điện", "quạt mini", "ga trải giường", "khăn tắm",
+        "đồ gia dụng",
+    )),
+    (Category.FASHION_APPAREL, (
+        "áo thun", "áo phông", "áo sơ mi", "sơ mi", "áo khoác", "hoodie", "sweater", "cardigan",
+        "polo", "croptop", "quần jean", "quần bò", "quần jogger", "quần âu", "quần short", "quần đùi",
+        "váy", "đầm", "chân váy", "jumpsuit", "giày sneaker", "giày thể thao", "giày cao gót",
+        "giày lười", "dép", "sandal", "túi xách", "túi đeo chéo", "ví da", "balo", "thắt lưng",
+        "dây nịt", "kính mát", "kính râm", "nón", "mũ", "đồng hồ đeo tay", "trang sức", "vòng tay",
+    )),
+    (Category.HEALTH_FITNESS, (
+        "súng massage", "máy massage", "đệm massage", "gối massage", "thảm tập", "yoga", "tạ tay",
+        "dây kháng lực", "con lăn tập bụng", "đai lưng tập gym", "bình shaker", "đau mỏi vai gáy",
+        "thể thao", "fitness",
+    )),
+    (Category.TECH_GADGETS, (
+        "usb", "ổ đĩa", "o dia", "flash drive", "thẻ nhớ", "thẻ sd", "micro sd", "ổ cứng", "ssd",
+        "hdd", "box ổ cứng", "củ sạc", "cáp sạc", "dây sạc", "pin dự phòng", "sạc dự phòng",
+        "sạc không dây", "tai nghe", "bluetooth", "earbuds", "headphone", "chuột không dây",
+        "chuột gaming", "bàn phím", "loa bluetooth", "soundbar", "micro thu âm", "webcam",
+        "giá đỡ điện thoại", "kẹp điện thoại", "gimbal", "tripod", "ốp lưng", "kính cường lực",
+        "laptop", "máy tính", "ipad", "màn hình", "hub type c", "smartwatch", "khay giấu dây",
+        "kẹp bàn", "quản lý cáp", "giá treo tai nghe", "kệ nâng màn hình", "ghế kê chân", "kê chân",
+        "đệm kê chân", "bàn kê chân", "footrest", "công thái học", "đi dây", "desk setup", "hyperwork",
+    )),
+)
 
-    # 2. Kitchen & Home Appliances
-    kitchen_kw = [
-        "chảo", "chảo chống dính", "nồi", "nồi chiên", "nồi cơm", "nồi áp suất",
-        "bếp từ", "bếp ga", "bếp hồng ngoại", "dao bếp", "thớt", "máy xay",
-        "máy ép", "máy làm sữa hạt", "ấm đun", "ấm siêu tốc", "bình giữ nhiệt",
-        "cốc giữ nhiệt", "hộp cơm", "hộp giữ nhiệt", "máy hút bụi", "robot hút bụi",
-        "máy hút chân không", "hút chân không thực phẩm",
-        "cây lau nhà", "bàn ủi", "bàn là", "máy lọc không khí", "quạt tích điện",
-        "quạt mini", "ga trải giường", "khăn tắm", "đồ gia dụng"
-    ]
-    if _matches(kitchen_kw):
-        return "KITCHEN_HOME"
 
-    # 3. Fashion & Apparel
-    fashion_kw = [
-        "áo thun", "áo phông", "áo sơ mi", "sơ mi", "áo khoác", "hoodie", "sweater",
-        "cardigan", "polo", "croptop", "quần jean", "quần bò", "quần jogger",
-        "quần âu", "quần short", "quần đùi", "váy", "đầm", "chân váy", "jumpsuit",
-        "giày sneaker", "giày thể thao", "giày cao gót", "giày lười", "dép", "sandal",
-        "túi xách", "túi đeo chéo", "ví da", "balo", "thắt lưng", "dây nịt",
-        "kính mát", "kính râm", "nón", "mũ", "đồng hồ đeo tay", "trang sức", "vòng tay"
-    ]
-    if _matches(fashion_kw):
-        return "FASHION_APPAREL"
-
-    # 4. Health & Fitness
-    health_kw = [
-        "súng massage", "máy massage", "đệm massage", "gối massage", "thảm tập",
-        "yoga", "tạ tay", "dây kháng lực", "con lăn tập bụng", "đai lưng tập gym",
-        "bình shaker", "đau mỏi vai gáy", "thể thao", "fitness"
-    ]
-    if _matches(health_kw):
-        return "HEALTH_FITNESS"
-
-    # 5. Tech & Gadgets & Desk Setup
-    tech_kw = [
-        "usb", "ổ đĩa", "o dia", "flash drive", "thẻ nhớ", "thẻ sd", "micro sd",
-        "ổ cứng", "ssd", "hdd", "box ổ cứng", "củ sạc", "cáp sạc", "dây sạc",
-        "pin dự phòng", "sạc dự phòng", "sạc không dây", "tai nghe", "bluetooth",
-        "earbuds", "headphone", "chuột không dây", "chuột gaming", "bàn phím",
-        "loa bluetooth", "soundbar", "micro thu âm", "webcam", "giá đỡ điện thoại",
-        "kẹp điện thoại", "gimbal", "tripod", "ốp lưng", "kính cường lực",
-        "laptop", "máy tính", "ipad", "màn hình", "hub type c", "smartwatch",
-        "khay giấu dây", "kẹp bàn", "quản lý cáp", "giá treo tai nghe", "kệ nâng màn hình",
-        "ghế kê chân", "kê chân", "đệm kê chân", "bàn kê chân", "footrest", "công thái học",
-        "đi dây", "desk setup", "hyperwork"
-    ]
-    if _matches(tech_kw):
-        return "TECH_GADGETS"
-
-    return "GENERAL_LIFESTYLE"
+def detect_product_category(name: str, description_text: str = "") -> str:
+    """Intelligently classify ANY Shopee product into one of 6 core commercial categories."""
+    return classify(f"{name} {description_text}", CATEGORY_RULES).value
 
 
 def generate_default_storyboard(

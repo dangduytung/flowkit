@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 from tools.common import storyboard_io
+from tools.common.categories import Category, CategoryRules, classify
 from tools.common.models import SceneDefinition
 from tools.tiktok_ad.config import DEFAULT_CHANNEL_NAME
 from tools.tiktok_ad.product_parser import ProductInfo
@@ -77,61 +78,36 @@ def clean_product_title(raw_name: str) -> str:
     return name if name else "Sản phẩm tiện ích"
 
 
+# Checked top to bottom; the first category with a whole-word keyword match wins.
+CATEGORY_RULES: CategoryRules = (
+    (Category.HEALTH_FITNESS, (
+        "kê chân", "gác chân", "massage", "công thái học", "ergonomic", "thư giãn", "sức khỏe",
+        "súng massage",
+    )),
+    (Category.GENERAL_LIFESTYLE, (  # storage & travel organisers
+        "túi hút chân không", "túi nén hút chân không", "túi nén", "túi đựng", "hộp đựng đồ",
+        "giá treo", "tủ vải", "kệ để giày", "vali", "sắp xếp tủ", "chăn màn",
+    )),
+    (Category.BEAUTY_SKINCARE, (
+        "son", "serum", "kem dưỡng", "skincare", "kem chống nắng", "trang điểm", "nước hoa",
+        "sữa rửa mặt",
+    )),
+    (Category.TECH_GADGETS, (
+        "chuột", "bàn phím", "usb", "tai nghe", "cáp sạc", "giá đỡ", "kẹp bàn",
+    )),
+    (Category.KITCHEN_HOME, (
+        "bếp", "nồi", "chảo", "hộp đựng thực phẩm", "dao", "máy hút chân không",
+        "hút chân không thực phẩm",
+    )),
+    (Category.FASHION_APPAREL, (
+        "áo thun", "áo sơ mi", "quần kaki", "quần jean", "váy", "giày", "dép", "túi xách", "ví",
+    )),
+)
+
+
 def detect_product_category(name: str, description_text: str = "") -> str:
     """Intelligently classify ANY product into core commercial categories."""
-    text = f"{name} {description_text}".lower()
-
-    def _matches(keywords: list[str]) -> bool:
-        for kw in keywords:
-            pattern = r"(?:\b|\s|^)" + re.escape(kw) + r"(?:\b|\s|$)"
-            if re.search(pattern, text, re.IGNORECASE):
-                return True
-        return False
-
-    # 1. Health & Fitness
-    health_kw = [
-        "kê chân", "gác chân", "massage", "công thái học", "ergonomic", "thư giãn", "sức khỏe", "súng massage"
-    ]
-    if _matches(health_kw):
-        return "HEALTH_FITNESS"
-
-    # 2. Storage & Home Organization & Travel (Checked before apparel/general to avoid collision)
-    storage_kw = [
-        "túi hút chân không", "túi nén hút chân không", "túi nén", "túi đựng", "hộp đựng đồ",
-        "giá treo", "tủ vải", "kệ để giày", "vali", "sắp xếp tủ", "chăn màn"
-    ]
-    if _matches(storage_kw):
-        return "GENERAL_LIFESTYLE"
-
-    # 3. Beauty & Skincare
-    beauty_kw = [
-        "son", "serum", "kem dưỡng", "skincare", "kem chống nắng", "trang điểm", "nước hoa", "sữa rửa mặt"
-    ]
-    if _matches(beauty_kw):
-        return "BEAUTY_SKINCARE"
-
-    # 4. Tech & Gadgets
-    tech_kw = [
-        "chuột", "bàn phím", "usb", "tai nghe", "cáp sạc", "giá đỡ", "kẹp bàn"
-    ]
-    if _matches(tech_kw):
-        return "TECH_GADGETS"
-
-    # 5. Kitchen & Home
-    kitchen_kw = [
-        "bếp", "nồi", "chảo", "hộp đựng thực phẩm", "dao", "máy hút chân không", "hút chân không thực phẩm"
-    ]
-    if _matches(kitchen_kw):
-        return "KITCHEN_HOME"
-
-    # 6. Fashion & Apparel
-    fashion_kw = [
-        "áo thun", "áo sơ mi", "quần kaki", "quần jean", "váy", "giày", "dép", "túi xách", "ví"
-    ]
-    if _matches(fashion_kw):
-        return "FASHION_APPAREL"
-
-    return "GENERAL_LIFESTYLE"
+    return classify(f"{name} {description_text}", CATEGORY_RULES).value
 
 
 def extract_top_features(

@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from agent.utils.slugify import slugify
 from tools.common.constants import IMAGE_SUFFIXES, TEXT_SUFFIXES, VIDEO_SUFFIXES
+from tools.common.text import slugify
 
 SLUG_SOURCE_MAX_CHARS = 60
 FALLBACK_SLUG_SOURCE_MAX_CHARS = 40
