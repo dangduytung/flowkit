@@ -17,10 +17,10 @@ from tools.shopee_ad.config import BGM_DIR, resolve_bgm_path
 from tools.shopee_ad.cover_generator import _format_cover_text, create_cover_image
 from tools.shopee_ad.product_parser import ProductInfo
 from tools.shopee_ad.prompts import (
-    _build_cta_scene,
-    _build_faceless_pov_scenes,
-    _build_flow_cinematic_scenes,
-    _build_problem_solution_scenes,
+    build_cta_scene,
+    build_faceless_pov_scenes,
+    build_flow_cinematic_scenes,
+    build_problem_solution_scenes,
 )
 from tools.shopee_ad.asset_extractor import (
     calculate_smart_subclip_starts,
@@ -192,7 +192,7 @@ class TestPromptConstraints:
         """Ensure no thumbs-up or peace sign gestures are requested in prompts."""
         categories = ["BEAUTY_SKINCARE", "HEALTH_FITNESS", "KITCHEN_HOME", "TECH_GADGETS"]
         for cat in categories:
-            scenes = _build_flow_cinematic_scenes(
+            scenes = build_flow_cinematic_scenes(
                 category=cat,
                 clean_title="Bộ Nồi Đa Năng",
                 feat1_title="Chống dính",
@@ -210,7 +210,7 @@ class TestPromptConstraints:
 
     def test_enforced_negative_constraints_in_problem_solution(self):
         """Problem-solution prompts must explicitly include finger & gesture safety constraints."""
-        scenes = _build_problem_solution_scenes(
+        scenes = build_problem_solution_scenes(
             category="GENERAL_LIFESTYLE",
             clean_title="Túi Nén Hút Chân Không",
             feat1_title="Gấp gọn thông minh",
@@ -225,7 +225,7 @@ class TestPromptConstraints:
 
     def test_faceless_pov_enforces_hand_realism(self):
         """Faceless POV prompts must enforce no face and natural hand resting."""
-        scenes = _build_faceless_pov_scenes(
+        scenes = build_faceless_pov_scenes(
             category="TECH_GADGETS",
             clean_title="Túi Nén Du Lịch",
             feat1_title="Nén gọn 3 lần",
@@ -239,7 +239,7 @@ class TestPromptConstraints:
 
     def test_cta_scenes_finger_constraints(self):
         """CTA scenes must explicitly forbid thumbs-up and enforce exactly 5 fingers."""
-        faceless_cta = _build_cta_scene(
+        faceless_cta = build_cta_scene(
             scene_id=5,
             cta_mode="follow",
             category="TECH_GADGETS",
@@ -250,7 +250,7 @@ class TestPromptConstraints:
         assert "strictly exactly 5 fingers" in (faceless_cta.prompt or "")
         assert "no thumbs-up" in (faceless_cta.prompt or "").lower()
 
-        human_cta = _build_cta_scene(
+        human_cta = build_cta_scene(
             scene_id=5,
             cta_mode="shopee",
             category="TECH_GADGETS",

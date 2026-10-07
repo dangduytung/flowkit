@@ -8,13 +8,8 @@ from tools.common import storyboard_io
 from tools.common.models import SceneDefinition
 from tools.shopee_ad.config import DEFAULT_CHANNEL_NAME
 from tools.shopee_ad.product_parser import ProductInfo
-from tools.shopee_ad.prompts import (
-    _build_cta_scene,
-    _build_faceless_pov_scenes,
-    _build_flow_cinematic_scenes,
-    _build_lifestyle_edc_scenes,
-    _build_problem_solution_scenes,
-)
+from tools.common.prompts import StoryContext
+from tools.shopee_ad.prompts import STYLES, build_cta_scene
 
 logger = logging.getLogger(__name__)
 
@@ -317,143 +312,21 @@ def generate_default_storyboard(
         except (ValueError, AttributeError):
             pass
 
-    num_images = len(info.image_names) if info.image_names else 1
-
-    if style in ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov"):
-        scenes = _build_faceless_pov_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            social_proof_title=social_proof_title,
-            custom_idea=custom_idea,
-        )
-    elif style in ("problem_solution", "drama"):
-        scenes = _build_problem_solution_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            custom_idea=custom_idea,
-        )
-    elif style in ("lifestyle_edc", "lifestyle"):
-        scenes = _build_lifestyle_edc_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            custom_idea=custom_idea,
-        )
-    elif style in ("flow_cinematic", "flow", "tech_minimal"):
-        scenes = _build_flow_cinematic_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            social_proof_title=social_proof_title,
-            custom_idea=custom_idea,
-        )
-    elif style == "hybrid":
-        # Hybrid: Flow AI for lifestyle/human emotional scenes + Real photos for authentic product display
-        scenes = [
-            SceneDefinition(
-                id=1,
-                name="Hook - Nhu cầu & Trải nghiệm thực tế",
-                kind="FLOW_AI",
-                narrator_text=f"Bạn đang tìm một món đồ thật ưng ý và tiện dụng mỗi ngày? Cùng mình trải nghiệm {clean_title} này nhé!",
-                overlay_title="TRẢI NGHIỆM THỰC TẾ",
-                overlay_subtitle=clean_title,
-                image_index=0,
-                prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Three stylish young Vietnamese friends hanging out in a modern cafe, "
-                    f"putting phones down and showing great curiosity and energetic excitement. "
-                    f"Warm cozy ambient lighting, shot on 35mm lens. Mouth closed, no speaking. NO fake packaging, NO cards."
-                ),
-            ),
-            SceneDefinition(
-                id=2,
-                name="Hero - Giới thiệu sản phẩm thật",
-                kind="PRODUCT_PHOTO",
-                narrator_text=f"Đây là {clean_title}, thiết kế nhỏ gọn, cầm đầm tay và hoàn thiện cực kỳ chỉn chu.",
-                overlay_title=clean_title[:28].upper(),
-                overlay_subtitle="Chính hãng - Hoàn thiện tỉ mỉ",
-                image_index=0,
-            ),
-            SceneDefinition(
-                id=3,
-                name="Tính năng nổi bật 1",
-                kind="FLOW_AI",
-                narrator_text=feat1_desc,
-                overlay_title=feat1_title,
-                overlay_subtitle="Trải nghiệm tiện lợi vượt trội",
-                image_index=min(1, num_images - 1),
-                prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Young expressive Vietnamese friends laughing and smiling happily, "
-                    f"enjoying a fun moment together in a modern stylish setting. Natural cinematic lighting. Mouth closed, no speaking. NO fake packaging."
-                ),
-            ),
-            SceneDefinition(
-                id=4,
-                name="Tính năng nổi bật 2 & Đánh giá tốt",
-                kind="PRODUCT_PHOTO",
-                narrator_text=f"{feat2_desc}. Sản phẩm được rất nhiều người dùng đánh giá tốt và tin tưởng sử dụng.",
-                overlay_title=social_proof_title,
-                overlay_subtitle=feat2_title[:28],
-                image_index=min(2, num_images - 1),
-            ),
-        ]
-    else:
-        # Local video / Image slide pipeline
-        kind_default = "REAL_FOOTAGE" if has_video else "IMAGE_SLIDE"
-        scenes = [
-            SceneDefinition(
-                id=1,
-                name="Hook - Nhu cầu thực tế",
-                kind=kind_default,
-                narrator_text=f"Bạn đang tìm một món đồ vừa chất lượng vừa tiện lợi cho {clean_title}? Cùng mình khám phá trải nghiệm thực tế ngay trong video này nhé!",
-                overlay_title="TRẢI NGHIỆM THỰC TẾ",
-                overlay_subtitle=clean_title,
-                image_index=0,
-            ),
-            SceneDefinition(
-                id=2,
-                name="Hero - Giới thiệu sản phẩm",
-                kind=kind_default,
-                narrator_text=f"Đây là chiếc {clean_title}, thiết kế tối giản thông minh, cầm đầm tay chắc chắn và cực kỳ tiện dụng mỗi ngày.",
-                overlay_title=clean_title[:28].upper(),
-                overlay_subtitle="Nhỏ gọn - Cực kỳ tiện dụng",
-                image_index=min(1, num_images - 1),
-            ),
-            SceneDefinition(
-                id=3,
-                name="Tính năng nổi bật 1",
-                kind=kind_default,
-                narrator_text=f"{feat1_desc}. Mọi chi tiết hoàn thiện chỉn chu, mang lại cảm giác an tâm và hài lòng tuyệt đối khi sử dụng.",
-                overlay_title=feat1_title,
-                overlay_subtitle="Hiệu năng mượt mà",
-                image_index=min(2, num_images - 1),
-            ),
-            SceneDefinition(
-                id=4,
-                name="Tính năng nổi bật 2",
-                kind=kind_default,
-                narrator_text=f"{feat2_desc}. Sản phẩm được rất nhiều bạn đánh giá cao và tin dùng sau khi trực tiếp trải nghiệm.",
-                overlay_title=social_proof_title,
-                overlay_subtitle=feat2_title[:28],
-                image_index=min(3, num_images - 1),
-            ),
-        ]
+    ctx = StoryContext(
+        product=info,
+        category=category,
+        clean_title=clean_title,
+        feat1_title=feat1_title,
+        feat1_desc=feat1_desc,
+        feat2_title=feat2_title,
+        feat2_desc=feat2_desc,
+        social_proof_title=social_proof_title,
+        custom_idea=custom_idea,
+    )
+    scenes = STYLES.build(style, ctx)
 
     # Optional CTA Scene 5
-    cta_scene = _build_cta_scene(
+    cta_scene = build_cta_scene(
         scene_id=len(scenes) + 1,
         cta_mode=cta_mode,
         category=category,

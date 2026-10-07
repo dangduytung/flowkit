@@ -9,13 +9,8 @@ from tools.common import storyboard_io
 from tools.common.models import SceneDefinition
 from tools.tiktok_ad.config import DEFAULT_CHANNEL_NAME
 from tools.tiktok_ad.product_parser import ProductInfo
-from tools.tiktok_ad.prompts import (
-    build_viral_hook_scenes,
-    build_faceless_pov_scenes,
-    build_problem_solution_scenes,
-    build_flow_cinematic_scenes,
-    build_lifestyle_edc_scenes,
-)
+from tools.common.prompts import StoryContext
+from tools.tiktok_ad.prompts import STYLES, append_call_to_action
 
 logger = logging.getLogger(__name__)
 
@@ -252,37 +247,6 @@ def extract_top_features(
     return results
 
 
-def append_call_to_action(
-    scenes: List[SceneDefinition],
-    cta_mode: str,
-    channel_name: str = DEFAULT_CHANNEL_NAME,
-) -> List[SceneDefinition]:
-    """Dynamically modify Scene 4 to include a high-converting CTA."""
-    if not scenes or cta_mode == "none":
-        return scenes
-
-    s4 = scenes[-1]
-    original = s4.narrator_text.strip()
-    if cta_mode in ("yellow_cart", "cart", "tiktok"):
-        cta_phrase = "Bấm ngay vào giỏ hàng màu vàng ở góc dưới bên trái màn hình để săn ưu đãi nhé!"
-        if "giỏ hàng màu vàng" not in original:
-            s4.narrator_text = f"{original} {cta_phrase}" if original else cta_phrase
-        s4.overlay_title = "GIỎ HÀNG GÓC TRÁI"
-        s4.overlay_subtitle = "Bấm Săn Deal Hôm Nay"
-    elif cta_mode in ("profile_bio", "bio"):
-        cta_phrase = "Xem ngay link chi tiết sản phẩm tại link Bio trên trang cá nhân nha cả nhà!"
-        if "Bio" not in original:
-            s4.narrator_text = f"{original} {cta_phrase}" if original else cta_phrase
-        s4.overlay_title = "LINK TRÊN BIO"
-        s4.overlay_subtitle = "Bấm Vào Trang Cá Nhân"
-    elif cta_mode == "follow":
-        cta_phrase = "Bấm follow kênh để săn thêm nhiều deal hời và mẹo hay mỗi ngày nhé!"
-        if "follow" not in original.lower():
-            s4.narrator_text = f"{original} {cta_phrase}" if original else cta_phrase
-        s4.overlay_title = "FOLLOW KÊNH NHA"
-        s4.overlay_subtitle = "Cập Nhật Deal Mỗi Ngày"
-
-    return scenes
 
 
 def generate_dynamic_storyboard(
@@ -311,123 +275,18 @@ def generate_dynamic_storyboard(
         except Exception:
             pass
 
-    if style in ("viral_hook", "hook", "viral"):
-        scenes = build_viral_hook_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            social_proof_title=social_proof_title,
-            custom_idea=custom_idea,
-            product=product,
-        )
-    elif style in ("faceless_pov", "hands_on_pov", "pov"):
-        scenes = build_faceless_pov_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            social_proof_title=social_proof_title,
-            custom_idea=custom_idea,
-            product=product,
-        )
-    elif style in ("problem_solution", "drama"):
-        scenes = build_problem_solution_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            custom_idea=custom_idea,
-            product=product,
-        )
-    elif style in ("flow_cinematic", "flow", "tech_minimal"):
-        scenes = build_flow_cinematic_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            social_proof_title=social_proof_title,
-            custom_idea=custom_idea,
-        )
-    elif style in ("lifestyle_edc", "lifestyle"):
-        scenes = build_lifestyle_edc_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            custom_idea=custom_idea,
-            product=product,
-        )
-    elif style == "hybrid":
-        num_images = len(product.image_names) if product.image_names else 1
-        scenes = [
-            SceneDefinition(
-                id=1,
-                name="Hook - Nhu cầu & Trải nghiệm thực tế",
-                kind="FLOW_AI",
-                narrator_text=f"Bạn đang tìm một món đồ thật ưng ý và tiện dụng mỗi ngày? Cùng mình trải nghiệm {clean_title} này nhé!",
-                overlay_title="TRẢI NGHIỆM THỰC TẾ",
-                overlay_subtitle=clean_title[:28],
-                image_index=0,
-                prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Two stylish young Vietnamese friends discovering {clean_title} with genuine curiosity and excitement. "
-                    f"Warm cozy ambient lighting, shot on 35mm lens. Mouth closed, no speaking. NO text overlays."
-                ),
-            ),
-            SceneDefinition(
-                id=2,
-                name="Hero - Giới thiệu sản phẩm thật",
-                kind="PRODUCT_PHOTO",
-                narrator_text=f"Đây là {clean_title}, thiết kế thông minh, hoàn thiện cực kỳ chỉn chu.",
-                overlay_title=clean_title[:28].upper(),
-                overlay_subtitle="Chính Hãng - Hoàn Thiện Tỉ Mỉ",
-                image_index=0,
-            ),
-            SceneDefinition(
-                id=3,
-                name="Tính năng nổi bật 1",
-                kind="FLOW_AI",
-                narrator_text=feat1_desc,
-                overlay_title=feat1_title[:24].upper(),
-                overlay_subtitle="Trải Nghiệm Vượt Trội",
-                image_index=min(1, num_images - 1),
-                prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Young expressive person smiling happily while using {clean_title} in modern setting. "
-                    f"Natural cinematic lighting. Mouth closed, no speaking. NO fake packaging."
-                ),
-            ),
-            SceneDefinition(
-                id=4,
-                name="Tính năng nổi bật 2 & Đánh giá tốt",
-                kind="PRODUCT_PHOTO",
-                narrator_text=f"{feat2_desc}. Sản phẩm được rất nhiều người dùng đánh giá tốt và tin tưởng sử dụng.",
-                overlay_title=social_proof_title,
-                overlay_subtitle=feat2_title[:24],
-                image_index=min(2, num_images - 1),
-            ),
-        ]
-    else:
-        scenes = build_viral_hook_scenes(
-            category=category,
-            clean_title=clean_title,
-            feat1_title=feat1_title,
-            feat1_desc=feat1_desc,
-            feat2_title=feat2_title,
-            feat2_desc=feat2_desc,
-            social_proof_title=social_proof_title,
-            custom_idea=custom_idea,
-            product=product,
-        )
+    ctx = StoryContext(
+        product=product,
+        category=category,
+        clean_title=clean_title,
+        feat1_title=feat1_title,
+        feat1_desc=feat1_desc,
+        feat2_title=feat2_title,
+        feat2_desc=feat2_desc,
+        social_proof_title=social_proof_title,
+        custom_idea=custom_idea,
+    )
+    scenes = STYLES.build(style, ctx)
 
     return append_call_to_action(scenes, cta_mode, channel_name)
 

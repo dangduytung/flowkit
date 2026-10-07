@@ -77,7 +77,10 @@ class TestArchetypeResolution:
             (TITLES["vacuum"], ProductArchetype.VACUUM_CLEANER),
             (TITLES["compression"], ProductArchetype.COMPRESSION_STORAGE),
             ("vali kéo du lịch 24 inch", ProductArchetype.COMPRESSION_STORAGE),
-            (TITLES["generic"], ProductArchetype.GENERIC),
+            (TITLES["generic"], ProductArchetype.DESK_ORGANIZER),
+            ("kê chân văn phòng", ProductArchetype.FOOTREST),
+            ("USB 64GB", ProductArchetype.STORAGE_DEVICE),
+            ("bình giữ nhiệt inox", ProductArchetype.GENERIC),
         ],
     )
     def test_resolves_expected_archetype(self, title, expected):
@@ -125,3 +128,39 @@ def test_shopee_storyboard_styles(style, cta_mode, title_key):
     product = ShopeeProductInfo(zip_path=Path("dummy.zip"), slug="dummy", name=TITLES[title_key], description_text="")
     scenes = generate_default_storyboard(product, style=style, cta_mode=cta_mode)
     assert scenes
+
+
+class TestStyleRegistry:
+    def test_unknown_style_uses_platform_fallback(self):
+        from tools.shopee_ad.prompts import STYLES as SHOPEE_STYLES
+        from tools.tiktok_ad.prompts import STYLES as TIKTOK_STYLES
+
+        assert SHOPEE_STYLES.get("nope") is SHOPEE_STYLES.get("local")
+        assert TIKTOK_STYLES.get("nope") is TIKTOK_STYLES.get("viral_hook")
+
+    def test_registry_rejects_duplicates_and_unknown_without_fallback(self):
+        from tools.common.prompts import StyleRegistry
+
+        reg = StyleRegistry()
+        reg.register(("a", "alias"), lambda ctx: [])
+        with pytest.raises(ValueError):
+            reg.register(("alias",), lambda ctx: [])
+        with pytest.raises(KeyError):
+            reg.get("missing")
+
+    def test_platform_batch_styles_are_all_registered(self):
+        from tools.shopee_ad.config import PROFILE as SHOPEE
+        from tools.shopee_ad.prompts import STYLES as SHOPEE_STYLES
+        from tools.tiktok_ad.config import PROFILE as TIKTOK
+        from tools.tiktok_ad.prompts import STYLES as TIKTOK_STYLES
+
+        assert set(SHOPEE.batch_styles) <= set(SHOPEE_STYLES.names)
+        assert set(TIKTOK.batch_styles) <= set(TIKTOK_STYLES.names)
+
+    def test_no_platform_imports_another_platform(self):
+        import pathlib
+        import re
+
+        for pkg, other in (("shopee_ad", "tiktok_ad"), ("tiktok_ad", "shopee_ad")):
+            for path in pathlib.Path("tools", pkg).rglob("*.py"):
+                assert not re.search(rf"\btools\.{other}\b", path.read_text(encoding="utf-8")), path
