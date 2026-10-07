@@ -1,11 +1,10 @@
 """Storyboard management: dynamically extracts features and generates scene scripts for ANY product."""
-import json
 import logging
 import re
-from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from tools.common import storyboard_io
 from tools.common.models import SceneDefinition
 from tools.shopee_ad.config import DEFAULT_CHANNEL_NAME
 from tools.shopee_ad.product_parser import ProductInfo
@@ -483,20 +482,11 @@ def load_or_create_storyboard(
     Load an existing storyboard.json or create a new one from ProductInfo.
     Allows manual customization per product without editing code.
     """
-    json_path = Path(json_path)
-    if json_path.exists() and not force:
-        try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            scenes = [SceneDefinition(**item) for item in data]
-            print(f"[Storyboard] Nạp kịch bản hiện có ({len(scenes)} scenes) từ {json_path.name}")
-            return scenes
-        except Exception as e:
-            print(f"[Storyboard] Cảnh báo: Không đọc được {json_path}, tạo mới kịch bản: {e}")
-
-    scenes = generate_default_storyboard(info, style=style, cta_mode=cta_mode, custom_idea=custom_idea, channel_name=channel_name)
-    json_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(json_path, "w", encoding="utf-8") as f:
-        json.dump([asdict(s) for s in scenes], f, ensure_ascii=False, indent=2)
-    print(f"[Storyboard] Đã tự động tạo và lưu kịch bản động mới ({len(scenes)} cảnh, style='{style}', cta='{cta_mode}') tại {json_path.name}")
-    return scenes
+    return storyboard_io.load_or_create(
+        json_path,
+        generate=lambda: generate_default_storyboard(
+            info, style=style, cta_mode=cta_mode, custom_idea=custom_idea, channel_name=channel_name
+        ),
+        force=force,
+        metadata={"product_name": info.name, "slug": info.slug, "style": style, "cta_mode": cta_mode},
+    )

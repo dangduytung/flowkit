@@ -122,6 +122,9 @@ def resolve_bgm_path(
     return None
 
 
+# Per-scene length of voiceless (--no-voice) cuts, in seconds
+SILENT_SCENE_SECONDS = 4.0
+
 # Channel Branding (Optional - empty by default for 100% white-label multi-channel distribution)
 DEFAULT_CHANNEL_NAME = os.environ.get("TIKTOK_AD_CHANNEL_NAME", "").strip()
 DEFAULT_CHANNEL_HANDLE = os.environ.get("TIKTOK_AD_CHANNEL_HANDLE", "").strip()

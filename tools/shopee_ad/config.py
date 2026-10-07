@@ -55,6 +55,9 @@ else:
 OUTPUT_ROOT = REPO_ROOT / "output" / "shopee_ads"
 BGM_DIR = REPO_ROOT / "assets" / "bgm"
 
+# Per-scene length of voiceless (--no-voice) cuts, in seconds
+SILENT_SCENE_SECONDS = 5.0
+
 # Channel Branding (Optional - empty by default for 100% white-label multi-channel distribution)
 DEFAULT_CHANNEL_NAME = os.environ.get("SHOPEE_AD_CHANNEL_NAME", "").strip()
 DEFAULT_CHANNEL_HANDLE = os.environ.get("SHOPEE_AD_CHANNEL_HANDLE", "").strip()

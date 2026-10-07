@@ -17,11 +17,12 @@ from tools.shopee_ad.config import (
     FLOWKIT_API_URL,
     OUTPUT_ROOT,
     SHOPEE_DOWNLOADS_DIR,
+    SILENT_SCENE_SECONDS,
     list_available_zips,
     resolve_bgm_path,
 )
 from tools.shopee_ad.product_parser import parse_product_zip
-from tools.shopee_ad.storyboard import load_or_create_storyboard
+from tools.shopee_ad.storyboard import generate_default_storyboard, load_or_create_storyboard
 from tools.shopee_ad.omnivoice_client import generate_speech
 from tools.shopee_ad.asset_extractor import (
     extract_zip,
@@ -40,7 +41,11 @@ from tools.shopee_ad.video_assembler import (
 from tools.shopee_ad.caption_generator import generate_all_platform_captions
 from tools.shopee_ad.cover_generator import create_cover_image
 from tools.shopee_ad.publish_guide import create_publish_guide
+from tools.common import storyboard_io
+from tools.common.constants import SCENE_TAIL_PAD_SECONDS
 from tools.common.naming import build_variant_suffix as _build_variant_suffix
+from tools.common.pipeline.selection import SceneSelection, warn_unknown_scene_ids
+from tools.common.pipeline.voice import silent_timing, synthesize_narration
 from tools.common.watermarks import resolve_delogo_for_product
 from tools.shopee_ad.flow_ad_generator import generate_flow_ad
 
@@ -167,28 +172,31 @@ def run_pipeline(
         channel_name=channel_name,
     )
 
-    # 6. Sinh giọng đọc thuyết minh qua OmniVoice API cho từng phân cảnh (hoặc nhịp POV silent)
-    audio_files = {}
-    audio_durations = {}
+    selection = SceneSelection.from_ids(target_scenes)
+    warn_unknown_scene_ids(selection, (sc.id for sc in scenes))
+    storyboard_io.refresh_targeted_scenes(
+        scenes,
+        selection.target_ids,
+        storyboard_file,
+        regenerate=lambda: generate_default_storyboard(
+            product, style=style, cta_mode=cta_mode, custom_idea=custom_idea, channel_name=channel_name
+        ),
+    )
 
+    # 6. Sinh giọng đọc thuyết minh qua OmniVoice API cho từng phân cảnh (hoặc nhịp POV silent)
     if not no_voice:
         print(f"\n🎙️ [Bước 2/5] Sinh giọng đọc thuyết minh qua OmniVoice API cho {len(scenes)} phân cảnh...")
-        for sc in scenes:
-            out_wav = audio_dir / f"{variant}_scene_{sc.id:02d}.wav"
-            print(f"  • Scene {sc.id}: {sc.name}")
-            dur = generate_speech(
-                text=sc.narrator_text,
-                output_path=out_wav,
-                speed=speed,
-                profile_id=profile_id,
-            )
-            audio_files[sc.id] = out_wav
-            audio_durations[sc.id] = dur
+        narration = synthesize_narration(
+            scenes,
+            audio_dir,
+            variant,
+            synthesize=lambda text, out: generate_speech(text=text, output_path=out, speed=speed, profile_id=profile_id),
+            selection=selection,
+        )
     else:
-        print(f"\n🔇 [Bước 2/5] Chế độ Không Voiceover (Silent POV) - Nhịp cắt chuẩn 5.0s/cảnh...")
-        for sc in scenes:
-            audio_files[sc.id] = None
-            audio_durations[sc.id] = 5.0
+        print(f"\n🔇 [Bước 2/5] Chế độ Không Voiceover (Silent POV) - Nhịp cắt chuẩn {SILENT_SCENE_SECONDS}s/cảnh...")
+        narration = silent_timing(scenes, SILENT_SCENE_SECONDS)
+    audio_files, audio_durations = narration.files, narration.durations
 
     # 7. Chuẩn bị các đoạn video clip cho từng cảnh
     print("\n🎬 [Bước 3/5] Chuẩn bị video clip 9:16 cho từng phân cảnh...")
@@ -206,7 +214,7 @@ def run_pipeline(
             ]
             res_p = subprocess.run(cmd_probe, capture_output=True, text=True, check=True)
             raw_video_dur = float(res_p.stdout.strip())
-            scene_req_durs = [audio_durations[sc.id] + 0.4 for sc in scenes]
+            scene_req_durs = [audio_durations[sc.id] + SCENE_TAIL_PAD_SECONDS for sc in scenes]
             smart_starts, glitch_intervals = calculate_smart_subclip_starts(
                 raw_video, len(scenes), raw_video_dur, scene_durations=scene_req_durs
             )
@@ -231,7 +239,7 @@ def run_pipeline(
     curr_raw_time = 0.0
     for idx_sc, sc in enumerate(scenes):
         clip_out = clips_dir / f"{variant}_clip_{sc.id:02d}.mp4"
-        dur = audio_durations[sc.id] + 0.4  # Đảm bảo video dài hơn audio 0.4s để chuyển cảnh êm
+        dur = audio_durations[sc.id] + SCENE_TAIL_PAD_SECONDS
 
         if sc.kind == "PRODUCT_PHOTO" or (not has_raw_video):
             # Dùng hiệu ứng Ken Burns Pan & Zoom từ ảnh sản phẩm
@@ -297,7 +305,7 @@ def run_pipeline(
         scene_out = scenes_dir / f"{variant}_scene_{sc.id:02d}_assembled.mp4"
         title_to_burn = None if no_overlay else sc.overlay_title
         subtitle_to_burn = None if no_overlay else sc.overlay_subtitle
-        timing_info = f"OmniVoice: {audio_durations[sc.id]:.2f}s" if not no_voice else "Silent: 5.0s"
+        timing_info = f"OmniVoice: {audio_durations[sc.id]:.2f}s" if not no_voice else f"Silent: {SILENT_SCENE_SECONDS}s"
         print(f"  • Ráp Scene {sc.id}: {sc.overlay_title} ({timing_info})")
         assemble_scene_clip(
             video_path=video_clips[sc.id],
@@ -306,7 +314,7 @@ def run_pipeline(
             title_text=title_to_burn,
             subtitle_text=subtitle_to_burn,
             audio_duration=audio_durations[sc.id],
-            target_duration=5.0 if no_voice else None,
+            target_duration=SILENT_SCENE_SECONDS if no_voice else None,
             remove_watermark=False,
         )
         assembled_scenes.append(scene_out)

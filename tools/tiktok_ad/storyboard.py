@@ -1,12 +1,11 @@
 """Storyboard management: dynamically extracts features and generates scene scripts for TikTok Ads."""
-import json
 import logging
 import re
 import unicodedata
-from dataclasses import asdict
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from tools.common import storyboard_io
 from tools.common.models import SceneDefinition
 from tools.tiktok_ad.config import DEFAULT_CHANNEL_NAME
 from tools.tiktok_ad.product_parser import ProductInfo
@@ -19,6 +18,9 @@ from tools.tiktok_ad.prompts import (
 )
 
 logger = logging.getLogger(__name__)
+
+# A stored TikTok storyboard with fewer scenes is treated as incomplete and rebuilt.
+MIN_STORYBOARD_SCENES = 4
 
 __all__ = [
     "SceneDefinition",
@@ -440,40 +442,16 @@ def load_or_create_storyboard(
     channel_name: str = DEFAULT_CHANNEL_NAME,
 ) -> List[SceneDefinition]:
     """Load existing storyboard JSON or generate a fresh one."""
-    storyboard_path = Path(storyboard_path)
-
-    if storyboard_path.exists() and not force:
-        try:
-            with open(storyboard_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            scenes = [SceneDefinition(**item) for item in data.get("scenes", [])]
-            if len(scenes) >= 4:
-                print(f"[Storyboard] Loaded existing {len(scenes)} scenes from {storyboard_path.name}")
-                return scenes
-        except Exception as e:
-            print(f"[Storyboard] Warning: Could not parse {storyboard_path.name}: {e}. Regenerating...")
-
-    scenes = generate_dynamic_storyboard(
-        product=product,
-        style=style,
-        cta_mode=cta_mode,
-        custom_idea=custom_idea,
-        channel_name=channel_name,
+    return storyboard_io.load_or_create(
+        storyboard_path,
+        generate=lambda: generate_dynamic_storyboard(
+            product=product,
+            style=style,
+            cta_mode=cta_mode,
+            custom_idea=custom_idea,
+            channel_name=channel_name,
+        ),
+        force=force,
+        metadata={"product_name": product.name, "slug": product.slug, "style": style, "cta_mode": cta_mode},
+        min_scenes=MIN_STORYBOARD_SCENES,
     )
-
-    storyboard_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(storyboard_path, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "product_name": product.name,
-                "slug": product.slug,
-                "style": style,
-                "cta_mode": cta_mode,
-                "scenes": [asdict(s) for s in scenes],
-            },
-            f,
-            ensure_ascii=False,
-            indent=2,
-        )
-    print(f"[Storyboard] Generated fresh storyboard with {len(scenes)} scenes saved to {storyboard_path.name}")
-    return scenes
