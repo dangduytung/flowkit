@@ -86,6 +86,8 @@ Hệ thống hỗ trợ đầy đủ 7 phong cách video ngắn chuẩn thuật 
 * **`--profile <id>`**: ID cấu hình giọng đọc OmniVoice (KOC Việt).
 * **`--crop {blur_bg, center_crop}`**: Cơ chế chuyển đổi tỷ lệ 9:16 (mặc định: `blur_bg` giữ nguyên khung hình gốc trên nền mờ sang trọng).
 * **`--idea "ý tưởng riêng"`**: Bổ sung bối cảnh hoặc phong cách mong muốn cho kịch bản.
+* **`--scene <id> [<id> ...]`**: Chỉ làm lại các phân cảnh được chọn (kịch bản của cảnh đó được cập nhật theo builder mới nhất); các cảnh còn lại giữ nguyên giọng đọc và clip. Khi Google Flow lỗi một vài cảnh, các clip đã xong vẫn được lưu và tool in sẵn lệnh `--scene ...` để chạy lại.
+* **`--regen`**: Sinh lại toàn bộ clip AI từ Google Flow, **giữ nguyên** storyboard (kể cả phần bạn sửa tay). Muốn viết lại kịch bản từ đầu thì dùng **`--force-storyboard`** (hoặc `--idea`).
 
 ---
 

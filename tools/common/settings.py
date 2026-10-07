@@ -109,6 +109,8 @@ class PlatformProfile:
     batch_styles: tuple[str, ...]  # what ``--style all`` expands to
     style_aliases: Mapping[str, str] = field(default_factory=dict)
     auto_mode: AutoModePolicy = AutoModePolicy.BY_ASSETS
+    # CTA treated as "no suffix" in output file names (defaults to default_cta).
+    variant_baseline_cta: Optional[str] = None
     # Flow clips run ~6s, so voiceless Flow scenes may use more of them than local cuts.
     flow_silent_scene_seconds: Optional[float] = None
     channel_name: str = ""
@@ -136,6 +138,10 @@ class PlatformProfile:
             channel_bio_link=env_str(f"{env_prefix}_AD_BIO_LINK"),
             **fields,
         )
+
+    @property
+    def naming_baseline_cta(self) -> str:
+        return self.variant_baseline_cta or self.default_cta
 
     @property
     def flow_silent_seconds(self) -> float:

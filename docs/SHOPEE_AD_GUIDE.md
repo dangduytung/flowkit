@@ -73,6 +73,8 @@ Hệ thống hoạt động theo cơ chế **Dynamic Universal** (tự động t
 * **`--no-voice`** (hoặc `--silent`): Tắt giọng đọc OmniVoice, xuất video chuẩn 20 giây (4 cảnh x 5 giây) với track âm thanh silent stereo sẵn sàng để bạn ném vào TikTok/CapCut ghép nhạc trend.
 * **`--no-overlay`** (hoặc `--clean`): Tắt chữ Text Overlay vàng/trắng, xuất video sạch 100% để bạn tự chèn chữ font yêu thích.
 * **`--tag <tên>`**: Gắn nhãn/tag tùy chỉnh vào tên file (ví dụ: `--tag v2`, `--tag test1`) để thoải mái xuất thử nghiệm nhiều biến thể mà không bị ghi đè.
+* **`--scene <id> [<id> ...]`**: Chỉ làm lại các phân cảnh được chọn (kịch bản của cảnh đó được cập nhật theo builder mới nhất); các cảnh còn lại giữ nguyên giọng đọc và clip. Khi Google Flow lỗi một vài cảnh, các clip đã xong vẫn được lưu và tool in sẵn lệnh `--scene ...` để chạy lại.
+* **`--regen`**: Sinh lại toàn bộ clip AI từ Google Flow, **giữ nguyên** storyboard (kể cả phần bạn sửa tay). Muốn viết lại kịch bản từ đầu thì dùng **`--force-storyboard`** (hoặc `--idea`).
 * **`--cta {none, follow, shopee, tiktok}`**:
   * `none` (mặc định 4 cảnh): Thích hợp video review tự nhiên hoặc chạy ads không lộ tính thương mại.
   * `follow` (5 cảnh): Cảnh cuối kêu gọi bấm follow kênh (ở dạng `faceless_pov` cảnh cuối vẫn chỉ xuất hiện bàn tay thân thiện, không làm động tác peace sign/thumbs up gượng gạo).

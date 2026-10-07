@@ -33,7 +33,6 @@ python -m tools.shopee_ad.orchestrator --style problem_solution --bgm path/to/mu
 ## Modes (`--mode`)
 - `flow`: 100% Google Flow AI video (auto delogo watermark, auto-uploads product photo as reference).
 - `local`: Edits shop raw video (auto avoids flash cuts/glitches) or Ken Burns pan & zoom slides.
-- `hybrid`: Combines AI video (scenes 1 & 3) with real product photos (scenes 2 & 4).
 - `auto` (default): Produces both `_local_<variant>.mp4` and `_flow_<variant>.mp4` if shop video exists.
 
 ## Styles (`--style`)
@@ -41,6 +40,7 @@ python -m tools.shopee_ad.orchestrator --style problem_solution --bgm path/to/mu
 - `flow_cinematic`: Cinematic KOC review with consistent character persona.
 - `problem_solution`: Urgent pain point -> Product rescue -> Relief and satisfaction.
 - `lifestyle_edc`: Active everyday carry lifestyle.
+- `hybrid`: Combines AI video (scenes 1 & 3) with real product photos (scenes 2 & 4).
 
 ## Key Flags
 - `--bgm [path]`: Bật nhạc nền BGM (**mặc định TẮT** - chỉ giữ âm thanh môi trường Foley + voiceover). Gõ `--bgm` (không tham số) để tự chọn ngẫu nhiên bài nhạc từ kho `assets/bgm/`, hoặc `--bgm <path>` để chỉ định file nhạc cụ thể.
@@ -53,7 +53,11 @@ python -m tools.shopee_ad.orchestrator --style problem_solution --bgm path/to/mu
   - `shopee`: Calls to check pinned comment / Shopee store.
   - `tiktok`: Calls to tap the yellow cart icon on bottom-left.
 - `--idea "..."`: Custom creative context injection into prompts.
+- `--scene <id> [<id> ...]`: Re-render only these scenes (their prompts/copy are refreshed from the builders; every other scene keeps its narration and clips). After a Flow failure the run prints the exact `--scene ...` command to retry.
+- `--regen`: Re-render all Flow AI clips; the storyboard (including hand edits) is kept.
+- `--force-storyboard`: Rebuild `storyboard_{style}.json` from scratch (discards hand edits). `--idea` implies it.
 - `--zip <path>`: Specify target ZIP (defaults to newest in `SHOPEE_DOWNLOADS_DIR`).
+- Output root: `output/shopee_ads/` unless `SHOPEE_OUTPUT_DIR` is set in `.env`.
 
 ## Multi-Variant Export Architecture
 Outputs are saved into `output/shopee_ads/<slug>/final/` using collision-free semantic names:

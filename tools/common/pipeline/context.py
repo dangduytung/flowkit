@@ -137,7 +137,7 @@ def open_workspace(profile: PlatformProfile, opts: RunOptions) -> ProductWorkspa
     zip_path = resolve_zip(profile, opts.zip_path)
     product = parse_product_zip(zip_path)
     variant = build_variant_suffix(
-        style=opts.style, no_overlay=opts.no_overlay, cta_mode=opts.cta_mode, default_cta=profile.default_cta, tag=opts.tag
+        style=opts.style, no_overlay=opts.no_overlay, cta_mode=opts.cta_mode, default_cta=profile.naming_baseline_cta, tag=opts.tag
     )
     workspace = ProductWorkspace(product=product, root=profile.output_root / product.slug, variant=variant)
     workspace.create_dirs()

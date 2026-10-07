@@ -31,7 +31,7 @@ def build_variant_suffix(
         style=style or PROFILE.default_style,
         no_overlay=no_overlay,
         cta_mode=cta_mode or PROFILE.default_cta,
-        default_cta=PROFILE.default_cta,
+        default_cta=PROFILE.naming_baseline_cta,
         tag=tag,
     )
 

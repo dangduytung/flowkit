@@ -146,3 +146,20 @@ class TestFlowRenderer:
             renderer.render(self.SCENES, product_refs=[])
         assert "flow_cinematic_raw_03.mp4" in downloaded
         assert "--scene 2 4" in caplog.text
+
+
+class TestPlatformDefaults:
+    """CLI defaults and file naming must match what each platform shipped with."""
+
+    def test_shopee_defaults_to_no_cta_but_names_files_against_shopee_cta(self):
+        from tools.shopee_ad.orchestrator import build_variant_suffix
+
+        assert build_parser(SHOPEE).parse_args([]).cta == "none"
+        assert build_variant_suffix(style="flow_cinematic", cta_mode="none") == "flow_cinematic_no-cta"
+        assert build_variant_suffix(style="flow_cinematic", cta_mode="shopee") == "flow_cinematic"
+
+    def test_tiktok_defaults_to_yellow_cart(self):
+        from tools.tiktok_ad.orchestrator import build_variant_suffix
+
+        assert build_parser(TIKTOK).parse_args([]).cta == "yellow_cart"
+        assert build_variant_suffix(style="viral_hook") == "viral_hook"

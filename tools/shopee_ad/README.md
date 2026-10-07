@@ -92,30 +92,45 @@ python -m tools.shopee_ad.orchestrator --style lifestyle_edc --idea "nữ vlogge
 | `--no-voice`, `--silent` | Không tạo voiceover thuyết minh (video thuần hình ảnh, nhịp chuẩn ~5s/cảnh để ghép nhạc trend TikTok) | `False` |
 | `--no-overlay`, `--clean` | Không chèn chữ Text Overlay (xuất video sạch để tự gõ text font TikTok/CapCut) | `False` |
 | `--idea "..."` | Bổ sung ý tưởng / bối cảnh sáng tạo vào prompt | Không |
-| `--cta {none, follow, shopee}` | Lời kêu gọi hành động ở cảnh kết thúc | `none` (4 cảnh Fanpage) |
+| `--cta {none, follow, shopee, tiktok}` | Lời kêu gọi hành động ở cảnh kết thúc | `none` (4 cảnh) |
 | `--speed <float>` | Tốc độ đọc của OmniVoice | `1.03` (chuẩn KOC đàm thoại) |
 | `--profile <id>` | ID profile giọng đọc tiếng Việt OmniVoice | Lấy từ .env `OMNIVOICE_PROFILE_ID` |
 | `--channel-name <tên>` | Tên kênh xuất bản đa nền tảng | Lấy từ .env `SHOPEE_AD_CHANNEL_NAME` |
 | `--channel-handle <id>` | Handle/ID kênh | Lấy từ .env `SHOPEE_AD_CHANNEL_HANDLE` |
-| `--regen` | Bắt buộc sinh lại toàn bộ clip AI từ Google Flow | `False` |
+| `--regen` | Sinh lại toàn bộ clip AI từ Google Flow (giữ nguyên storyboard) | `False` |
+| `--scene <id> [<id> ...]` | Chỉ làm lại các phân cảnh này; cảnh khác giữ nguyên giọng đọc & clip | Tất cả |
+| `--force-storyboard` | Tạo lại `storyboard_{style}.json` từ đầu (mất chỉnh sửa tay) | `False` |
+| `--bgm [file]` | Nhạc nền (mặc định tắt); `--bgm` = ngẫu nhiên từ `assets/bgm/` | Tắt |
+| `--delogo {auto, none, x=..:y=..:w=..:h=..}` | Xóa logo shop trên video gốc (`auto` = theo `config/watermark_rules.json`) | `auto` |
+| `--crop {blur_bg, center_crop}` | Cách đưa video/ảnh về khung 9:16 | `blur_bg` |
+| `--tag <tên>` | Nhãn phân biệt các lần xuất (A/B test) | Không |
 
 ---
 
-## 5. Cấu Trúc Thư Mục Độc Lập
+## 5. Cấu Trúc Mã Nguồn
+
+Pipeline (local & Flow), xử lý media, TTS, client FlowKit dùng chung nằm ở `tools/common/`;
+package này chỉ chứa phần riêng của Shopee: cấu hình (`PROFILE`), kịch bản và nội dung.
 
 ```
 tools/shopee_ad/
-├── __init__.py
-├── config.py             # Quản lý đường dẫn và cấu hình môi trường (.env)
-├── product_parser.py     # Phân tích file zip, trích xuất metadata và tính năng
-├── storyboard.py         # Nhận diện ngành hàng thông minh & tạo kịch bản phân cảnh
-├── omnivoice_client.py   # Client sinh giọng đọc tiếng Việt OmniVoice (VoiceStudio)
-├── asset_extractor.py    # Xử lý video/ảnh gốc (Ken Burns 9:16)
-├── video_assembler.py    # Ráp video, delogo Flow, text overlay UTF-8, xuất master audio & script
-├── caption_generator.py  # Tạo caption đa nền tảng (Facebook Reels, TikTok, Shorts)
-├── cover_generator.py    # Tạo ảnh bìa thumbnail 9:16 bắt mắt cho video
-├── publish_guide.py      # Sinh file cẩm nang hướng dẫn đăng bài chi tiết từng nền tảng
-├── flow_ad_generator.py  # Điều phối sinh video AI qua Google Flow Omni Flash
-├── orchestrator.py       # Bộ điều khiển CLI trung tâm (quét ZIP, điều phối auto/flow/local)
-└── README.md
+├── config.py             # PROFILE: thư mục, CTA, style mặc định, biến môi trường SHOPEE_*
+├── platform.py           # Nối nội dung Shopee vào pipeline chung (PlatformHooks)
+├── orchestrator.py       # CLI: python -m tools.shopee_ad.orchestrator (auto/local/flow/both)
+├── flow_ad_generator.py  # CLI rút gọn, luôn chạy chế độ Flow
+├── storyboard.py         # Nhận diện ngành hàng, trích tính năng, chọn builder theo --style
+├── prompts/              # Mỗi style một module + STYLES registry (thêm style = thêm module)
+├── caption_generator.py  # Caption đa nền tảng (Facebook Reels, TikTok, Shorts)
+├── cover_generator.py    # Kiểu chữ ảnh bìa Shopee (dựng ảnh: tools/common/media/cover.py)
+├── publish_guide.py      # Cẩm nang đăng bài từng nền tảng
+└── asset_extractor.py, video_assembler.py, product_parser.py, omnivoice_client.py
+                          # Đường dẫn import cũ, trỏ sang tools/common
+
+tools/common/
+├── pipeline/             # cli, local, flow, các bước dùng chung, --scene (SceneSelection)
+├── media/                # cắt/ghép video, lập kế hoạch cắt, ảnh bìa, chữ overlay (ffmpeg)
+├── prompts/              # StyleRegistry, cảnh cinematic dùng chung
+├── settings.py           # .env, PlatformProfile, ServiceSettings
+├── flow_client.py, tts.py, product.py, bgm.py, watermarks.py, archetypes.py
 ```
+
