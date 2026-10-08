@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from tools.common.constants import FLOW_WATERMARK_BOX
+from tools.common.media.flowmark import flow_watermark_filter_for
 from tools.common.ffmpeg import delogo_filter, run_ffmpeg
 from tools.common.media.text import TextStyle, drawtext_filter, text_files
 
@@ -77,7 +77,7 @@ def create_cover_frame(
         box_opacity=0.65, box_border=12, border_width=3,
     )
 
-    filters = [delogo_filter(delogo) or f"delogo={FLOW_WATERMARK_BOX.to_spec()}", f"noise=alls={COVER_GRAIN}:allf=t"]
+    filters = [delogo_filter(delogo) or flow_watermark_filter_for(Path(source_video)), f"noise=alls={COVER_GRAIN}:allf=t"]
     with text_files(output_path.parent, output_path.stem, {"title": hook, "sub": sub}) as files:
         if "title" in files:
             filters.append(drawtext_filter(files["title"], hook_style))

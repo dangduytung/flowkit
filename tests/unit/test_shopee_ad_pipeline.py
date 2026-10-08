@@ -238,7 +238,7 @@ class TestPromptConstraints:
             assert "no face" in p_lower or "hands only" in p_lower or "no human face" in p_lower
 
     def test_cta_scenes_finger_constraints(self):
-        """CTA scenes must explicitly forbid thumbs-up and enforce exactly 5 fingers."""
+        """CTA scenes forbid thumbs-up but never name the finger defect (it primes the model)."""
         faceless_cta = build_cta_scene(
             scene_id=5,
             cta_mode="follow",
@@ -247,7 +247,8 @@ class TestPromptConstraints:
             clean_title="Túi Nén Du Lịch",
         )
         assert faceless_cta is not None
-        assert "strictly exactly 5 fingers" in (faceless_cta.prompt or "")
+        assert "5 fingers" not in (faceless_cta.prompt or "")
+        assert "lower left" not in (faceless_cta.prompt or "").lower()
         assert "no thumbs-up" in (faceless_cta.prompt or "").lower()
 
         human_cta = build_cta_scene(
@@ -479,3 +480,20 @@ class TestAssetExtractor:
 
 
 
+
+
+def test_feature_extraction_skips_scrape_metadata():
+    """description.txt metadata ("Tên sản phẩm: …") must never become a feature badge."""
+    from tools.shopee_ad.storyboard import extract_product_features
+
+    text = (
+        "Tên sản phẩm: Nồi phủ sứ chống dính Elmich Olive EL-5532OV size 18,20cm\n"
+        "Link sản phẩm: https://shopee.vn/product/1/2\nĐã bán: 3k+\n\n---\nMô tả sản phẩm:\n"
+        "Nồi phủ sứ chống dính Elmich Olive\n"
+        "– Chống\xa0dính\xa0đỉnh\xa0cao: Bền gấp 33 lần so với các loại chống dính thông thường.\n"
+        "– Chịu nhiệt độ cao: Không giải phóng các chất độc hại như PTFE, PFOA gây hại\n"
+    )
+    features = extract_product_features(text)
+    titles = [t for t, _ in features]
+    assert titles[:2] == ["CHỐNG DÍNH ĐỈNH CAO", "CHỊU NHIỆT ĐỘ CAO"]
+    assert not any("TÊN SẢN PHẨM" in t or "LINK" in t for t in titles)

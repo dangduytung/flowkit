@@ -88,6 +88,7 @@ Hệ thống hỗ trợ đầy đủ 7 phong cách video ngắn chuẩn thuật 
 * **`--idea "ý tưởng riêng"`**: Bổ sung bối cảnh hoặc phong cách mong muốn cho kịch bản.
 * **`--scene <id> [<id> ...]`**: Chỉ làm lại các phân cảnh được chọn (kịch bản của cảnh đó được cập nhật theo builder mới nhất); các cảnh còn lại giữ nguyên giọng đọc và clip. Khi Google Flow lỗi một vài cảnh, các clip đã xong vẫn được lưu và tool in sẵn lệnh `--scene ...` để chạy lại.
 * **`--regen`**: Sinh lại toàn bộ clip AI từ Google Flow, **giữ nguyên** storyboard (kể cả phần bạn sửa tay). Muốn viết lại kịch bản từ đầu thì dùng **`--force-storyboard`** (hoặc `--idea`).
+  * Prompt Flow giờ được viết theo kiểu **clip quay điện thoại cầm tay** (xem `tools/common/prompts/realism.py`). `storyboard_*.json` tạo từ bản cũ vẫn được tự làm sạch khi gửi đi, nhưng muốn dùng hẳn kịch bản mới thì chạy lại với **`--force-storyboard`**.
 
 ---
 

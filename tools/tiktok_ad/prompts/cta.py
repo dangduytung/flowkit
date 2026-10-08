@@ -16,19 +16,19 @@ def append_call_to_action(
     s4 = scenes[-1]
     original = s4.narrator_text.strip()
     if cta_mode in ("yellow_cart", "cart", "tiktok"):
-        cta_phrase = "Bấm ngay vào giỏ hàng màu vàng ở góc dưới bên trái màn hình để săn ưu đãi nhé!"
+        cta_phrase = "Bấm vô giỏ hàng màu vàng góc trái để săn ưu đãi nha!"
         if "giỏ hàng màu vàng" not in original:
             s4.narrator_text = f"{original} {cta_phrase}" if original else cta_phrase
         s4.overlay_title = "GIỎ HÀNG GÓC TRÁI"
         s4.overlay_subtitle = "Bấm Săn Deal Hôm Nay"
     elif cta_mode in ("profile_bio", "bio"):
-        cta_phrase = "Xem ngay link chi tiết sản phẩm tại link Bio trên trang cá nhân nha cả nhà!"
+        cta_phrase = "Link chi tiết mình để ở Bio trang cá nhân nha."
         if "Bio" not in original:
             s4.narrator_text = f"{original} {cta_phrase}" if original else cta_phrase
         s4.overlay_title = "LINK TRÊN BIO"
         s4.overlay_subtitle = "Bấm Vào Trang Cá Nhân"
     elif cta_mode == "follow":
-        cta_phrase = "Bấm follow kênh để săn thêm nhiều deal hời và mẹo hay mỗi ngày nhé!"
+        cta_phrase = "Follow kênh nha, mỗi ngày đều có deal với mẹo hay."
         if "follow" not in original.lower():
             s4.narrator_text = f"{original} {cta_phrase}" if original else cta_phrase
         s4.overlay_title = "FOLLOW KÊNH NHA"

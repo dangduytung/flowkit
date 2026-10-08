@@ -2,30 +2,32 @@
 from typing import List
 
 from tools.common.models import SceneDefinition
+from tools.common.prompts.realism import feature_line, product_noun, spoken_name
 from tools.common.prompts.registry import StoryContext
 
 
 def build_hybrid_scenes(ctx: StoryContext) -> List[SceneDefinition]:
     clean_title = ctx.clean_title
+    short_name = spoken_name(clean_title)
     return [
         SceneDefinition(
             id=1,
             name="Hook - Nhu cầu & Trải nghiệm thực tế",
             kind="FLOW_AI",
-            narrator_text=f"Bạn đang tìm một món đồ thật ưng ý và tiện dụng mỗi ngày? Cùng mình trải nghiệm {clean_title} này nhé!",
+            narrator_text=f"Đang kiếm một món xài hằng ngày cho tiện thì coi thử {short_name} này nè.",
             overlay_title="TRẢI NGHIỆM THỰC TẾ",
             overlay_subtitle=clean_title[:28],
             image_index=0,
             prompt=(
-                f"Vertical 9:16 RAW cinematic video. Two stylish young Vietnamese friends discovering {clean_title} with genuine curiosity and excitement. "
-                f"Warm cozy ambient lighting, shot on 35mm lens. Mouth closed, no speaking. NO text overlays."
+                f"Two young Vietnamese friends sit at a small table in an ordinary coffee shop; one takes the {product_noun(ctx.category, clean_title)} out of a tote bag and the other leans in to look. "
+                f"Iced drinks on the table, people in the background, daylight from the street. No speaking. NO packaging text."
             ),
         ),
         SceneDefinition(
             id=2,
             name="Hero - Giới thiệu sản phẩm thật",
             kind="PRODUCT_PHOTO",
-            narrator_text=f"Đây là {clean_title}, thiết kế thông minh, hoàn thiện cực kỳ chỉn chu.",
+            narrator_text=f"Đây là {short_name}, làm gọn gàng, kỹ lắm.",
             overlay_title=clean_title[:28].upper(),
             overlay_subtitle="Chính Hãng - Hoàn Thiện Tỉ Mỉ",
             image_index=0,
@@ -39,15 +41,15 @@ def build_hybrid_scenes(ctx: StoryContext) -> List[SceneDefinition]:
             overlay_subtitle="Trải Nghiệm Vượt Trội",
             image_index=min(1, ctx.num_images - 1),
             prompt=(
-                f"Vertical 9:16 RAW cinematic video. Young expressive person smiling happily while using {clean_title} in modern setting. "
-                f"Natural cinematic lighting. Mouth closed, no speaking. NO fake packaging."
+                f"The same young Vietnamese person uses the {product_noun(ctx.category, clean_title)} at home on the sofa, glances at it, then relaxes back with a small smile. "
+                f"Lived-in living room, daylight. No speaking."
             ),
         ),
         SceneDefinition(
             id=4,
             name="Tính năng nổi bật 2 & Đánh giá tốt",
             kind="PRODUCT_PHOTO",
-            narrator_text=f"{ctx.feat2_desc}. Sản phẩm được rất nhiều người dùng đánh giá tốt và tin tưởng sử dụng.",
+            narrator_text=feature_line(ctx.feat2_title, ctx.feat2_desc, "Xài hằng ngày tiện lắm luôn."),
             overlay_title=ctx.social_proof_title,
             overlay_subtitle=ctx.feat2_title[:24],
             image_index=min(2, ctx.num_images - 1),

@@ -9,6 +9,7 @@ from tools.common.pipeline import flow as flow_pipeline
 from tools.common.pipeline.cli import build_parser, select_runs
 from tools.common.pipeline.context import ProductWorkspace, RunOptions
 from tools.common.product import ProductInfo
+from tools.common.prompts.realism import PHONE_HEADER
 from tools.shopee_ad.config import PROFILE as SHOPEE
 from tools.tiktok_ad.config import PROFILE as TIKTOK
 
@@ -61,6 +62,7 @@ class FakeClient(flow_client.FlowKitClient):
     def __init__(self, fail_ids=()):
         super().__init__(base_url="http://fake")
         self.submitted = []
+        self.reference_sets = []
         self.fail_ids = set(fail_ids)
 
     def submit_text_video(self, payload):
@@ -69,6 +71,7 @@ class FakeClient(flow_client.FlowKitClient):
 
     def submit_reference_video(self, payload):
         self.submitted.append(("r2v", payload["prompt"], payload["reference_media_ids"][0]))
+        self.reference_sets.append(payload["reference_media_ids"])
         return {"operations": [{"operation": {"name": payload["prompt"]}}]}
 
     def upload_image(self, image_path, project_id=""):
@@ -119,11 +122,16 @@ class TestFlowRenderer:
         client = FakeClient()
         renderer, downloaded = renderer_factory(client)
         renderer.render(self.SCENES, product_refs=["ref-a"])
-        kinds = {prompt: (kind, ref) for kind, prompt, ref in client.submitted}
-        assert kinds[self.SCENES[0].prompt] == ("t2v", None)  # anchor first
-        assert kinds[self.SCENES[1].prompt] == ("r2v", "anchor-media")  # consistent character
-        assert kinds[self.SCENES[2].prompt] == ("r2v", "ref-a")  # product reference
-        assert kinds[self.SCENES[3].prompt] == ("t2v", None)
+        def sent(scene):
+            return next((kind, ref) for kind, prompt, ref in client.submitted if scene.prompt.lower() in prompt.lower())
+
+        assert sent(self.SCENES[0]) == ("r2v", "ref-a")  # anchor first, drawn from the real product
+        assert sent(self.SCENES[1]) == ("r2v", "anchor-media")  # consistent character
+        assert sent(self.SCENES[2]) == ("r2v", "ref-a")  # product reference
+        assert sent(self.SCENES[3]) == ("t2v", None)
+        assert all(prompt.startswith(PHONE_HEADER) and "Camera:" in prompt for _, prompt, _ in client.submitted)
+        assert ["anchor-media", "ref-a"] in client.reference_sets  # character scenes also carry the product photo
+        assert all(("Product:" in prompt) == (ref == "ref-a" or kind == "r2v") for kind, prompt, ref in client.submitted)
         assert sorted(downloaded) == [f"flow_cinematic_raw_0{i}.mp4" for i in range(1, 5)]
 
     def test_existing_clips_are_reused_and_scene_flag_targets_one(self, renderer_factory):
@@ -137,7 +145,7 @@ class TestFlowRenderer:
 
         targeted, _ = renderer_factory(client, target_scenes=[3])
         targeted.render(self.SCENES, product_refs=[])
-        assert [p for _, p, _ in client.submitted] == [self.SCENES[2].prompt]
+        assert len(client.submitted) == 1 and self.SCENES[2].prompt.lower() in client.submitted[0][1].lower()
 
     def test_failures_keep_finished_clips_and_name_the_scenes(self, renderer_factory, caplog):
         client = FakeClient(fail_ids={2, 4})

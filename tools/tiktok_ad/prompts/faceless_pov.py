@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from tools.common.archetypes import ProductArchetype, resolve_product_archetype
 from tools.common.models import SceneDefinition
+from tools.common.prompts.realism import feature_line, spoken_name
 from tools.common.product import ProductInfo
 
 
@@ -22,10 +23,11 @@ def build_faceless_pov_scenes(
     has_video = bool(product and product.video_name)
     num_images = len(product.image_names) if product and product.image_names else 1
     archetype = resolve_product_archetype(clean_title)
+    short_name = spoken_name(clean_title)
 
     # Archetype-specific copy takes precedence over the broader category copy.
     if archetype == ProductArchetype.COMPRESSION_STORAGE:
-        pov_summary_text = "Bảo vệ quần áo chống ẩm mốc bụi bẩn suốt 6-8 tháng, kéo khóa vali nhẹ tênh, đi du lịch cực kỳ thảnh thơi!"
+        pov_summary_text = "Đồ cất cả mùa không lo ẩm mốc, kéo khóa vali nhẹ tênh, đi chơi thảnh thơi."
         pov_summary_title = "KÉO KHÓA NHẸ TÊNH"
         pov_summary_sub = "Bảo Vệ Chống Ẩm Mốc"
         pov_summary_prompt = (
@@ -33,7 +35,7 @@ def build_faceless_pov_scenes(
             "Warm natural morning light. Completely faceless."
         )
     elif archetype == ProductArchetype.VACUUM_CLEANER:
-        pov_summary_text = "Hút sạch mọi bụi mịn và tóc rụng trong tích tắc, nhà cửa và xe hơi lúc nào cũng sạch bóng tinh tươm!"
+        pov_summary_text = "Bụi với tóc rụng hút cái là sạch, nhà cửa với xe lúc nào cũng gọn gàng."
         pov_summary_title = "SẠCH BÓNG TINH TƯƠM"
         pov_summary_sub = "Hút Sạch Mọi Góc Nhỏ"
         pov_summary_prompt = (
@@ -41,7 +43,7 @@ def build_faceless_pov_scenes(
             f"Sunlit warm atmosphere, spotless floor. Completely faceless."
         )
     elif category == "HEALTH_FITNESS":
-        pov_summary_text = "Một sự đầu tư nhỏ cho sức khỏe nhưng mang lại sự thoải mái và năng lượng tích cực mỗi ngày!"
+        pov_summary_text = "Đầu tư nhỏ cho sức khỏe thôi mà ngày nào cũng thấy dễ chịu."
         pov_summary_title = "SỐNG KHỎE MỖI NGÀY"
         pov_summary_sub = "Lựa Chọn Hoàn Hảo"
         pov_summary_prompt = (
@@ -49,7 +51,7 @@ def build_faceless_pov_scenes(
             f"Warm natural sunlight, peaceful atmosphere, comfortable lifestyle. Completely faceless."
         )
     elif category == "BEAUTY_SKINCARE":
-        pov_summary_text = "Một bước chăm sóc đơn giản nhưng nâng tầm vẻ đẹp tự nhiên và sự tự tin rạng ngời mỗi ngày!"
+        pov_summary_text = "Thêm một bước chăm da đơn giản thôi mà ra đường tự tin hẳn."
         pov_summary_title = "NÂNG TẦM VẺ ĐẸP"
         pov_summary_sub = "Tự Tin Rạng Rỡ"
         pov_summary_prompt = (
@@ -57,7 +59,7 @@ def build_faceless_pov_scenes(
             f"Soft glowing lighting, clean minimalist beauty setup. Completely faceless."
         )
     elif category == "TECH_GADGETS":
-        pov_summary_text = "Một món đồ công nghệ đáng giá, giúp tối ưu hiệu suất và nâng tầm góc làm việc hiện đại!"
+        pov_summary_text = "Món nhỏ thôi mà góc làm việc gọn hẳn, làm việc cũng trơn tru hơn."
         pov_summary_title = "TỐI ƯU HIỆU SUẤT"
         pov_summary_sub = "Góc Setup Đẳng Cấp"
         pov_summary_prompt = (
@@ -65,7 +67,7 @@ def build_faceless_pov_scenes(
             f"Warm morning sunlight, minimalist aesthetic, cozy workspace. Completely faceless."
         )
     elif category == "KITCHEN_HOME":
-        pov_summary_text = "Một trợ thủ đắc lực giúp không gian sống gọn gàng và việc nhà trở nên nhàn tênh mỗi ngày!"
+        pov_summary_text = "Có món này, nhà cửa gọn gàng, việc nhà nhàn hẳn."
         pov_summary_title = "TIỆN ÍCH GIA ĐÌNH"
         pov_summary_sub = "Không Gian Tinh Tươm"
         pov_summary_prompt = (
@@ -73,7 +75,7 @@ def build_faceless_pov_scenes(
             f"Warm inviting ambient light, organized living space. Completely faceless."
         )
     elif category == "FASHION_APPAREL":
-        pov_summary_text = "Một item hoàn hảo tôn dáng và giúp bạn tự tin toả sáng trong mọi khoảnh khắc thường nhật!"
+        pov_summary_text = "Mặc lên gọn dáng, đi đâu cũng thấy tự tin."
         pov_summary_title = "TỰ TIN TỎA SÁNG"
         pov_summary_sub = "Phong Cách Thời Thượng"
         pov_summary_prompt = (
@@ -81,7 +83,7 @@ def build_faceless_pov_scenes(
             f"Chic aesthetic room lighting, stylish wardrobe background. Completely faceless."
         )
     else:
-        pov_summary_text = "Một món đồ nhỏ nhưng mang lại tiện ích vượt trội, nâng cấp chất lượng cuộc sống mỗi ngày!"
+        pov_summary_text = "Món nhỏ thôi mà xài mỗi ngày tiện lắm luôn."
         pov_summary_title = "NÂNG TẦM TRẢI NGHIỆM"
         pov_summary_sub = "Lựa Chọn Hoàn Hảo"
         pov_summary_prompt = (
@@ -103,7 +105,7 @@ def build_faceless_pov_scenes(
             id=1,
             name="POV Unboxing & Ấn tượng ban đầu",
             kind="REAL_FOOTAGE" if has_video else "IMAGE_SLIDE",
-            narrator_text=f"Cùng mình unbox và trải nghiệm thực tế chiếc {clean_title} này nhé. Cầm trên tay đầm chắc và hoàn thiện rất xịn.",
+            narrator_text=f"Mở hộp {short_name} ra coi nè. Cầm lên thấy đầm tay, làm kỹ lắm.",
             overlay_title="TRẢI NGHIỆM THỰC TẾ",
             overlay_subtitle=clean_title[:28],
             real_start_sec=0.0,
@@ -121,7 +123,7 @@ def build_faceless_pov_scenes(
             id=2,
             name="POV Thao tác sử dụng trực tiếp",
             kind="REAL_FOOTAGE" if has_video else "IMAGE_SLIDE",
-            narrator_text=f"{feat1_desc}. Mọi thao tác đều cực kỳ mượt mà và êm ái.",
+            narrator_text=feature_line(feat1_title, feat1_desc, "Thao tác êm, mượt lắm."),
             overlay_title=feat1_title[:24].upper(),
             overlay_subtitle="Thao Tác Cực Êm",
             real_start_sec=4.0 if has_video else 0.0,
@@ -135,7 +137,7 @@ def build_faceless_pov_scenes(
             id=3,
             name="POV Chi tiết công năng & Chất liệu",
             kind="PRODUCT_PHOTO",
-            narrator_text=f"{feat2_desc}. Từng góc cạnh được chăm chút tỉ mỉ, rất đáng tiền.",
+            narrator_text=feature_line(feat2_title, feat2_desc, "Từng góc cạnh làm kỹ, đáng tiền."),
             overlay_title=feat2_title[:24].upper(),
             overlay_subtitle="Chất Liệu Bền Bỉ",
             real_start_sec=8.0 if has_video else 0.0,

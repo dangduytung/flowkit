@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from tools.common.archetypes import ProductArchetype, resolve_product_archetype
 from tools.common.models import SceneDefinition
+from tools.common.prompts.realism import feature_line, spoken_name
 from tools.common.product import ProductInfo
 
 
@@ -23,34 +24,35 @@ def build_viral_hook_scenes(
     num_images = len(product.image_names) if product and product.image_names else 1
 
     archetype = resolve_product_archetype(clean_title)
+    short_name = spoken_name(clean_title)
 
     # Hook question: archetype-specific copy first, then the broader category copy.
     if archetype == ProductArchetype.COMPRESSION_STORAGE:
-        hook_text = f"Chuẩn bị đi du lịch hay dọn tủ mà quần áo cồng kềnh nhét mãi không vừa vali? Dùng ngay {clean_title} này xẹp 80% nha!"
+        hook_text = f"Soạn đồ đi chơi mà áo quần cồng kềnh, nhét hoài không vô vali. Coi {short_name} này nè."
         hook_title = "VALI CHẬT NÍCH?"
         hook_sub = "Hút Xẹp 80% Diện Tích"
     elif category == "HEALTH_FITNESS":
-        hook_text = f"Cả ngày làm việc căng thẳng, cơ thể uể oải đau nhức khó chịu? Trải nghiệm ngay {clean_title} này đi, cảm giác khác biệt hoàn toàn luôn!"
+        hook_text = f"Làm cả ngày mệt rã người, mỏi hết cả lưng. Coi thử {short_name} này nè."
         hook_title = "CƠ THỂ ĐAU NHỨC UỂ OẢI?"
         hook_sub = "Cứu Cánh Cho Bạn"
     elif category == "BEAUTY_SKINCARE":
-        hook_text = f"Mặt mộc cứ sần sùi khô mốc làm bạn thiếu tự tin? Xem ngay bí quyết chăm da với {clean_title} này nhé!"
+        hook_text = f"Mặt mộc sần sùi, khô mốc, ra đường thấy ngại ghê. Coi thử {short_name} này nè."
         hook_title = "DA KHÔ MỐC THIẾU TỰ TIN?"
         hook_sub = "Bí Quyết Căng Mịn"
     elif category == "TECH_GADGETS":
-        hook_text = f"Bàn làm việc bừa bộn hoặc phụ kiện bất tiện làm giảm cảm hứng? Khám phá ngay giải pháp cực hay với {clean_title}!"
+        hook_text = f"Bàn làm việc bừa bộn, đồ đạc bất tiện, ngồi vô là hết hứng. Coi thử {short_name} này nè."
         hook_title = "BÀN SETUP QUÁ BỪA BỘN?"
         hook_sub = "Nâng Tầm Không Gian"
     elif category == "KITCHEN_HOME":
-        hook_text = f"Gian bếp lộn xộn, dọn dẹp mất cả tiếng đồng hồ? Món đồ thông minh {clean_title} này sẽ cứu rỗi bạn!"
+        hook_text = f"Bếp lộn xộn, dọn một hồi mất cả tiếng. Coi thử {short_name} này nè."
         hook_title = "DỌN DẸP MẤT THỜI GIAN?"
         hook_sub = "Tiện Lợi Gấp Đôi"
     elif category == "FASHION_APPAREL":
-        hook_text = f"Mỗi sáng đứng trước tủ đồ không biết mặc gì vừa đẹp vừa tôn dáng? Khám phá ngay mẫu {clean_title} này nhé!"
+        hook_text = f"Sáng nào cũng đứng trước tủ đồ không biết mặc gì. Coi thử {short_name} này nè."
         hook_title = "ĐAU ĐẦU CHỌN OUTFIT?"
         hook_sub = "Phối Đồ Cực Chuẩn"
     else:
-        hook_text = f"Ai đang gặp phiền toái mỗi ngày mà chưa tìm được cách xử lý? Trải nghiệm ngay {clean_title} cực kỳ hữu ích này nhé!"
+        hook_text = f"Có mấy cái phiền phức nhỏ mỗi ngày mà hoài không xử lý được. Coi thử {short_name} này nè."
         hook_title = "BẠN ĐANG TÌM GIẢI PHÁP?"
         hook_sub = "Trải Nghiệm Đỉnh Cao"
 
@@ -86,7 +88,7 @@ def build_viral_hook_scenes(
             id=2,
             name="Feature 1 - Trực diện thao tác giải pháp",
             kind="REAL_FOOTAGE" if has_video else "IMAGE_SLIDE",
-            narrator_text=f"{feat1_desc}. Cảm nhận sự thư giãn và tiện lợi ngay tức thì!",
+            narrator_text=feature_line(feat1_title, feat1_desc, "Xài vô là thấy tiện liền."),
             overlay_title=feat1_title[:24].upper(),
             overlay_subtitle="Thao Tác Cực Êm",
             real_start_sec=4.0 if has_video else 0.0,
@@ -100,7 +102,7 @@ def build_viral_hook_scenes(
             id=3,
             name="Feature 2 - Cấu tạo & Độ bền công thái học",
             kind="PRODUCT_PHOTO",  # Use photo pan/zoom for rich visual variety
-            narrator_text=f"{feat2_desc}. Hoàn thiện chắc chắn, thiết kế thông minh nâng tầm chất lượng sống.",
+            narrator_text=feature_line(feat2_title, feat2_desc, "Làm chắc chắn, xài lâu yên tâm."),
             overlay_title=feat2_title[:24].upper(),
             overlay_subtitle="Bền Chắc - Hoàn Thiện Tỉ Mỉ",
             real_start_sec=8.0 if has_video else 0.0,
@@ -114,7 +116,7 @@ def build_viral_hook_scenes(
             id=4,
             name="Social Proof & Chốt đơn",
             kind="REAL_FOOTAGE" if has_video else "PRODUCT_PHOTO",
-            narrator_text=f"Sản phẩm nhận được rất nhiều phản hồi tích cực và đánh giá cao. Món đồ cực kỳ đáng đầu tư {closing_phrase}",
+            narrator_text=f"Món này đáng tiền thiệt, nhất là {closing_phrase}",
             overlay_title=social_proof_title,
             overlay_subtitle="Được Tin Dùng Hàng Đầu",
             real_start_sec=10.0 if has_video else 0.0,

@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from tools.common.archetypes import ProductArchetype, title_matches
 from tools.common.models import SceneDefinition
+from tools.common.prompts.realism import feature_line, product_noun, spoken_name
 from tools.common.prompts.personas import character_persona
 
 
@@ -19,6 +20,8 @@ def build_problem_solution_scenes(
     """Generate 4 Problem-Solution / Drama AI scenes tailored to the product category."""
     idea_ctx = f" ({custom_idea})" if custom_idea else ""
     persona = character_persona(category)
+    noun = product_noun(category, clean_title)
+    short_name = spoken_name(clean_title)
 
     if category == "BEAUTY_SKINCARE":
         return [
@@ -26,52 +29,51 @@ def build_problem_solution_scenes(
                 id=1,
                 name="Hook - Nỗi lo da khô mốc trước buổi hẹn",
                 kind="FLOW_AI",
-                narrator_text="Sắp đi tiệc hay gặp khách mà da khô sần, đánh nền bị mốc meo nhìn phát chán đúng không? Đừng lo, xem ngay giải pháp phục hồi da cực xịn này nhé!",
+                narrator_text="Sắp đi gặp khách mà da khô sần, đánh nền lên mốc hết trơn, nhìn chán ghê. Ai bị vậy thì coi cái này nè.",
                 overlay_title="NỀN MỐC DA KHÔ SẦN?",
                 overlay_subtitle="Mất tự tin trước sự kiện?",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Young woman looking in vanity mirror with a concerned, slightly frustrated expression at her dry, dull facial skin. "
-                    f"Mouth closed, no speaking, no dialogue{idea_ctx}. Cinematic moody lighting, shallow depth of field. NO text overlays, NO talking."
+                    f"{persona['intro']} leans toward the bathroom mirror and touches a dry, flaky patch on her cheek, frowning slightly{idea_ctx}. "
+                    f"Real bathroom with a towel on the rail, flat ceiling light, not talking."
                 ),
             ),
             SceneDefinition(
                 id=2,
                 name="Hero Action - Cấp ẩm phục hồi tức thì",
                 kind="FLOW_AI",
-                narrator_text=f"Chấm thử vài giọt {clean_title} này lên xem. Tinh chất thấm sâu, cấp ẩm tức thì giúp làn da căng bóng mịn màng trông thấy rõ.",
+                narrator_text=f"Chấm vài giọt {short_name} này lên thử coi. Thấm nhanh lắm, da ẩm lên thấy rõ.",
                 overlay_title="CẤP ẨM TỨC THÌ",
                 overlay_subtitle="Thấm sâu - Căng mọng da",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. Macro close-up shot of gentle hands applying the silky formula onto cheek and forehead, soothing absorbing motion. "
-                    "Luminous moisture reflection, glowing aesthetic commercial lighting. NO text overlays, NO face."
+                    "Close-up of a woman's fingertips, no face: she dabs a little cream onto her cheek and spreads it in small circles until it sinks in. "
+                    "Real skin with pores and fine lines, window light. Hands only."
                 ),
             ),
             SceneDefinition(
                 id=3,
                 name="Feature - Da căng bóng mịn màng thở phào",
                 kind="FLOW_AI",
-                narrator_text="Lớp nền tệp mịn màng vào da, không hề bết rít hay đổ dầu, nhìn tươi tắn tự nhiên rạng rỡ suốt cả ngày dài.",
+                narrator_text="Lớp nền ăn vô da, không bết, không đổ dầu, nhìn tươi tắn tự nhiên cả ngày.",
                 overlay_title="CĂNG BÓNG MỊN MÀNG",
                 overlay_subtitle="Tươi tắn rạng rỡ",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. The woman smiles radiant with sheer relief and joy, admiring her glowing dewy face in the sunlit mirror. "
-                    "Mouth closed, no speaking, warm golden lighting. NO text overlays."
+                    f"{persona['cont']} looks at her skin in the mirror, turns her cheek toward the window light, then gives a small relaxed smile and looks away. "
+                    f"Ordinary bedroom, morning daylight, not talking."
                 ),
             ),
             SceneDefinition(
                 id=4,
                 name="Lifestyle - Tự tin tỏa sáng mọi nơi",
                 kind="FLOW_AI",
-                narrator_text="Chăm da khỏe đẹp thế này thì tự tin bước ra ngoài tỏa sáng, chẳng ngại bất kỳ góc máy hay ống kính nào luôn!",
+                narrator_text="Da ổn rồi thì ra đường tự tin hẳn, chụp hình gần cũng không ngại.",
                 overlay_title="TỰ TIN TỎA SÁNG",
                 overlay_subtitle="Tự tin - Rạng ngời",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. Confident woman stepping into an evening party or sunny street, glowing skin turning heads with natural elegance. "
-                    "Mouth closed, no speaking. NO text overlays."
+                    f"{persona['cont']} picks up her bag and keys from a shelf by the apartment door and steps out. Daylight from the hallway, not talking."
                 ),
             ),
         ]
@@ -82,52 +84,51 @@ def build_problem_solution_scenes(
                 id=1,
                 name="Hook - Nấu nướng dính khét ám ảnh",
                 kind="FLOW_AI",
-                narrator_text="Nấu nướng xong mà chảo dính chặt, thức ăn cháy xém chùi rửa toát mồ hôi? Xem ngay giải pháp nấu nướng tiện lợi giải phóng đôi tay này nhé!",
+                narrator_text="Nấu xong mà đồ ăn dính đáy, cháy xém, rửa muốn toát mồ hôi luôn á. Ai bị vậy thì coi cái này nè.",
                 overlay_title="ÁM ẢNH BẾP NÚC?",
                 overlay_subtitle="Dính khét - Toát mồ hôi?",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person standing by stove looking tired and frustrated at an old scratched sticky pan with burnt food. "
-                    f"Mouth closed, no speaking, moody kitchen lighting{idea_ctx}. NO text overlays, NO talking."
+                    f"{persona['intro']} stands at a home stove scraping at burnt egg stuck to an old scratched pan with a spatula, sighing{idea_ctx}. "
+                    f"Ordinary kitchen, ceiling light, not talking."
                 ),
             ),
             SceneDefinition(
                 id=2,
                 name="Hero Action - Đổi sang chảo chống dính siêu mượt",
                 kind="FLOW_AI",
-                narrator_text=f"Đổi sang dùng {clean_title} này xem. Lớp chống dính siêu mượt, tráng trứng hay xào nấu lướt êm ru không dính một tí nào luôn.",
+                narrator_text=f"Đổi qua {short_name} này thử coi. Đồ ăn không dính chút nào, đảo một cái là lên.",
                 overlay_title="CHỐNG DÍNH SIÊU MƯỢT",
                 overlay_subtitle="Lướt êm ru - Không dính",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Macro close-up shot of hands cooking with {clean_title}, fresh egg and meat gliding effortlessly on surface without sticking. "
-                    f"Crisp steam sizzle, bright appetizing commercial lighting. NO text overlays, NO face."
+                    f"Close-up of hands cooking with the {noun} at a home gas stove, no face: a wooden spatula stirs sliced pork and vegetables and nothing sticks to the bottom. "
+                    f"Light steam rises, a few drops of oil on the stovetop. Hands only."
                 ),
             ),
             SceneDefinition(
                 id=3,
                 name="Feature - Bữa ăn ngon nóng hổi vàng giòn",
                 kind="FLOW_AI",
-                narrator_text="Nhiệt tỏa đều nhanh chóng, món ăn chín vàng giòn thơm nức mũi mà lại tiết kiệm dầu ăn và thời gian nấu nướng mỗi ngày.",
+                narrator_text="Nóng đều, nhanh, món chín ngon mà đỡ tốn dầu, đỡ tốn thời gian.",
                 overlay_title="CHÍN ĐỀU THƠM NGON",
                 overlay_subtitle="Nấu nhanh trong vài phút",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. Person smiling warmly as they place a steaming appetizing meal on table, leaning back with immense satisfaction. "
-                    "Mouth closed, no speaking, warm cozy dining ambiance. NO text overlays."
+                    f"{persona['cont']} sets a plate of stir-fried pork and vegetables next to a bowl of rice on a small kitchen table and sits down to eat. Chopsticks and a glass of water on the table, not talking."
                 ),
             ),
             SceneDefinition(
                 id=4,
                 name="Lifestyle - Lau nhẹ là sạch bong thảnh thơi",
                 kind="FLOW_AI",
-                narrator_text="Nấu xong chỉ cần lấy khăn giấy lau nhẹ qua là sạch bong. Bếp núc thảnh thơi, nấu nướng mỗi ngày tràn đầy niềm vui!",
+                narrator_text="Nấu xong rửa nhẹ cái là sạch, khỏi chà khỏi cọ. Nhàn ghê luôn!",
                 overlay_title="LAU NHẸ LÀ SẠCH BONG",
                 overlay_subtitle="Thảnh thơi yêu việc bếp",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. Gentle wipe of soft sponge cleans the pan completely sparkling clean in one second. "
-                    "Bright aesthetic kitchen, calm peaceful vibe, mouth closed, no speaking. NO text overlays."
+                    f"Close-up at the kitchen sink, no face: a hand wipes the {noun} once with a damp yellow sponge and a film of oil comes off under running water. "
+                    f"A few dishes in the rack. Hands only."
                 ),
             ),
         ]
@@ -138,52 +139,49 @@ def build_problem_solution_scenes(
                 id=1,
                 name="Hook - Áo quần luộm thuộm khó phối",
                 kind="FLOW_AI",
-                narrator_text="Sáng nào cũng đắn đo chọn đồ mà vẫn chưa ưng ý? Cùng mình trải nghiệm chiếc quần kaki này nhé!",
+                narrator_text=f"Sáng nào cũng đứng lựa đồ hoài mà mặc vô vẫn chưa ưng. Coi thử {short_name} này nè.",
                 overlay_title="LUỘM THUỘM THIẾU TỰ TIN?",
                 overlay_subtitle="Khó phối đồ mỗi sáng?",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person standing before a wardrobe looking indecisive and frustrated, holding uncomfortable wrinkled clothes. "
-                    f"Mouth closed, no speaking{idea_ctx}. Moody indoor lighting. NO text overlays, NO talking."
+                    f"{persona['intro']} stands in front of an open wardrobe holding up a wrinkled shirt, looks at it and tosses it onto the bed{idea_ctx}. "
+                    f"Clothes piled on a chair, daylight from the window, not talking."
                 ),
             ),
             SceneDefinition(
                 id=2,
                 name="Hero Action - Lên form tôn dáng chuẩn đẹp",
                 kind="FLOW_AI",
-                narrator_text=f"Mặc thử chiếc {clean_title} này lên xem. Form đứng tôn dáng cực chuẩn, vải mềm mát co giãn nhẹ nhàng thoải mái cả ngày dài.",
+                narrator_text=f"Mặc {short_name} này lên thử coi. Lên form gọn, vải mềm mát, mặc cả ngày vẫn thoải mái.",
                 overlay_title="LÊN FORM TÔN DÁNG",
                 overlay_subtitle="Mềm mát - Thoáng khí",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Macro close-up shot of hands buttoning or smoothing {clean_title}, showing clean seams and premium drape. "
-                    f"Crisp fashion commercial lighting, dynamic angles. NO text overlays, NO face."
+                    f"Close-up of hands, no face: hands do up the button of the {noun} and smooth the fabric flat. Visible stitching and weave, daylight. Hands only."
                 ),
             ),
             SceneDefinition(
                 id=3,
                 name="Feature - Vận động thoải mái không nhăn nhúm",
                 kind="FLOW_AI",
-                narrator_text="Vận động đứng lên ngồi xuống thoải mái, vải không hề nhăn nhúm hay xù lông, nhìn tổng thể thon gọn và chỉn chu hơn hẳn.",
+                narrator_text="Đứng lên ngồi xuống thoải mái, vải không nhăn, không xù, nhìn gọn gàng hẳn.",
                 overlay_title="CHỈN CHU THON GỌN",
                 overlay_subtitle="Tự tin tràn đầy năng lượng",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. Person smiling genuinely into a full-length mirror, turning with confidence and effortless style. "
-                    "Mouth closed, no speaking, chic interior light. NO text overlays."
+                    f"{persona['cont']}, now wearing the {noun}, turns slightly in front of a full-length mirror in a small bedroom and smooths the fabric. Filmed from beside the mirror, not talking."
                 ),
             ),
             SceneDefinition(
                 id=4,
                 name="Lifestyle - Tự tin sải bước mọi nơi",
                 kind="FLOW_AI",
-                narrator_text="Chiếc quần này phối cùng áo thun hay sơ mi đi làm, đi cà phê dạo phố đều cực kỳ bảnh bao, tự tin sải bước mọi nơi.",
+                narrator_text="Phối với áo thun hay sơ mi gì cũng hợp, đi làm đi cà phê đều đẹp.",
                 overlay_title="TỰ TIN SẢI BƯỚC",
                 overlay_subtitle="Đi làm, dạo phố cực xinh",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. Person stepping confidently down a vibrant modern sunlit street with stylish energy. "
-                    "Mouth closed, no speaking. NO text overlays."
+                    f"{persona['cont']}, wearing the {noun}, walks along a Vietnamese street past parked motorbikes, filmed by a friend walking a few steps ahead. Overcast daylight, not talking."
                 ),
             ),
         ]
@@ -194,52 +192,48 @@ def build_problem_solution_scenes(
                 id=1,
                 name="Hook - Đau mỏi ê ẩm cổ vai gáy",
                 kind="FLOW_AI",
-                narrator_text="Ngồi làm việc cả ngày, cổ vai gáy cứng đờ, đau nhức ê ẩm làm giảm năng suất? Đừng chịu đựng nữa, thử ngay mẹo thư giãn này nha!",
+                narrator_text="Ngồi làm cả ngày, cổ vai gáy cứng đơ, mỏi muốn rã ra luôn. Đừng ráng chịu nữa, coi cái này nè.",
                 overlay_title="CỔ VAI GÁY CỨNG ĐỜ?",
                 overlay_subtitle="Mệt mỏi - Đau nhức ê ẩm?",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Office worker rubbing their sore neck and shoulders with a wincing pained expression at desk. "
-                    f"Mouth closed, no speaking{idea_ctx}. Moody office lighting. NO text overlays, NO talking."
+                    f"{persona['intro']} sits at a desk rubbing his stiff neck and rolling one shoulder, wincing slightly{idea_ctx}. Laptop and papers on the desk, office ceiling light, not talking."
                 ),
             ),
             SceneDefinition(
                 id=2,
                 name="Hero Action - Lực rung đầm êm giải tỏa tức thì",
                 kind="FLOW_AI",
-                narrator_text=f"Dùng thử chiếc {clean_title} này xem. Lực rung đầm êm tác động sâu vào từng bó cơ căng cứng, giải tỏa nhức mỏi chỉ sau vài phút.",
+                narrator_text=f"Xài thử {short_name} này coi. Rung đầm mà êm, đè vô chỗ mỏi vài phút là đỡ liền.",
                 overlay_title="GIẢM ĐAU MỎI SÂU",
                 overlay_subtitle="Tác động sâu - Êm ái",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Macro close-up shot of {clean_title} smoothly massaging shoulder/back, rhythmic soothing pulses. "
-                    f"Crisp commercial lighting. NO text overlays, NO face."
+                    f"Close-up, no face: a hand holds the {noun} against the top of the shoulder, and the shirt fabric and muscle shift slightly with each pulse. Hands only."
                 ),
             ),
             SceneDefinition(
                 id=3,
                 name="Feature - Người nhẹ bẫng tràn năng lượng",
                 kind="FLOW_AI",
-                narrator_text="Cơn nhức mỏi tan biến ngay lập tức, người nhẹ bẫng sảng khoái và tràn đầy năng lượng để tập trung xử lý công việc hiệu quả.",
+                narrator_text="Người nhẹ nhõm hẳn ra, ngồi làm tiếp cũng tập trung hơn.",
                 overlay_title="SẢNG KHOÁI PHẤN CHẤN",
                 overlay_subtitle="Lấy lại 100% năng lượng",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 RAW cinematic video. Person rolling shoulders back with a huge smile of relief, stretching arms with renewed vitality. "
-                    "Mouth closed, no speaking, bright natural sunlight. NO text overlays."
+                    f"{persona['cont']} rolls his shoulders back slowly and stretches both arms up, then lets out a breath. Living room, daylight, not talking."
                 ),
             ),
             SceneDefinition(
                 id=4,
                 name="Lifestyle - Tiện mang theo văn phòng",
                 kind="FLOW_AI",
-                narrator_text="Thiết kế nhỏ gọn bỏ túi mang theo văn phòng hay đi du lịch, mỏi lúc nào dùng lúc đó, cực kỳ tiện lợi mỗi ngày!",
+                narrator_text="Nhỏ gọn, bỏ túi mang lên công ty hay đi chơi, mỏi lúc nào xài lúc đó.",
                 overlay_title="TIỆN LỢI MỌI NƠI",
                 overlay_subtitle="Chăm sóc cơ thể mỗi ngày",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 RAW cinematic video. Person packing {clean_title} into sleek backpack, walking with upright energized posture. "
-                    f"Mouth closed, no speaking. NO text overlays."
+                    f"{persona['cont']} puts the {noun} into a backpack on a chair and zips it closed. Small apartment, daylight, not talking."
                 ),
             ),
         ]
@@ -253,53 +247,50 @@ def build_problem_solution_scenes(
                     id=1,
                     name="Hook - Báo động đầy bộ nhớ giữa deadline",
                     kind="FLOW_AI",
-                    narrator_text="Laptop liên tục báo đầy bộ nhớ giữa lúc deadline gấp gáp khiến bạn bối rối? Đừng hoảng, có cách cứu nguy cực nhanh và an toàn nhé!",
+                    narrator_text="Đang chạy deadline mà laptop báo đầy bộ nhớ, rối muốn xỉu. Bình tĩnh, coi cái này nè.",
                     overlay_title="BÁO ĐỘNG ĐẦY Ổ CỨNG?",
                     overlay_subtitle="Công việc bị gián đoạn?",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Young Vietnamese professional sitting at an office desk looking concerned and stressed at their laptop screen. "
-                        f"A red storage full alert is reflected on their glasses. Mouth closed, no speaking, serious anxious expression{idea_ctx}, looking for a quick solution. "
-                        f"Cinematic moody lighting, shallow depth of field. NO text overlays, NO talking."
+                        f"{persona['intro']} sits at a desk frowning at his laptop, the screen turned away from the camera, and rubs his forehead{idea_ctx}. "
+                        f"A mug and a few cables on the desk, evening lamp light, not talking."
                     ),
                 ),
                 SceneDefinition(
                     id=2,
                     name="Hero Action - Cắm cứu nguy tức thì",
                     kind="FLOW_AI",
-                    narrator_text=f"Cắm ngay chiếc {clean_title} này vào. Nhỏ xíu như móc khóa, cắm là nhận ngay, giải phóng hàng trăm gigabyte dữ liệu quan trọng tức thì.",
+                    narrator_text=f"Cắm {short_name} này vô coi. Nhỏ xíu như cái móc khóa, cắm vô là nhận liền.",
                     overlay_title="CẮM LÀ NHẬN NGAY",
                     overlay_subtitle="Giải phóng dung lượng khủng",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Dramatic macro close-up shot of hands confidently plugging {clean_title} into the side USB port of the laptop. "
-                        f"A vibrant blue LED light flashes to life, smooth heroic motion, crisp metallic finish, premium cinematic commercial lighting. NO text overlays, NO face."
+                        f"Close-up of a hand plugging the {noun} into the side USB port of a laptop, no face; it takes a small push to seat it and a tiny LED on the drive starts blinking. "
+                        f"Fingerprints on the laptop edge. Hands only."
                     ),
                 ),
                 SceneDefinition(
                     id=3,
                     name="Feature - Sao chép siêu tốc & Nhẹ nhõm",
                     kind="FLOW_AI",
-                    narrator_text="Tốc độ sao chép siêu nhanh, copy cả thư mục nặng chỉ trong vài giây chớp mắt, trút bỏ hoàn toàn gánh nặng lưu trữ.",
+                    narrator_text="Chép cả thư mục nặng mà nhanh lắm, laptop nhẹ hẳn.",
                     overlay_title="SAO CHÉP SIÊU TỐC",
                     overlay_subtitle="Lưu trữ an toàn tuyệt đối",
                     image_index=0,
                     prompt=(
-                        "Vertical 9:16 RAW cinematic video. The young professional leans back in their chair with a huge smile of relief and satisfaction as file transfer finishes instantly. "
-                        "Taking a relaxed sip from their coffee cup, smooth productive vibe, mouth closed, no speaking, no dialogue. Warm bright ambient sunlight. NO text overlays."
+                        f"{persona['cont']} leans back in his chair, lets out a breath and takes a sip from a mug while the laptop screen stays turned away from the camera. Desk lamp light, not talking."
                     ),
                 ),
                 SceneDefinition(
                     id=4,
                     name="Lifestyle - Móc khóa cứu tinh đồng hành",
                     kind="FLOW_AI",
-                    narrator_text="Móc luôn cùng chùm chìa khóa mang theo bên mình mọi lúc mọi nơi, dữ liệu luôn sẵn sàng, an tâm tuyệt đối trên từng cây số!",
+                    narrator_text="Móc chung với chùm chìa khóa, đi đâu cũng mang theo được, dữ liệu lúc nào cũng có sẵn.",
                     overlay_title="MÓC KHÓA TIỆN LỢI",
                     overlay_subtitle="Gọn nhẹ - Siêu bền bỉ",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Cinematic close-up of hands clipping {clean_title} onto car keys with a confident gesture, ready to head out for meetings. "
-                        f"Modern dynamic professional lifestyle, warm natural lighting. Mouth closed, no speaking, no dialogue. NO text overlays."
+                        f"Close-up of hands, no face: a hand clips the {noun} onto a key ring with a few house keys and drops them into a jacket pocket. Hands only."
                     ),
                 ),
             ]
@@ -309,52 +300,49 @@ def build_problem_solution_scenes(
                     id=1,
                     name="Hook - Dây điện bừa bộn dưới chân bàn",
                     kind="FLOW_AI",
-                    narrator_text="Dây nguồn, ổ cắm lòng thòng bừa bộn dưới chân bàn, nhìn vừa ngột ngạt vừa bực mình đúng không? Mình chỉ cho cách này!",
+                    narrator_text="Dây nguồn với ổ cắm lòng thòng dưới chân bàn, nhìn rối mắt mà bực mình ghê. Coi cái này nè.",
                     overlay_title="DÂY ĐIỆN BỪA BỘN?",
                     overlay_subtitle="Mất tập trung - Ngột ngạt?",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Featuring {persona['intro']}, sitting at an office desk looking annoyed and stressed at a tangle of messy black cables and power strips cluttering the floor under the desk. "
-                        f"Mouth closed, no speaking, serious frustrated expression{idea_ctx}. Cinematic moody lighting, shallow depth of field. NO text overlays, NO talking."
+                        f"{persona['intro']} sits at a desk and looks down at a tangle of black cables and power strips on the floor under it, shaking his head slightly{idea_ctx}. "
+                        f"Ordinary room, lamp light, not talking."
                     ),
                 ),
                 SceneDefinition(
                     id=2,
                     name="Hero Action - Lắp khay kẹp bàn giấu trọn dây",
                     kind="FLOW_AI",
-                    narrator_text=f"Gắn thử cái {clean_title} này lên xem. Chỉ mất mười giây vặn ốc, không cần khoan đục. Giấu trọn mọi ổ cắm củ sạc xuống dưới, sạch bong!",
+                    narrator_text=f"Gắn {short_name} này lên thử coi. Vặn ốc mười giây là xong, khỏi khoan, ổ cắm củ sạc giấu hết xuống dưới.",
                     overlay_title="KẸP BÀN 10 GIÂY",
                     overlay_subtitle="Không khoan đục - Giấu trọn dây",
                     image_index=0,
                     prompt=(
-                        "Vertical 9:16 RAW cinematic video. Dramatic macro close-up shot of hands clamping the sleek minimalist metallic cable management tray securely onto the edge of a clean wooden desk, routing power cables neatly inside. "
-                        "Smooth confident action, commercial tech interior lighting. NO text overlays, NO face."
+                        f"Close-up of hands, no face: hands clamp the {noun} onto the edge of a wooden desk and turn the knob until it holds firm. Hands only."
                     ),
                 ),
                 SceneDefinition(
                     id=3,
                     name="Feature - Bàn làm việc thông thoáng nhẹ nhõm",
                     kind="FLOW_AI",
-                    narrator_text=f"{feat1_desc}. Toàn bộ góc bàn tự nhiên thông thoáng gọn gàng, nhìn ngắm mà mê luôn.",
+                    narrator_text=feature_line(feat1_title, feat1_desc, "Góc bàn thoáng hẳn, nhìn mà mê."),
                     overlay_title="MẶT BÀN SẠCH BONG",
                     overlay_subtitle="Góc làm việc thông thoáng",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Featuring {persona['cont']}, leaning back in their office chair with a huge smile of relief and satisfaction looking at their clean, aesthetic, cable-free modern desk setup. "
-                        f"Taking a relaxed sip of coffee, mouth closed, no speaking, no dialogue. Warm morning sunlight. NO text overlays."
+                        f"{persona['cont']} tucks the last cable into the tray under the desk edge, sits back in his chair and takes a sip of coffee. Daylight from the window, not talking."
                     ),
                 ),
                 SceneDefinition(
                     id=4,
                     name="Lifestyle - Không gian làm việc tràn đầy cảm hứng",
                     kind="FLOW_AI",
-                    narrator_text="Chất liệu kim loại chắc nịch, chịu tải ngon lành. Góc làm việc ngăn nắp thế này thì ngồi cả ngày không thấy chán!",
+                    narrator_text="Kim loại chắc nịch, để đồ nặng cũng không sao. Bàn gọn vậy ngồi cả ngày cũng không chán.",
                     overlay_title="GÓC SETUP MƠ ƯỚC",
                     overlay_subtitle="Thẩm mỹ - Hiện đại",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Wide aesthetic hero pan of the stylish minimalist desk setup with modern laptop, plant, and spotless floor without a single dangling cable. "
-                        f"Featuring {persona['cont']} working peacefully, mouth closed, no speaking. Warm natural lighting. NO text overlays."
+                        f"{persona['cont']} types on the laptop at the desk, with no cables hanging over its edge. Plant and a notebook on the desk, daylight, not talking."
                     ),
                 ),
             ]
@@ -364,52 +352,48 @@ def build_problem_solution_scenes(
                     id=1,
                     name="Hook - Gián đoạn kết nối & Pin yếu",
                     kind="FLOW_AI",
-                    narrator_text="Thiết bị chập chờn, pin tụt nhanh giữa lúc công việc cao điểm? Đừng để sự cố làm gián đoạn ngày làm việc của bạn nha!",
+                    narrator_text="Đang làm mà thiết bị chập chờn, pin tụt vèo vèo, bực ghê chớ. Coi cái này nè.",
                     overlay_title="SỰ CỐ GIÁN ĐOẠN?",
                     overlay_subtitle="Pin yếu - Kết nối chập chờn?",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Tech professional looking annoyed at a dead battery icon or tangled broken cables on desk. "
-                        f"Mouth closed, no speaking{idea_ctx}. Moody office lighting. NO text overlays, NO talking."
+                        f"{persona['intro']} sits at a desk untangling a knot of old cables with a frown{idea_ctx}. Laptop with the screen turned away from the camera, lamp light, not talking."
                     ),
                 ),
                 SceneDefinition(
                     id=2,
                     name="Hero Action - Kết nối tức thì giải cứu tình thế",
                     kind="FLOW_AI",
-                    narrator_text=f"Cắm ngay {clean_title} này vào! Kết nối siêu nhanh, đường truyền ổn định đưa thiết bị trở lại hoạt động một trăm phần trăm.",
+                    narrator_text=f"Cắm {short_name} này vô coi. Kết nối nhanh, ổn định, chạy lại bình thường liền.",
                     overlay_title="KẾT NỐI TỨC THÌ",
                     overlay_subtitle="Ổn định - Tốc độ cao",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Macro close-up of hands plugging in {clean_title}, satisfying click and vibrant LED power light turning on. "
-                        f"Commercial high-tech lighting. NO text overlays, NO face."
+                        f"Close-up of a hand, no face: it plugs in the {noun} with a small push and a small indicator light turns on. Hands only."
                     ),
                 ),
                 SceneDefinition(
                     id=3,
                     name="Feature - Năng suất mượt mà & Nụ cười nhẹ nhõm",
                     kind="FLOW_AI",
-                    narrator_text=f"{feat1_desc}. Hiệu suất mượt mà, giúp bạn hoàn thành deadline nhẹ nhàng không chút lo âu.",
+                    narrator_text=feature_line(feat1_title, feat1_desc, "Làm deadline nhẹ nhàng hơn hẳn."),
                     overlay_title=feat1_title,
                     overlay_subtitle="Năng suất đỉnh cao",
                     image_index=0,
                     prompt=(
-                        "Vertical 9:16 RAW cinematic video. Professional smiling with satisfaction, typing swiftly and sipping coffee peacefully. "
-                        "Mouth closed, no speaking, bright natural sunlight. NO text overlays."
+                        f"{persona['cont']} types on the laptop, then picks up a mug and takes a sip. Screen turned away from the camera, daylight, not talking."
                     ),
                 ),
                 SceneDefinition(
                     id=4,
                     name="Lifestyle - Tự do làm việc mọi nơi",
                     kind="FLOW_AI",
-                    narrator_text="Nhỏ gọn trong lòng bàn tay, người bạn đồng hành tin cậy cho góc làm việc hiện đại!",
+                    narrator_text="Nhỏ gọn vừa lòng bàn tay, để trên bàn làm việc lúc nào cũng tiện.",
                     overlay_title="TỰ DO MỌI NƠI",
                     overlay_subtitle="Nhỏ gọn - An tâm tuyệt đối",
                     image_index=0,
                     prompt=(
-                        f"Vertical 9:16 RAW cinematic video. Hands slipping {clean_title} into jacket pocket, walking confidently out of cafe into city. "
-                        f"Mouth closed, no speaking. NO text overlays."
+                        f"Close-up, no face: a hand slips the {noun} into a jacket pocket. Hands only."
                     ),
                 ),
             ]
@@ -435,61 +419,51 @@ def build_problem_solution_scenes(
                 id=1,
                 name="Hook - Đồ cồng kềnh chật chỗ",
                 kind="FLOW_AI",
-                narrator_text="Mỗi lần chuyển mùa hay chuẩn bị đi xa, nhìn đống chăn màn, áo phao cồng kềnh chất đống chiếm hết cả phòng mà phát ngợp đúng không? Thử ngay cách này nha!",
+                narrator_text="Chuyển mùa hay soạn đồ đi xa, nhìn đống chăn mền, áo phao chất đống mà ngợp luôn. Coi cái này nè.",
                 overlay_title="ĐỒ CỒNG KỀNH CHẬT CHỖ?",
                 overlay_subtitle="Tủ quần áo quá tải?",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 authentic fast-paced commercial ad video. Medium shot, 35mm lens, 60fps real-time look, bright modern bedroom. "
-                    f"Featuring {persona['intro']} sitting on the edge of the bed. In front of them, an enormous messy mountain of bulky winter puffer coats and thick folded blankets is piled high on the bed, overflowing everywhere. "
-                    f"The actor looks overwhelmed at the massive pile, looks directly into the camera, and shakes their head with an exasperated funny reaction{idea_ctx}. "
-                    f"Natural brisk human speed, crisp real-time movement, not slow motion, not floaty. Realistic morning natural lighting. NO text overlays, NO talking."
+                    f"{persona['intro']} sits on the edge of the bed next to a tall pile of puffer jackets and thick blankets, looks at it and lets out a tired sigh{idea_ctx}. "
+                    f"Lived-in bedroom, morning daylight, normal speed, not talking."
                 ),
             ),
             SceneDefinition(
                 id=2,
                 name="Hero Action - Hút xẹp 80% diện tích",
                 kind="FLOW_AI",
-                narrator_text=f"Dùng {clean_title} này xem. Khóa zip đôi kín khít, van silicon một chiều hút sạch không khí, nén xẹp phẳng lì chỉ sau 10 giây, giảm ngay 80% diện tích!",
+                narrator_text=f"Xài {short_name} này thử coi. Kéo khóa zip, hút hơi qua van, túi xẹp xuống còn có chút xíu.",
                 overlay_title="HÚT XẸP 80% DIỆN TÍCH",
                 overlay_subtitle="Van silicon 1 chiều - Kín tuyệt đối",
                 image_index=0,
                 prompt=(
-                    "Vertical 9:16 authentic fast-paced commercial ad video. Macro close-up B-roll, 60fps crisp commercial studio lighting. "
-                    "A clear transparent vacuum compression bag rests flat on a modern wooden table, containing a thick puffy winter jacket. "
-                    "A mini electric suction pump is attached to the circular one-way silicon valve on the bag. In a fast satisfying time-lapse compression, the air is rapidly sucked out, "
-                    "and the puffy bag instantly deflates and flattens down into a rock-firm, paper-thin, rigid flat slab. "
-                    "Crisp texture, bright clean studio lighting, natural speed, not floaty. NO face, NO hands in frame. NO text overlays."
+                    "Close-up of a clear vacuum storage bag on a wooden table, no hands in frame, no face: a small electric pump sits on its round valve and with a steady hum "
+                    "the bag slowly shrinks and wrinkles tightly around the puffer jacket inside over a few seconds. Normal speed."
                 ),
             ),
             SceneDefinition(
                 id=3,
                 name="Feature - Gọn gàng tủ quần áo",
                 kind="FLOW_AI",
-                narrator_text="Chất liệu PA PE dẻo dai dày dặn, tái sử dụng thoải mái. Đống chăn màn cồng kềnh giờ xếp gọn gàng trong ngăn tủ, vừa sạch sẽ chống ẩm mốc, vừa tiết kiệm không gian tối đa!",
+                narrator_text="Túi dày, dẻo, xài lại được hoài. Chăn mền gom gọn một ngăn tủ, đỡ ẩm mốc mà đỡ chỗ.",
                 overlay_title="GỌN GÀNG TỦ QUẦN ÁO",
                 overlay_subtitle="Chống ẩm mốc suốt 6-8 tháng",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 authentic fast-paced commercial ad video. Eye-level medium shot, sharp 35mm lens, 60fps real-time commercial look. "
-                    f"Featuring {persona['cont']} standing in front of a modern aesthetic wooden wardrobe closet. With a bright proud smile, "
-                    f"they place a neat stack of 4 ultra-thin compressed flat vacuum bags like books onto a closet shelf, leaving 80 percent of the wardrobe shelf completely open, spacious, and spotless. "
-                    f"Crisp confident movement, natural human speed, not slow motion, not floaty. Warm natural indoor daylight. Mouth closed, no dialogue. NO text overlays."
+                    f"{persona['cont']} slides a flattened, wrinkled vacuum bag of clothes onto a wardrobe shelf next to two others, then steps back. Room light, normal speed, not talking."
                 ),
             ),
             SceneDefinition(
                 id=4,
                 name="Lifestyle - Tự tin lên đường",
                 kind="FLOW_AI",
-                narrator_text="Dù dọn tủ gia đình hay chuẩn bị vali du lịch đều nhàn tênh. Hành lý gọn nhẹ, thảnh thơi lên đường tận hưởng chuyến đi thôi!",
+                narrator_text="Dọn tủ hay soạn vali đi chơi đều nhàn, hành lý gọn nhẹ hẳn.",
                 overlay_title="TỰ TIN LÊN ĐƯỜNG",
                 overlay_subtitle="Hành lý gọn gàng - Thảnh thơi du lịch",
                 image_index=0,
                 prompt=(
-                    f"Vertical 9:16 authentic fast-paced commercial ad video. Medium hero shot, bright natural morning sunlight, 60fps real-time commercial look. "
-                    f"Featuring {persona['cont']} standing proudly in a stylish travel outfit beside a sleek, closed suitcase sitting neatly on a luggage rack. "
-                    f"They give the top of the suitcase a confident, satisfied double pat with their hand, look directly at the camera with a beaming warm smile, "
-                    f"and look directly into camera with a beaming confident smile, feeling completely ready for vacation. Stable realistic physics, crisp human gestures, natural speed, not floaty. Mouth closed, no speaking. NO thumbs-up, NO distorted fingers. NO text overlays."
+                    f"{persona['cont']} pulls the handle up on the closed suitcase by the bed and gives the top a light pat. Bedroom daylight, normal speed, not talking. "
+                    f"NO thumbs-up, NO distorted fingers."
                 ),
             ),
         ]
@@ -500,52 +474,48 @@ def build_problem_solution_scenes(
             id=1,
             name="Hook - Rắc rối vụn vặt thường ngày",
             kind="FLOW_AI",
-            narrator_text="Mấy việc vặt trong nhà làm bạn tốn thời gian và bực mình? Thử ngay cách này xem sao nha!",
+            narrator_text="Mấy việc vặt trong nhà làm hoài không xong, mất thời gian ghê. Coi cái này nè.",
             overlay_title="BẤT TIỆN HÀNG NGÀY?",
             overlay_subtitle="Tốn thời gian & Công sức?",
             image_index=0,
             prompt=(
-                f"Vertical 9:16 RAW cinematic video. Person looking frustrated at a common daily annoyance or messy clutter on table. "
-                f"Mouth closed, no speaking{idea_ctx}. Moody indoor light. NO text overlays, NO talking."
+                f"{persona['intro']} sits at a cluttered table at home, pushes a few things aside and sighs{idea_ctx}. Lived-in room, daylight, not talking."
             ),
         ),
         SceneDefinition(
             id=2,
             name="Hero Action - Giải pháp thông minh giải quyết triệt để",
             kind="FLOW_AI",
-            narrator_text=f"Dùng thử {clean_title} này xem. Thiết kế thông minh xử lý gọn gàng chỉ trong vài giây, cực kỳ tiện lợi.",
+            narrator_text=f"Xài thử {short_name} này coi. Vài giây là xong việc, tiện lắm.",
             overlay_title="GIẢI PHÁP THÔNG MINH",
             overlay_subtitle="Tiện lợi - Dễ sử dụng",
             image_index=0,
             prompt=(
-                f"Vertical 9:16 RAW cinematic video. Macro close-up shot of hands using {clean_title} smoothly and effectively. "
-                f"Flawless satisfying action, clean commercial B-roll lighting. NO text overlays, NO face."
+                f"Close-up of hands at a home table, no face: hands use the {noun} once, slowly and simply, the way it is normally used. Real fingerprints and scratches on the table. Hands only."
             ),
         ),
         SceneDefinition(
             id=3,
             name="Feature - Cuộc sống tiện nghi nhẹ nhàng",
             kind="FLOW_AI",
-            narrator_text=f"{feat1_desc}. Mọi thứ trở nên ngăn nắp nhẹ nhàng, thảnh thơi hơn rất nhiều.",
+            narrator_text=feature_line(feat1_title, feat1_desc, "Nhà cửa gọn gàng, nhẹ nhàng hơn hẳn."),
             overlay_title=feat1_title,
             overlay_subtitle="Thảnh thơi tiện nghi",
             image_index=0,
             prompt=(
-                "Vertical 9:16 RAW cinematic video. Person smiling with genuine relief, enjoying clean tidy comfortable space. "
-                "Mouth closed, no speaking, warm sunny ambiance. NO text overlays."
+                f"{persona['cont']} sits back on the sofa and looks around the tidied room. Daylight, not talking."
             ),
         ),
         SceneDefinition(
             id=4,
             name="Lifestyle - Nâng tầm chất lượng sống",
             kind="FLOW_AI",
-            narrator_text=f"{feat2_desc}. Một món đồ nhỏ nhưng giúp cuộc sống thoải mái và tiện nghi hơn mỗi ngày!",
+            narrator_text=feature_line(feat2_title, feat2_desc, "Món nhỏ thôi mà mỗi ngày tiện hơn nhiều."),
             overlay_title="NÂNG TẦM CUỘC SỐNG",
             overlay_subtitle="Hiện đại - Tiện ích",
             image_index=0,
             prompt=(
-                f"Vertical 9:16 RAW cinematic video. Neat aesthetic shot of {clean_title} placed elegantly in room, creator stepping out with a happy smile. "
-                f"Mouth closed, no speaking. NO text overlays."
+                f"{persona['cont']} sets the {noun} down in its usual place on a shelf and walks out of the room. Daylight, not talking."
             ),
         ),
     ]

@@ -91,13 +91,36 @@ def clean_product_title(raw_name: str) -> str:
     return " ".join(res_words).strip()
 
 
+# A feature line is read aloud over one ~6 s Flow clip; longer copy freezes the last frame.
+MAX_FEATURE_CHARS = 90
+
+
+def _short_feature(text: str) -> str:
+    """Trim to a clause boundary under MAX_FEATURE_CHARS, without trailing punctuation.
+
+    Templates add their own ". " after the feature, so a trailing "." would read as "..".
+    """
+    text = text.strip()
+    if len(text) > MAX_FEATURE_CHARS:
+        cut = text.rfind(",", 0, MAX_FEATURE_CHARS)
+        text = text[:cut] if cut > 20 else text[:MAX_FEATURE_CHARS].rsplit(" ", 1)[0]
+    return text.rstrip(" .!;,:")
+
+
 def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
     """
     Extract key selling points / features from Shopee description text.
     Returns list of (badge_title, full_sentence).
     """
+    # The zip's description.txt opens with scrape metadata ("Tên sản phẩm: …", "Link sản phẩm: …");
+    # only the text after the "Mô tả sản phẩm:" marker is the shop's own copy.
+    description_text = description_text.replace(" ", " ")
+    marker = re.search(r"^\s*mô tả sản phẩm\s*:?\s*$", description_text, re.IGNORECASE | re.MULTILINE)
+    if marker:
+        description_text = description_text[marker.end():]
     lines = [l.strip() for l in description_text.splitlines() if l.strip()]
     spec_blacklist = (
+        "tên sản phẩm", "số sao", "lượt đánh giá", "đã bán", "ngày tải",
         "thông số", "kích thước", "trong hộp", "màu sắc", "xuất xứ",
         "lưu ý", "bảo hành", "cam kết", "hướng dẫn", "liên hệ", "vat", "hóa đơn",
         "tải trọng", "trọng lượng", "khối lượng", "chất liệu", "hastag", "link",
@@ -116,7 +139,7 @@ def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
             in_feature_section = False
             continue
         if in_feature_section:
-            clean = re.sub(r"^[✅⭐👉🔹✔\-\*\•\d\.\)]+\s*", "", l).strip()
+            clean = re.sub(r"^[✅⭐👉🔹✔\-–—\*\•\d\.\)]+\s*", "", l).strip()
             if 12 <= len(clean) <= 100 and not any(clean.lower().startswith(b) for b in spec_blacklist):
                 candidates.append(clean)
 
@@ -133,7 +156,7 @@ def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
         for l in lines:
             if any(l.lower().startswith(p) for p in spec_blacklist) or l.startswith("---"):
                 continue
-            clean = re.sub(r"^[\-\*\•\d\.\)]+\s*", "", l).strip()
+            clean = re.sub(r"^[\-–—\*\•\d\.\)]+\s*", "", l).strip()
             if len(clean) < 14 or clean.startswith("#") or clean.startswith("http"):
                 continue
             if ":" in clean:
@@ -148,11 +171,11 @@ def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
         if " - " in b:
             t, d = b.split(" - ", 1)
             t_clean = re.sub(r"[^\w\s\d]", "", t).strip().upper()[:22]
-            results.append((t_clean, d.strip()))
+            results.append((t_clean, _short_feature(d)))
         elif ":" in b:
             t, d = b.split(":", 1)
             t_clean = re.sub(r"[^\w\s\d]", "", t).strip().upper()[:22]
-            results.append((t_clean, d.strip()))
+            results.append((t_clean, _short_feature(d)))
         else:
             low_b = b.lower()
             if "gọn gàng" in low_b or "đi dây" in low_b:
@@ -167,7 +190,7 @@ def extract_product_features(description_text: str) -> List[Tuple[str, str]]:
                 words = b.split()
                 badge = " ".join(words[:3]).upper()[:20]
                 badge = re.sub(r"[^\w\s\d]", "", badge).strip()
-            results.append((badge or "TÍNH NĂNG NỔI BẬT", b))
+            results.append((badge or "TÍNH NĂNG NỔI BẬT", _short_feature(b)))
 
         if len(results) >= 3:
             break

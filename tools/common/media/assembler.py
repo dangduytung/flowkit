@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
-from tools.common.constants import FLOW_WATERMARK_BOX, SCENE_TAIL_PAD_SECONDS, VERTICAL_720P, VideoSpec
+from tools.common.constants import SCENE_TAIL_PAD_SECONDS, VERTICAL_720P, VideoSpec
 from tools.common.ffmpeg import (
     DEFAULT_ENCODE,
     EncodeProfile,
@@ -21,6 +21,7 @@ from tools.common.ffmpeg import (
     run_ffmpeg,
     try_probe_duration,
 )
+from tools.common.media.flowmark import flow_watermark_filter, flow_watermark_filter_for
 from tools.common.media.text import TextStyle, drawtext_filter, text_files
 from tools.common.models import SceneDefinition
 
@@ -103,10 +104,11 @@ def fit_duration_filters(video_duration: float, total_duration: float, fps: int)
     return filters
 
 
-def delogo_filters(remove_flow_watermark: bool, delogo: Optional[str]) -> list[str]:
+def delogo_filters(remove_flow_watermark: bool, delogo: Optional[str], flow_filter: Optional[str] = None) -> list[str]:
+    """Flow sparkle removal (``flow_filter`` sized to the clip) plus an optional shop-logo box."""
     filters = []
     if remove_flow_watermark:
-        filters.append(f"delogo={FLOW_WATERMARK_BOX.to_spec()}")
+        filters.append(flow_filter or flow_watermark_filter())
     custom = delogo_filter(delogo)
     if custom:
         filters.append(custom)
@@ -128,16 +130,18 @@ def audio_mix_graph(video_graph: str, ambient: bool, finishing: bool, sample_rat
     """filter_complex mixing narration (input 1) with optional clip ambience (0:a) and room tone (2:a)."""
     voice_eq = f",equalizer=f=3400:t=q:w=1.5:g={look.voice_presence_cut_db}" if finishing else ""
     chains = [f"[0:v]{video_graph}[v]"]
-    inputs = []
+    # Narration goes first: amix duration=first ends the mix with the voice, not with the
+    # (shorter) clip ambience, which used to cut sentences off at the clip's 6 s.
+    chains.append(f"[1:a]volume=1.0{voice_eq},aresample={sample_rate}[voc]")
+    inputs = ["[voc]"]
     if ambient:
         chains.append(f"[0:a]volume={AMBIENT_VOLUME},aresample={sample_rate}[amb]")
         inputs.append("[amb]")
     if finishing:
         chains.append(f"[2:a]volume={look.room_tone_volume},aresample={sample_rate}[room]")
         inputs.append("[room]")
-    chains.append(f"[1:a]volume=1.0{voice_eq},aresample={sample_rate}[voc]")
-    inputs.append("[voc]")
-    chains.append(f"{''.join(inputs)}amix=inputs={len(inputs)}:duration=first:dropout_transition=2[aout]")
+    # apad covers the tail pad after the voice; the caller's -t ends the scene.
+    chains.append(f"{''.join(inputs)}amix=inputs={len(inputs)}:duration=first:dropout_transition=2:normalize=0,apad[aout]")
     return ";".join(chains)
 
 
@@ -177,7 +181,8 @@ def assemble_scene_clip(
     total = scene_duration(audio_duration, has_narration, target_duration, video_duration, pad_tail)
 
     filters = fit_duration_filters(video_duration, total, spec.fps)
-    filters += delogo_filters(remove_watermark, delogo)
+    flow_filter = flow_watermark_filter_for(video_path) if remove_watermark else None
+    filters += delogo_filters(remove_watermark, delogo, flow_filter)
     if de_ai:
         filters += look_filters(spec)
 

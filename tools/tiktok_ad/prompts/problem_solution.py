@@ -4,6 +4,7 @@ from typing import List, Optional
 
 from tools.common.archetypes import ProductArchetype, resolve_product_archetype
 from tools.common.models import SceneDefinition
+from tools.common.prompts.realism import feature_line, spoken_name
 from tools.common.product import ProductInfo
 
 
@@ -21,48 +22,49 @@ def build_problem_solution_scenes(
     has_video = bool(product and product.video_name)
     num_images = len(product.image_names) if product and product.image_names else 1
     archetype = resolve_product_archetype(clean_title)
+    short_name = spoken_name(clean_title)
 
     # Archetype-specific copy takes precedence over the broader category copy.
     if archetype == ProductArchetype.COMPRESSION_STORAGE:
         prob_title = "ĐỒ CỒNG KỀNH CHẬT CHỖ?"
-        prob_text = "Mỗi lần chuyển mùa hay chuẩn bị đi xa, nhìn đống chăn màn, áo phao cồng kềnh chất đống chiếm hết cả phòng mà phát ngợp đúng không? Thử ngay cách này nha!"
-        sol_text = f"Dùng {clean_title} này xem. Khóa zip đôi kín khít, van silicon một chiều hút sạch không khí, nén xẹp phẳng lì chỉ sau 10 giây, giảm ngay 80% diện tích!"
-        satisfaction_text = "Chất liệu PA PE dẻo dai dày dặn, dọn tủ hay xếp vali đều gọn gàng, thảnh thơi lên đường tận hưởng chuyến đi!"
+        prob_text = "Chuyển mùa hay soạn đồ đi xa, nhìn đống chăn mền, áo phao chất đống mà ngợp luôn. Coi cái này nè."
+        sol_text = f"Xài {short_name} này thử coi. Kéo khóa zip, hút hơi qua van, túi xẹp xuống còn có chút xíu."
+        satisfaction_text = "Túi dày, dẻo, dọn tủ hay xếp vali đều gọn, đi chơi thảnh thơi."
     elif archetype == ProductArchetype.VACUUM_CLEANER:
         prob_title = "BỤI BẨN KẼ HẸP KHÓ LAU?"
-        prob_text = "Vụn bánh trên sofa, bụi mịn kẽ bàn phím hay góc hẹp trong xe hơi cứ lau hoài không sạch làm bạn khó chịu? Đừng lo!"
-        sol_text = f"Chiếc {clean_title} lực hút cực mạnh này xử lý gọn lẹ chỉ trong 3 giây. Đầu hút đa năng len lỏi mọi ngóc ngách!"
-        satisfaction_text = "Góc làm việc, sofa hay xe hơi lúc nào cũng tinh tươm sạch bóng, nhẹ nhàng thảnh thơi mỗi ngày!"
+        prob_text = "Vụn bánh trên sofa, bụi trong kẽ bàn phím, góc xe hơi lau hoài không sạch. Coi cái này nè."
+        sol_text = f"Có {short_name} này là xử lý gọn lẹ, đầu hút luồn vô được mấy góc hẹp luôn."
+        satisfaction_text = "Bàn làm việc, sofa hay xe hơi lúc nào cũng sạch, nhẹ nhàng hẳn."
     elif category == "HEALTH_FITNESS":
         prob_title = "ĐAU MỎI CƠ THỂ?"
-        prob_text = "Cả ngày làm việc căng thẳng, cơ thể đau mỏi uể oải không tập trung nổi? Đừng chủ quan nữa!"
-        sol_text = f"Chiếc {clean_title} này chính là giải pháp cứu cánh. Trải nghiệm là cảm nhận ngay sự nhẹ nhõm và thư giãn."
-        satisfaction_text = "Làm việc năng suất hơn hẳn, tạm biệt hoàn toàn cảm giác nhức mỏi mỗi khi tan ca!"
+        prob_text = "Làm cả ngày mỏi nhừ, ngồi hoài không tập trung nổi. Đừng ráng chịu nữa, coi cái này nè."
+        sol_text = f"Xài thử {short_name} này coi, vài phút là người nhẹ nhõm hẳn."
+        satisfaction_text = "Làm việc hăng hơn hẳn, tan ca cũng không còn mỏi như trước."
     elif category == "BEAUTY_SKINCARE":
         prob_title = "LÀN DA THIẾU TỰ TIN?"
-        prob_text = "Mỗi lần ra ngoài hay trang điểm, làn da kém tươi tắn làm bạn thiếu tự tin? Đừng lo lắng nữa!"
-        sol_text = f"Sản phẩm {clean_title} này chính là bí quyết cứu cánh, giúp nuôi dưỡng làn da căng tràn sức sống."
-        satisfaction_text = "Tự tin rạng rỡ suốt cả ngày, không còn nỗi lo da xuống tông hay khô ráp!"
+        prob_text = "Ra đường hay trang điểm mà da xỉn, không tươi, thấy thiếu tự tin ghê. Coi cái này nè."
+        sol_text = f"Xài thử {short_name} này coi, da ẩm mượt, tươi tắn hơn hẳn."
+        satisfaction_text = "Cả ngày tự tin, không lo da xuống tông hay khô ráp."
     elif category == "TECH_GADGETS":
         prob_title = "GÓC SETUP BẤT TIỆN?"
-        prob_text = "Bàn làm việc bừa bộn hay thao tác gián đoạn làm giảm hiệu suất công việc? Đã đến lúc nâng cấp rồi!"
-        sol_text = f"Chiếc {clean_title} này chính là giải pháp cứu cánh, sắp xếp tối ưu và nâng tầm góc làm việc."
-        satisfaction_text = "Thao tác mượt mà chuẩn công nghệ, cảm hứng sáng tạo tăng vọt mỗi ngày!"
+        prob_text = "Bàn làm việc bừa bộn, làm cái gì cũng vướng. Tới lúc dọn lại rồi, coi cái này nè."
+        sol_text = f"Có {short_name} này là bàn làm việc gọn hẳn, đồ nào chỗ nấy."
+        satisfaction_text = "Thao tác trơn tru, ngồi vô là muốn làm liền."
     elif category == "KITCHEN_HOME":
         prob_title = "VIỆC BẾP QUÁ MỆT MỎI?"
-        prob_text = "Nấu nướng hay dọn dẹp mất cả tiếng đồng hồ mệt nhoài mỗi tối? Đừng để việc nhà làm bạn kiệt sức!"
-        sol_text = f"Món đồ {clean_title} này chính là vị cứu tinh, giúp mọi công việc nội trợ trở nên nhàn tênh."
-        satisfaction_text = "Gian bếp gọn gàng tinh tươm, tận hưởng trọn vẹn những bữa cơm gia đình đầm ấm!"
+        prob_text = "Nấu nướng dọn dẹp mỗi tối mất cả tiếng, mệt muốn xỉu. Coi cái này nè."
+        sol_text = f"Có {short_name} này là việc bếp núc nhàn hẳn ra."
+        satisfaction_text = "Bếp gọn gàng, ăn bữa cơm cũng thấy thảnh thơi hơn."
     elif category == "FASHION_APPAREL":
         prob_title = "LOAY HOAY CHỌN ĐỒ?"
-        prob_text = "Mỗi sáng đứng trước tủ đồ không biết mặc gì vừa vặn, chỉn chu? Đừng tốn thời gian loay hoay nữa!"
-        sol_text = f"Chiếc {clean_title} này chính là cứu tinh, form chuẩn tôn dáng, phối đồ nào cũng hợp."
-        satisfaction_text = "Ra đường tự tin chỉn chu, đi làm hay đi chơi đều gọn gàng thời thượng!"
+        prob_text = "Sáng nào cũng loay hoay không biết mặc gì cho gọn, cho vừa. Coi cái này nè."
+        sol_text = f"Thử {short_name} này coi, lên form gọn, phối gì cũng hợp."
+        satisfaction_text = "Ra đường gọn gàng, đi làm đi chơi đều tự tin."
     else:
         prob_title = "BẤT TIỆN HÀNG NGÀY?"
-        prob_text = "Những phiền toái nhỏ trong cuộc sống làm bạn mất thời gian và khó chịu? Đừng để kéo dài nữa!"
-        sol_text = f"Chiếc {clean_title} này chính là giải pháp cứu cánh, giải quyết triệt để và mang lại tiện ích tối đa."
-        satisfaction_text = "Nâng cấp chất lượng cuộc sống mỗi ngày, thảnh thơi và an tâm tuyệt đối!"
+        prob_text = "Mấy cái phiền phức nhỏ mỗi ngày mà để hoài thì mệt lắm. Coi cái này nè."
+        sol_text = f"Xài thử {short_name} này coi, xử lý gọn lẹ, tiện ghê."
+        satisfaction_text = "Mỗi ngày nhẹ nhàng, thảnh thơi hơn hẳn."
 
     return [
         SceneDefinition(
@@ -89,7 +91,7 @@ def build_problem_solution_scenes(
             id=3,
             name="Hiệu năng - Trải nghiệm vượt trội",
             kind="PRODUCT_PHOTO",
-            narrator_text=f"{feat1_desc}. {feat2_desc}.",
+            narrator_text=feature_line(feat1_title, feat1_desc, feature_line(feat2_title, feat2_desc)),
             overlay_title=feat1_title[:24].upper(),
             overlay_subtitle=feat2_title[:24],
             real_start_sec=8.0 if has_video else 0.0,

@@ -3,7 +3,8 @@ import random
 
 import pytest
 
-from tools.common.constants import FLOW_WATERMARK_BOX, VERTICAL_720P
+from tools.common.constants import VERTICAL_720P
+from tools.common.media.flowmark import flow_watermark_filter
 from tools.common.ffmpeg import EncodeProfile, delogo_filter
 from tools.common.media import assembler
 from tools.common.media.cover import format_cover_text
@@ -88,7 +89,7 @@ class TestAssemblerBuilders:
 
     def test_delogo_filters_combine_flow_and_custom(self):
         assert assembler.delogo_filters(True, "delogo=x=1:y=2:w=3:h=4") == [
-            f"delogo={FLOW_WATERMARK_BOX.to_spec()}",
+            flow_watermark_filter(),
             "delogo=x=1:y=2:w=3:h=4",
         ]
         assert assembler.delogo_filters(False, None) == []
@@ -99,12 +100,23 @@ class TestAssemblerBuilders:
 
     @pytest.mark.parametrize(
         "ambient,finishing,expected_inputs",
-        [(True, True, "[amb][room][voc]amix=inputs=3"), (False, True, "[room][voc]amix=inputs=2"), (True, False, "[amb][voc]amix=inputs=2")],
+        [(True, True, "[voc][amb][room]amix=inputs=3"), (False, True, "[voc][room]amix=inputs=2"), (True, False, "[voc][amb]amix=inputs=2")],
     )
     def test_audio_mix_graph(self, ambient, finishing, expected_inputs):
         graph = assembler.audio_mix_graph("null", ambient=ambient, finishing=finishing, sample_rate=48000)
-        assert expected_inputs in graph
+        assert expected_inputs in graph  # narration first: the mix lasts as long as the voice
         assert ("equalizer" in graph) == finishing
+
+    def test_narration_longer_than_clip_audio_is_not_cut(self, tmp_path):
+        """A 2 s Flow clip with its own audio under 4 s of narration must yield a ~4 s scene."""
+        from tools.common.ffmpeg import probe_duration, run_ffmpeg
+
+        clip, voice = tmp_path / "clip.mp4", tmp_path / "voice.wav"
+        run_ffmpeg(["-f", "lavfi", "-i", "color=c=gray:s=320x568:d=2:r=25", "-f", "lavfi", "-i", "sine=f=300:d=2",
+                    "-shortest", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", str(clip)])
+        run_ffmpeg(["-f", "lavfi", "-i", "sine=f=600:d=4", str(voice)])
+        out = assembler.assemble_scene_clip(clip, voice, tmp_path / "out.mp4", pad_tail=0.3, remove_watermark=False)
+        assert probe_duration(out) >= 4.0
 
     def test_voiceover_script_timecodes(self):
         scenes = [
@@ -146,3 +158,33 @@ class TestCoverText:
 
     def test_short_text_unchanged_but_upper(self):
         assert format_cover_text("móc dán tường", 34) == "MÓC DÁN TƯỜNG"
+
+
+class TestFlowWatermarkMask:
+    def test_mask_covers_the_measured_sparkle_only(self, tmp_path):
+        from tools.common.media.flowmark import flow_watermark_mask
+
+        mask = flow_watermark_mask(720, 1280, tmp_path).read_bytes()
+        header_end = mask.index(b"255\n") + 4
+        pixels = mask[header_end:]
+        assert len(pixels) == 720 * 1280
+        on = [(i % 720, i // 720) for i, v in enumerate(pixels) if v]
+        xs, ys = [p[0] for p in on], [p[1] for p in on]
+        # Measured sparkle spans x 576-623, y 1136-1183; the mask must cover it with a small margin.
+        assert min(xs) <= 576 and max(xs) >= 623 and min(ys) <= 1136 and max(ys) >= 1183
+        assert max(xs) - min(xs) < 70 and max(ys) - min(ys) < 70
+        assert pixels[1160 * 720 + 600] == 255 and pixels[1140 * 720 + 580] == 0  # centre on, star notch off
+
+    def test_mask_scales_with_frame_size(self, tmp_path):
+        from tools.common.media.flowmark import flow_watermark_mask
+
+        data = flow_watermark_mask(1080, 1920, tmp_path).read_bytes()
+        assert data.startswith(b"P5\n1080 1920\n255\n")
+
+    def test_removelogo_filter_runs_in_ffmpeg(self, tmp_path):
+        from tools.common.ffmpeg import run_ffmpeg
+        from tools.common.media.flowmark import flow_watermark_filter
+
+        out = tmp_path / "f.png"
+        run_ffmpeg(["-f", "lavfi", "-i", "color=c=gray:s=720x1280:d=0.1", "-vf", flow_watermark_filter(), "-frames:v", "1", str(out)])
+        assert out.stat().st_size > 0

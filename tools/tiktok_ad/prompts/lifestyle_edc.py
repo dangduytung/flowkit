@@ -3,6 +3,7 @@
 from typing import List, Optional
 
 from tools.common.models import SceneDefinition
+from tools.common.prompts.realism import feature_line, spoken_name
 from tools.common.product import ProductInfo
 
 
@@ -20,6 +21,7 @@ def build_lifestyle_edc_scenes(
     has_video = bool(product and product.video_name)
     num_images = len(product.image_names) if product and product.image_names else 1
     idea_ctx = f" ({custom_idea})" if custom_idea else ""
+    short_name = spoken_name(clean_title)
 
     if category == "TECH_GADGETS":
         hook_sub = "Góc Làm Việc Hiện Đại"
@@ -42,7 +44,7 @@ def build_lifestyle_edc_scenes(
             id=1,
             name="Hook - Món đồ bất ly thân",
             kind="REAL_FOOTAGE" if has_video else "IMAGE_SLIDE",
-            narrator_text=f"Một món đồ nhỏ gọn nhưng cực kỳ đắc lực mà bạn nhất định phải có bên mình mỗi ngày! Khám phá ngay {clean_title} nhé!",
+            narrator_text=f"Món nhỏ gọn mà ngày nào cũng cần tới, coi thử {short_name} này nè.",
             overlay_title="MÓN ĐỒ BẤT LY THÂN",
             overlay_subtitle=hook_sub,
             real_start_sec=0.0,
@@ -56,7 +58,7 @@ def build_lifestyle_edc_scenes(
             id=2,
             name="Hero Action - Hoàn thiện tinh tế bền bỉ",
             kind="REAL_FOOTAGE" if has_video else "IMAGE_SLIDE",
-            narrator_text="Chất liệu cao cấp chống va đập, chống hao mòn hoàn hảo. Thiết kế thông minh, luôn sẵn sàng khi bạn cần.",
+            narrator_text="Làm chắc chắn, va chạm nhẹ cũng không sao, cần là lấy ra xài liền.",
             overlay_title="HOÀN THIỆN TINH TẾ",
             overlay_subtitle="Chất Liệu Cao Cấp - Bền Bỉ",
             real_start_sec=4.0 if has_video else 0.0,
@@ -70,7 +72,7 @@ def build_lifestyle_edc_scenes(
             id=3,
             name="Feature - Đồng hành mọi khoảnh khắc",
             kind="PRODUCT_PHOTO",
-            narrator_text=f"{feat1_desc}. Đáp ứng hoàn hảo mọi nhu cầu, mang lại sự tiện nghi và tự tin tuyệt đối.",
+            narrator_text=feature_line(feat1_title, feat1_desc, "Đi đâu mang theo cũng tiện."),
             overlay_title=feat1_title[:24].upper(),
             overlay_subtitle="Tiện Lợi Vượt Trội",
             real_start_sec=8.0 if has_video else 0.0,
@@ -84,7 +86,7 @@ def build_lifestyle_edc_scenes(
             id=4,
             name="Lifestyle - Tự do & Năng động",
             kind="REAL_FOOTAGE" if has_video else "PRODUCT_PHOTO",
-            narrator_text="Gọn gàng trong lòng bàn tay, người bạn đồng hành hoàn hảo cho phong cách sống hiện đại và năng động!",
+            narrator_text="Gọn vừa lòng bàn tay, bỏ túi mang theo cả ngày.",
             overlay_title="ĐỒNG HÀNH MỌI NƠI",
             overlay_subtitle=lifestyle_sub,
             real_start_sec=10.0 if has_video else 0.0,

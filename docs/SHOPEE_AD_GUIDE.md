@@ -75,11 +75,12 @@ Hệ thống hoạt động theo cơ chế **Dynamic Universal** (tự động t
 * **`--tag <tên>`**: Gắn nhãn/tag tùy chỉnh vào tên file (ví dụ: `--tag v2`, `--tag test1`) để thoải mái xuất thử nghiệm nhiều biến thể mà không bị ghi đè.
 * **`--scene <id> [<id> ...]`**: Chỉ làm lại các phân cảnh được chọn (kịch bản của cảnh đó được cập nhật theo builder mới nhất); các cảnh còn lại giữ nguyên giọng đọc và clip. Khi Google Flow lỗi một vài cảnh, các clip đã xong vẫn được lưu và tool in sẵn lệnh `--scene ...` để chạy lại.
 * **`--regen`**: Sinh lại toàn bộ clip AI từ Google Flow, **giữ nguyên** storyboard (kể cả phần bạn sửa tay). Muốn viết lại kịch bản từ đầu thì dùng **`--force-storyboard`** (hoặc `--idea`).
+  * Prompt Flow giờ được viết theo kiểu **clip quay điện thoại cầm tay** (xem `tools/common/prompts/realism.py`). `storyboard_*.json` tạo từ bản cũ vẫn được tự làm sạch khi gửi đi (bỏ "cinematic/4K/commercial lighting", "instantly", "5 fingers"…), nhưng muốn dùng hẳn kịch bản mới (1 hành động/cảnh, bối cảnh đời thường, tên sản phẩm tiếng Anh) thì chạy lại với **`--force-storyboard`**.
 * **`--cta {none, follow, shopee, tiktok}`**:
   * `none` (mặc định 4 cảnh): Thích hợp video review tự nhiên hoặc chạy ads không lộ tính thương mại.
   * `follow` (5 cảnh): Cảnh cuối kêu gọi bấm follow kênh (ở dạng `faceless_pov` cảnh cuối vẫn chỉ xuất hiện bàn tay thân thiện, không làm động tác peace sign/thumbs up gượng gạo).
   * `shopee` (5 cảnh): Cảnh cuối kêu gọi bấm vào link giỏ hàng hoặc xem bình luận ghim.
-  * `tiktok` (5 cảnh): Cảnh cuối kêu gọi bấm vào giỏ hàng màu vàng ở góc dưới bên trái màn hình.
+  * `tiktok` (5 cảnh): Cảnh cuối kêu gọi bấm vào giỏ hàng màu vàng ở góc dưới bên trái màn hình (lời kêu gọi nằm ở giọng đọc + chữ; hình ảnh chỉ là cầm sản phẩm hướng về máy, không chỉ tay vào góc màn hình).
 * **`--idea "nội dung"`**: Thêm ý tưởng/bối cảnh riêng (ví dụ: `--idea "bàn làm việc tone gỗ sồi ấm cúng"`).
 * **`--speed <float>`**: Tốc độ đọc OmniVoice (mặc định: `1.03` chuẩn KOC đàm thoại tự nhiên).
 

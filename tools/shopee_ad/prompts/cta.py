@@ -19,26 +19,26 @@ def build_cta_scene(
     """Build CTA / Outro scene tailored to platform and style."""
     is_faceless = style in ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov")
     kind = "FLOW_AI" if not is_local else ("REAL_FOOTAGE" if has_video else "IMAGE_SLIDE")
+    persona = character_persona(category)
 
     if cta_mode == "follow":
-        persona = character_persona(category)
         overlay_t = f"FOLLOW {channel_name.upper()}" if channel_name else "BẤM FOLLOW KÊNH"
         if category == "FASHION_APPAREL":
-            cta_txt = "Bạn nào cũng mê phong cách chỉn chu, gọn gàng thì bấm follow kênh mình để gom thêm nhiều mẹo hay ho mỗi ngày nhé!"
+            cta_txt = "Ai thích ăn mặc gọn gàng thì follow kênh nha, mỗi ngày đều có mẹo hay."
         elif category == "BEAUTY_SKINCARE":
-            cta_txt = "Bạn nào cũng mê chăm sóc bản thân, làm đẹp thảnh thơi thì bấm follow kênh mình để gom thêm nhiều mẹo hay ho mỗi ngày nhé!"
+            cta_txt = "Ai mê chăm da, làm đẹp nhẹ nhàng thì follow kênh nha, mỗi ngày đều có mẹo hay."
         else:
-            cta_txt = "Bạn nào cũng mê không gian ngăn nắp, thảnh thơi thì bấm follow kênh mình để gom thêm nhiều mẹo hay ho mỗi ngày nhé!"
+            cta_txt = "Ai thích nhà cửa gọn gàng thì follow kênh nha, mỗi ngày đều có mẹo hay."
 
         if is_faceless:
             follow_prompt = (
-                "Vertical 9:16 RAW cinematic video. First-person POV looking down at clean aesthetic table, hands resting calmly beside the neat setup. "
-                "Warm modern ambient lighting. NO human face, NO head in frame, hands only. NO thumbs-up, NO peace sign, strictly exactly 5 fingers. NO text overlays."
+                "First-person view looking down at a home table, no face: a hand sets the product down next to a mug and rests flat on the table beside it. "
+                "Daylight from the window. Hands only. NO thumbs-up, NO peace sign."
             )
         else:
             follow_prompt = (
-                f"Vertical 9:16 RAW cinematic video. Featuring {persona['cont']}, giving a gentle wave and warm genuine smile to camera in a modern tidy aesthetic room. "
-                f"Natural modern aesthetic lighting. Mouth closed, no speaking, no dialogue. NO text overlays."
+                f"{persona['cont']} glances up toward the camera, gives a small casual wave and a relaxed smile, then looks away. "
+                f"Lived-in room at home, daylight, not talking."
             )
 
         return SceneDefinition(
@@ -55,20 +55,20 @@ def build_cta_scene(
     elif cta_mode == "shopee":
         if is_faceless:
             shopee_prompt = (
-                "Vertical 9:16 RAW cinematic video. Macro POV shot looking down at product neatly displayed on desk, hand pointing down toward comments. "
-                "Bright commercial aesthetic lighting. NO human face, hands only. NO thumbs-up, strictly 5 fingers. NO text overlays."
+                "First-person view looking down at a desk, no face: a hand picks up the product, holds it toward the camera for a moment and sets it back down. "
+                "Daylight. Hands only. NO thumbs-up."
             )
         else:
             shopee_prompt = (
-                "Vertical 9:16 RAW cinematic video. Happy young Vietnamese creator smiling warmly at the camera, giving a polite welcoming nod. "
-                "Mouth closed, no speaking, bright vibrant ambient lighting. NO thumbs-up. NO text overlays."
+                f"{persona['cont']} holds the product up toward the camera for a moment, gives a small nod and lowers it. "
+                f"Room at home, daylight, not talking. NO thumbs-up."
             )
 
         return SceneDefinition(
             id=scene_id,
             name="Kêu gọi hành động Shopee (CTA)",
             kind=kind,
-            narrator_text="Món này tiện lợi thực sự! Mình để link chính hãng dưới phần bình luận cho các bạn tham khảo nhé!",
+            narrator_text="Món này xài tiện thiệt sự. Link mình để dưới bình luận nha.",
             overlay_title="LINK Ở BÌNH LUẬN GHIM",
             overlay_subtitle="Chính hãng - Giá cực tốt",
             image_index=0,
@@ -78,20 +78,20 @@ def build_cta_scene(
     elif cta_mode in ("tiktok", "tiktok_shop"):
         if is_faceless:
             tiktok_prompt = (
-                "Vertical 9:16 RAW cinematic video. Macro POV shot looking down at product, hand gesturing toward the lower left corner. "
-                "Bright commercial aesthetic lighting. NO human face, hands only. NO text overlays."
+                "First-person view looking down at a desk, no face: a hand picks up the product, holds it toward the camera for a moment and sets it back down. "
+                "Daylight. Hands only. NO thumbs-up."
             )
         else:
             tiktok_prompt = (
-                "Vertical 9:16 RAW cinematic video. Young Vietnamese creator pointing enthusiastically toward lower-left corner with friendly smile. "
-                "Mouth closed, no speaking, bright vibrant lighting. NO text overlays."
+                f"{persona['cont']} holds the product up toward the camera for a moment, gives a small nod and lowers it. "
+                f"Room at home, daylight, not talking. NO thumbs-up."
             )
 
         return SceneDefinition(
             id=scene_id,
             name="Kêu gọi hành động TikTok Shop (CTA)",
             kind=kind,
-            narrator_text="Món này tiện lợi thực sự! Các bạn bấm ngay vào giỏ hàng màu vàng góc trái để nhận ưu đãi hôm nay nhé!",
+            narrator_text="Món này xài tiện thiệt sự. Bấm vô giỏ hàng màu vàng góc trái để coi ưu đãi hôm nay nha.",
             overlay_title="GIỎ HÀNG GÓC TRÁI",
             overlay_subtitle="Bấm nhận ưu đãi hôm nay",
             image_index=0,

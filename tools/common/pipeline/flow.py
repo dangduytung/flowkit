@@ -16,6 +16,7 @@ from tools.common.pipeline.context import PlatformHooks, ProductWorkspace, RunOp
 from tools.common.pipeline.local import pick_image, resolve_delogo
 from tools.common.pipeline.selection import SceneSelection
 from tools.common.pipeline.steps import assemble_scenes, load_storyboard, narrate, package_outputs, print_summary
+from tools.common.prompts.realism import finalize_video_prompt
 from tools.common.settings import PlatformProfile
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ def wants_product_reference(scene: SceneDefinition, faceless_storyboard: bool) -
     return is_faceless_scene(scene, faceless_storyboard) or any(m in _prompt(scene) for m in PRODUCT_MARKERS)
 
 
-def _render_request(prompt: str, project_id: str, reference: Optional[str] = None) -> dict:
+def _render_request(prompt: str, project_id: str, references: Sequence[str] = ()) -> dict:
     payload = {
         "prompt": prompt,
         "project_id": project_id,
@@ -76,8 +77,8 @@ def _render_request(prompt: str, project_id: str, reference: Optional[str] = Non
         "aspect_ratio": OMNI_ASPECT_RATIO,
         "resolution": OMNI_RESOLUTION,
     }
-    if reference:
-        payload["reference_media_ids"] = [reference]
+    if references:
+        payload["reference_media_ids"] = list(references)
     return payload
 
 
@@ -91,6 +92,8 @@ class FlowRenderer:
         self.project_id = project_id
         self.selection: SceneSelection = opts.selection
         self.force = opts.regen or opts.force_storyboard
+        self.faceless = False
+        self.product_refs: Sequence[str] = ()
 
     def clip_path(self, scene_id: int) -> Path:
         return self.workspace.clips_dir / f"{self.opts.style}_raw_{scene_id:02d}.mp4"
@@ -99,9 +102,23 @@ class FlowRenderer:
         ready = file_is_ready(self.clip_path(scene_id), MIN_FLOW_CLIP_BYTES)
         return not self.selection.keep_existing(scene_id, ready, force_rebuild=self.force)
 
-    def _submit(self, scene: SceneDefinition, reference: Optional[str]) -> FlowJob:
-        payload = _render_request(scene.prompt, self.project_id, reference)
-        if reference:
+    def _product_ref(self, scene: SceneDefinition) -> Optional[str]:
+        """The product photo for a scene that shows the product, so Omni draws the real item."""
+        if not self.product_refs or not scene.use_product_ref or scene.image_index is None or scene.image_index < 0:
+            return None
+        return self.product_refs[scene.image_index % len(self.product_refs)]
+
+    def _submit(self, scene: SceneDefinition, references: Sequence[str] = ()) -> FlowJob:
+        references = [r for r in references if r]
+        # Scene heuristics read the template wording, so the realism rewrite happens only here.
+        prompt = finalize_video_prompt(
+            scene.prompt or "",
+            faceless=is_faceless_scene(scene, self.faceless),
+            human=is_human_scene(scene, self.faceless),
+            product_reference=any(r in self.product_refs for r in references),
+        )
+        payload = _render_request(prompt, self.project_id, references)
+        if references:
             res = self.client.submit_reference_video(payload)
             op_name = res.get("operations", [{}])[0].get("operation", {}).get("name")
             logger.info("Scene %s submitted (r2v): op_name=%s", scene.id, op_name)
@@ -123,7 +140,7 @@ class FlowRenderer:
         if self._needs_render(scene.id):
             logger.info("  • Đang gửi Scene %s (Anchor Nhân Vật): %s...", scene.id, scene.overlay_title)
             logger.info("  ⏳ Chờ sinh video Scene 1 để trích xuất khuôn mặt nhân vật chuẩn (~35s)...")
-            self._collect([self._submit(scene, reference=None)]).raise_for_failures()
+            self._collect([self._submit(scene, [self._product_ref(scene)])]).raise_for_failures()
         try:
             logger.info("  🎯 [Nhân Vật Nhất Quán] Đang trích xuất frame chân dung nhân vật từ Scene 1...")
             anchor = extract_frame(self.clip_path(scene.id), self.workspace.clips_dir / f"{self.opts.style}_character_anchor.jpg", ANCHOR_FRAME_SECONDS)
@@ -135,7 +152,8 @@ class FlowRenderer:
             return None
 
     def render(self, ai_scenes: Sequence[SceneDefinition], product_refs: Sequence[str]) -> None:
-        faceless = is_faceless_storyboard(self.opts.style, ai_scenes)
+        faceless = self.faceless = is_faceless_storyboard(self.opts.style, ai_scenes)
+        self.product_refs = list(product_refs)
         mode = "Phong cách POV / Hands-On 100% Không Lộ Mặt" if faceless else "Bảo đảm nhân vật nhất quán"
         logger.info("\n🎬 [Bước 4/5] Gửi yêu cầu sinh Video AI tới Google Flow (%s)...", mode)
 
@@ -151,13 +169,14 @@ class FlowRenderer:
                 continue
             if character and is_human_scene(scene, faceless):
                 logger.info("  • Đang gửi Scene %s (AI - Reference Nhân Vật Nhất Quán): %s...", scene.id, scene.overlay_title)
-                jobs.append(self._submit(scene, reference=character))
+                # Identity from the anchor frame, the actual product from the shop photo.
+                jobs.append(self._submit(scene, [character, self._product_ref(scene)]))
             elif product_refs and wants_product_reference(scene, faceless):
                 logger.info("  • Đang gửi Scene %s (AI - Reference Sản Phẩm ZIP): %s...", scene.id, scene.overlay_title)
-                jobs.append(self._submit(scene, reference=product_refs[scene.image_index % len(product_refs)]))
+                jobs.append(self._submit(scene, [self._product_ref(scene)]))
             else:
                 logger.info("  • Đang gửi Scene %s (AI Text-to-Video): %s...", scene.id, scene.overlay_title)
-                jobs.append(self._submit(scene, reference=None))
+                jobs.append(self._submit(scene))
             time.sleep(SUBMIT_SPACING_SECONDS)
 
         if jobs:

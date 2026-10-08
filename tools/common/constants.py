@@ -21,24 +21,21 @@ class VideoSpec:
         return f"{self.width}x{self.height}"
 
 
-@dataclass(frozen=True)
-class DelogoBox:
-    """A rectangle for ffmpeg's ``delogo`` filter, in output pixels."""
-
-    x: int
-    y: int
-    w: int
-    h: int
-
-    def to_spec(self) -> str:
-        return f"x={self.x}:y={self.y}:w={self.w}:h={self.h}"
-
 
 # Portrait 9:16 at 720p — the format Flow renders and every short-video platform accepts.
 VERTICAL_720P = VideoSpec()
 
-# Google Flow's sparkle mark, bottom-right of a 720x1280 render.
-FLOW_WATERMARK_BOX = DelogoBox(x=546, y=1120, w=68, h=104)
+@dataclass(frozen=True)
+class SparkleMark:
+    """Centre and half-size of Flow's four-point sparkle, in 720x1280 pixels."""
+
+    cx: float
+    cy: float
+    radius: float
+
+
+# Measured on 27 Flow renders: the sparkle spans x 576-623, y 1136-1183.
+FLOW_WATERMARK_SPARKLE = SparkleMark(cx=599.5, cy=1159.5, radius=24.0)
 
 # File types found in a scraped product zip.
 IMAGE_SUFFIXES = (".jpg", ".jpeg", ".png", ".webp")
@@ -52,8 +49,8 @@ MIN_FLOW_CLIP_BYTES = 100_000
 SCENE_TAIL_PAD_SECONDS = 0.4
 
 __all__ = [
-    "DelogoBox",
-    "FLOW_WATERMARK_BOX",
+    "FLOW_WATERMARK_SPARKLE",
+    "SparkleMark",
     "IMAGE_SUFFIXES",
     "MIN_FLOW_CLIP_BYTES",
     "SCENE_TAIL_PAD_SECONDS",
