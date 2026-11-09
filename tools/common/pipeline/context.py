@@ -30,6 +30,7 @@ class RunOptions:
     channel_name: Optional[str] = None
     channel_handle: Optional[str] = None
     custom_idea: Optional[str] = None
+    custom_persona: Optional[str] = None
     force_storyboard: bool = False
     regen: bool = False
     no_voice: bool = False

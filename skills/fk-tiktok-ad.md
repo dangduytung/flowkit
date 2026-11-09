@@ -59,9 +59,10 @@ python -m tools.tiktok_ad.orchestrator --list
 - `--profile <id>`: OmniVoice voice profile ID.
 - `--crop {blur_bg, center_crop}`: 9:16 canvas framing mode (default: `blur_bg`).
 - `--bgm [path]`: Background music, **off by default**. `--bgm` picks a random track from `assets/bgm/` (preferring one named after the style); `--bgm <file>` uses that file.
+- `--persona "..."` / `--character "..."`: Custom character persona (60+ built-in personas rotated by product title, `--persona random`, `--persona male`/`female`, index `0..9`, or free-form Vietnamese/English character description). Implies `--force-storyboard`.
 - `--scene <id> [<id> ...]`: Re-render only these scenes (their prompts/copy are refreshed from the builders; every other scene keeps its narration and clips). After a Flow failure the run prints the exact `--scene ...` command to retry.
 - `--regen`: Re-render all Flow AI clips; the storyboard (including hand edits) is kept.
-- `--force-storyboard`: Rebuild `storyboard_{style}.json` from scratch (discards hand edits). `--idea` implies it.
+- `--force-storyboard`: Rebuild `storyboard_{style}.json` from scratch (discards hand edits). `--idea` and `--persona` imply it.
 - `--zip <path>`: Specify target ZIP (defaults to newest in `TIKTOK_DOWNLOADS_DIR`).
 - Output root: `output/tiktok_ads/` unless `TIKTOK_OUTPUT_DIR` is set in `.env`.
 

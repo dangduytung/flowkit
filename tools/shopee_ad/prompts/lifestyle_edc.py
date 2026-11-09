@@ -15,10 +15,11 @@ def build_lifestyle_edc_scenes(
     feat2_title: str,
     feat2_desc: str,
     custom_idea: Optional[str] = None,
+    custom_persona: Optional[str] = None,
 ) -> List[SceneDefinition]:
     """Generate 4 Aesthetic Lifestyle / Everyday Carry AI scenes tailored to category."""
     idea_ctx = f" ({custom_idea})" if custom_idea else ""
-    persona = character_persona(category)
+    persona = character_persona(category, seed=clean_title, custom_persona=custom_persona)
     noun = product_noun(category, clean_title)
     short_name = spoken_name(clean_title)
     return [

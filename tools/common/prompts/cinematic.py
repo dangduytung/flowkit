@@ -17,10 +17,11 @@ def build_flow_cinematic_scenes(
     feat2_desc: str,
     social_proof_title: str,
     custom_idea: Optional[str] = None,
+    custom_persona: Optional[str] = None,
 ) -> List[SceneDefinition]:
     """Generate 4 cinematic AI scenes tailored to the product's physical category."""
     idea_ctx = f" ({custom_idea})" if custom_idea else ""
-    persona = character_persona(category)
+    persona = character_persona(category, seed=clean_title, custom_persona=custom_persona)
     noun = product_noun(category, clean_title)
     short_name = spoken_name(clean_title)
 
@@ -455,6 +456,67 @@ def build_flow_cinematic_scenes(
                 prompt=(
                     f"{persona['cont']} zips the packed suitcase closed around the last corner and stands it upright on its wheels beside the bed. "
                     f"Medium shot, bedroom daylight, normal speed, not talking."
+                ),
+            ),
+        ]
+
+    # Bedding, Blankets, Comforters
+    is_bedding = any(
+        k in clean_title.lower()
+        for k in ["chăn", "mền", "ga trải giường", "ruột chăn"]
+    )
+    if is_bedding:
+        return [
+            SceneDefinition(
+                id=1,
+                name="Hook - Chăn ấm mềm mịn cho ngày se lạnh",
+                kind="FLOW_AI",
+                narrator_text=f"Trời trở lạnh hay nằm phòng điều hòa mà có {short_name} này đắp là êm ru luôn. Coi thử chất lông nè.",
+                overlay_title="MỀM MỊN ẤM ÁP",
+                overlay_subtitle=clean_title,
+                image_index=0,
+                prompt=(
+                    f"{persona['intro']} stands beside an unmade bed in a cozy lived-in bedroom, holding the folded smoky-grey {noun} against her chest and gently pressing one hand into the plush fur{idea_ctx}. "
+                    f"Medium shot, warm bedside lamp light mixed with window light, not talking."
+                ),
+            ),
+            SceneDefinition(
+                id=2,
+                name="Hero Action - Cận cảnh 2 lớp lông dày dặn",
+                kind="FLOW_AI",
+                narrator_text="Thiết kế hai lớp dày dặn, một mặt lông dài bồng bềnh, mặt dưới mịn lì sát da, sờ mướt tay lắm.",
+                overlay_title="CHĂN 2 LỚP DÀY DẶN",
+                overlay_subtitle="Lông mịn siêu mềm - Không rụng",
+                image_index=0,
+                prompt=(
+                    f"Close-up of hands on a bed, no face: fingers slowly stroke the long fluffy smoky-grey fur of the {noun} and turn back one corner to show the smooth velvety underside and neat border stitching. "
+                    f"Warm lamp light catching the soft fibers. Hands only."
+                ),
+            ),
+            SceneDefinition(
+                id=3,
+                name="Feature - Giữ nhiệt êm ái ôm trọn cơ thể",
+                kind="FLOW_AI",
+                narrator_text=feature_line(feat1_title, feat1_desc, "Đắp lên nhẹ tênh mà giữ ấm cực tốt."),
+                overlay_title=feat1_title,
+                overlay_subtitle="Giữ ấm vượt trội - Thoáng khí",
+                image_index=0,
+                prompt=(
+                    f"{persona['cont']} sits propped against pillows on the bed with the smoky-grey {noun} draped warmly over her lap and shoulders, reading an open book and pulling the soft edge up comfortably. "
+                    f"Lived-in bedroom with a nightstand and lamp, warm indoor light, not talking."
+                ),
+            ),
+            SceneDefinition(
+                id=4,
+                name="Lifestyle - Phủ kín giường rộng sang trọng",
+                kind="FLOW_AI",
+                narrator_text=feature_line(feat2_title, feat2_desc, "Trải ra phủ kín cả giường đôi, nhìn căn phòng sang hẳn."),
+                overlay_title="SANG TRỌNG ĐẲNG CẤP",
+                overlay_subtitle="Êm ái trọn giấc ngủ",
+                image_index=0,
+                prompt=(
+                    f"{persona['cont']} stands beside the bed and smooths the smoky-grey {noun} flat across the mattress with both hands, leaving the bedroom neat and cozy. "
+                    f"Medium shot, warm bedroom light, not talking."
                 ),
             ),
         ]

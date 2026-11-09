@@ -86,6 +86,11 @@ Hệ thống hỗ trợ đầy đủ 7 phong cách video ngắn chuẩn thuật 
 * **`--profile <id>`**: ID cấu hình giọng đọc OmniVoice (KOC Việt).
 * **`--crop {blur_bg, center_crop}`**: Cơ chế chuyển đổi tỷ lệ 9:16 (mặc định: `blur_bg` giữ nguyên khung hình gốc trên nền mờ sang trọng).
 * **`--idea "ý tưởng riêng"`**: Bổ sung bối cảnh hoặc phong cách mong muốn cho kịch bản.
+* **`--persona "mô tả"`** (hoặc `--character "mô tả"`): Đa dạng hóa & tùy chỉnh nhân vật xuất hiện trong video (tự động tạo lại storyboard):
+  * Mặc định hệ thống có **60+ hồ sơ nhân vật** (10 nhân vật/ngành hàng) tự động xoay vòng theo tên sản phẩm.
+  * Truyền `--persona random`: Tổ hợp ngẫu nhiên hàng nghìn biến thể nhân vật (tuổi, giới tính, kiểu tóc, kính, trang phục).
+  * Truyền `--persona male` / `--persona female` hoặc số thứ tự `--persona 0` .. `9`.
+  * Truyền **prompt tùy ý bằng tiếng Việt hoặc tiếng Anh** (ví dụ: `--persona "cô gái 22 tuổi tóc ngắn ngang vai, đeo kính tròn, mặc áo cardigan màu kem"` hoặc `--persona "30-year-old Vietnamese man with round glasses, wearing a navy sweater"`). Hệ thống tự dịch sang tiếng Anh chuẩn để tránh lỗi Google Flow in chữ tiếng Việt lên bao bì.
 * **`--scene <id> [<id> ...]`**: Chỉ làm lại các phân cảnh được chọn (kịch bản của cảnh đó được cập nhật theo builder mới nhất); các cảnh còn lại giữ nguyên giọng đọc và clip. Khi Google Flow lỗi một vài cảnh, các clip đã xong vẫn được lưu và tool in sẵn lệnh `--scene ...` để chạy lại.
 * **`--regen`**: Sinh lại toàn bộ clip AI từ Google Flow, **giữ nguyên** storyboard (kể cả phần bạn sửa tay). Muốn viết lại kịch bản từ đầu thì dùng **`--force-storyboard`** (hoặc `--idea`).
   * Prompt Flow giờ được viết theo kiểu **clip quay điện thoại cầm tay** (xem `tools/common/prompts/realism.py`). `storyboard_*.json` tạo từ bản cũ vẫn được tự làm sạch khi gửi đi, nhưng muốn dùng hẳn kịch bản mới thì chạy lại với **`--force-storyboard`**.
@@ -120,7 +125,11 @@ python -m tools.tiktok_ad.orchestrator --style problem_solution --cta follow
 # 7. Chỉ định file ZIP cụ thể:
 python -m tools.tiktok_ad.orchestrator --zip "path/to/tiktok_product_file.zip" --style viral_hook
 
-# 8. Liệt kê tất cả các file ZIP có sẵn trong thư mục TikTok Downloads:
+# 8. Tùy chỉnh nhân vật bằng tiếng Việt / tiếng Anh hoặc ngẫu nhiên (--persona):
+python -m tools.tiktok_ad.orchestrator --mode flow --style flow_cinematic --persona "cô gái 22 tuổi tóc ngắn ngang vai, đeo kính tròn, mặc áo cardigan màu kem" --tag p1
+python -m tools.tiktok_ad.orchestrator --mode flow --style flow_cinematic --persona random --tag p2
+
+# 9. Liệt kê tất cả các file ZIP có sẵn trong thư mục TikTok Downloads:
 python -m tools.tiktok_ad.orchestrator --list
 ```
 
@@ -138,6 +147,7 @@ Khi làm việc với AI Agent (thông qua skill `/fk-tiktok-ad`), bạn chỉ c
 | **Video TikTok Shop trỏ giỏ hàng vàng** | *"Tạo video quảng cáo TikTok Shop có CTA trỏ vào giỏ hàng màu vàng"* | `python -m tools.tiktok_ad.orchestrator --style viral_hook --cta yellow_cart` |
 | **Sinh video Google Flow AI** | *"Tạo video Google Flow AI cho sản phẩm TikTok, có giọng đọc KOC đầy đủ"* | `python -m tools.tiktok_ad.orchestrator --mode flow --style flow_cinematic` |
 | **Video tình huống cấp bách** | *"Dựng kịch bản drama giải cứu cho sản phẩm, có kêu gọi follow kênh"* | `python -m tools.tiktok_ad.orchestrator --style problem_solution --cta follow` |
+| **Đổi nhân vật tùy ý / ngẫu nhiên** | *"Tạo video với nhân vật là nam 28 tuổi đeo kính mặc áo polo nhé"* hoặc *"Đổi nhân vật ngẫu nhiên"* | `python -m tools.tiktok_ad.orchestrator --mode flow --style flow_cinematic --persona "nam 28 tuổi đeo kính mặc áo polo"` |
 | **Kiểm tra file đã tải** | *"Xem trong thư mục TikTok Downloads có những file zip nào"* | `python -m tools.tiktok_ad.orchestrator --list` |
 
 ---

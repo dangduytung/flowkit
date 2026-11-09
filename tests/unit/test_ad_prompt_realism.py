@@ -167,3 +167,36 @@ def test_narration_reads_like_speech():
         assert ".." not in text, text
         assert "mình đặt về dùng thử" not in text.lower() and "mình thử dùng" not in text.lower(), text
         assert len(text) <= 160, (len(text), text)
+
+
+def test_persona_pools_and_custom_persona():
+    """All 60+ personas and custom Vietnamese/English persona prompts must be diverse and ASCII-clean."""
+    from tools.common.prompts.personas import _PERSONA_POOLS, character_persona
+
+    for cat in CATEGORIES:
+        pool = _PERSONA_POOLS[cat]
+        assert len(pool) >= 10, f"{cat} should have at least 10 personas"
+        seen_intros = {character_persona(cat, custom_persona=str(i))["intro"] for i in range(len(pool))}
+        assert len(seen_intros) == len(pool)
+        for p in pool:
+            assert not has_vietnamese(p["intro"])
+            assert not has_vietnamese(p["cont"])
+            hits = [w for w in BANNED if w in p["intro"].lower()]
+            assert not hits, (cat, hits, p["intro"])
+
+    # Vietnamese custom persona prompt -> translated to ASCII English automatically
+    vi_persona = character_persona(
+        "GENERAL_LIFESTYLE",
+        custom_persona="cô gái 22 tuổi tóc ngắn ngang vai, đeo kính tròn, mặc áo cardigan màu kem",
+    )
+    assert not has_vietnamese(vi_persona["intro"])
+    assert not has_vietnamese(vi_persona["cont"])
+    assert "22-year-old Vietnamese woman" in vi_persona["intro"]
+    assert "glasses" in vi_persona["intro"]
+    assert vi_persona["cont"].startswith("the same ")
+
+    # Random synthesis
+    rand_persona = character_persona("GENERAL_LIFESTYLE", custom_persona="random:test123")
+    assert not has_vietnamese(rand_persona["intro"])
+    assert rand_persona["cont"].startswith("the same ")
+

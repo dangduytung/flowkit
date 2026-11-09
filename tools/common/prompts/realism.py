@@ -157,6 +157,7 @@ _KEYWORD_NOUNS: tuple[tuple[tuple[str, ...], str], ...] = (
     (("sữa rửa mặt",), "face cleanser tube"),
     (("máy massage", "súng massage", "massage"), "handheld massager"),
     (("thảm yoga", "thảm tập"), "yoga mat"),
+    (("chăn lông", "chăn", "mền"), "thick plush blanket"),
     (("gối",), "pillow"),
     (("giày", "dép"), "pair of shoes"),
     (("túi xách", "balo", "ba lô"), "bag"),

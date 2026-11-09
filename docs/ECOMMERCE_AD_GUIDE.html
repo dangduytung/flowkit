@@ -663,6 +663,19 @@
             Cho phép bạn thoải mái xuất hàng loạt phong cách, tùy chọn CTA hoặc thêm nhãn <code>--tag v1</code>, <code>--tag v2</code> vào chung thư mục <code>final/</code> để tự mở xem, so sánh trực quan và chọn bản ưng ý nhất trước khi đăng!
           </p>
         </div>
+
+        <div class="card">
+          <div class="card-title">
+            <span style="color: #38bdf8;">👤 --persona / --character Nhân Vật Đa Dạng & Prompt Tùy Ý</span>
+            <span class="tag">60+ Hồ Sơ & Custom</span>
+          </div>
+          <p>
+            • <strong>Kho 60+ nhân vật:</strong> 10 nhân vật/ngành hàng tự động xoay vòng theo tên sản phẩm.<br>
+            • <span class="tag">--persona random</span>: Tổ hợp ngẫu nhiên hàng nghìn biến thể (tuổi, giới tính, kiểu tóc, kính, trang phục).<br>
+            • <span class="tag">--persona male</span> / <span class="tag">female</span> / <span class="tag">0..9</span>: Chọn nhanh giới tính hoặc hồ sơ.<br>
+            • <span class="tag">--persona "cô gái 22 tuổi tóc ngắn đeo kính tròn..."</span>: Nhập prompt tùy ý bằng tiếng Việt hoặc tiếng Anh (hệ thống tự dịch sang tiếng Anh chuẩn cho Flow).
+          </p>
+        </div>
       </div>
     </section>
 
@@ -780,6 +793,20 @@
           </span>
           <div class="code-box">
             <span class="code-text">python -m tools.shopee_ad.orchestrator --style problem_solution --cta follow</span>
+            <button class="copy-btn" onclick="copyCode(this)">Sao chép</button>
+          </div>
+        </div>
+
+        <div style="margin-top: 12px;">
+          <span style="font-weight: 600; font-size: 13.5px; color: #cbd5e1;">
+            5. Tùy chỉnh nhân vật bằng tiếng Việt tùy ý hoặc ngẫu nhiên (--persona):
+          </span>
+          <div class="code-box">
+            <span class="code-text">python -m tools.shopee_ad.orchestrator --mode flow --style flow_cinematic --persona "cô gái 22 tuổi tóc ngắn ngang vai, đeo kính tròn, mặc áo cardigan màu kem" --tag p1</span>
+            <button class="copy-btn" onclick="copyCode(this)">Sao chép</button>
+          </div>
+          <div class="code-box">
+            <span class="code-text">python -m tools.shopee_ad.orchestrator --mode flow --style flow_cinematic --persona random --tag p2</span>
             <button class="copy-btn" onclick="copyCode(this)">Sao chép</button>
           </div>
         </div>

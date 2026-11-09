@@ -42,6 +42,9 @@ def build_parser(profile: PlatformProfile) -> argparse.ArgumentParser:
         "hoặc nhiều style phân tách bằng dấu phẩy"
     ))
     p.add_argument("--idea", "--story", type=str, default=None, help="Ý tưởng / tình huống kịch bản tùy chỉnh (tự tạo lại storyboard)")
+    p.add_argument("--persona", "--character", dest="persona", type=str, default=None, help=(
+        "Mô tả nhân vật tùy chỉnh (tiếng Việt/Anh), hoặc từ khóa 'random', 'male', 'female', hoặc số 0..9 (tự tạo lại storyboard)"
+    ))
     p.add_argument("--scene", nargs="+", type=int, default=None, help="Chỉ tạo lại các phân cảnh này (ví dụ: --scene 2 3)")
     p.add_argument("--regen", action="store_true", help="Tạo lại toàn bộ clip AI từ Google Flow (giữ nguyên storyboard)")
     p.add_argument("--force-storyboard", action="store_true", help="Tạo lại storyboard từ đầu (mất chỉnh sửa tay trong JSON)")
@@ -68,8 +71,9 @@ def options_from_args(args: argparse.Namespace, zip_path: Path, style: str) -> R
         channel_name=args.channel_name,
         channel_handle=args.channel_handle,
         custom_idea=args.idea,
-        # A new idea only takes effect in a freshly generated storyboard.
-        force_storyboard=args.force_storyboard or bool(args.idea),
+        custom_persona=args.persona,
+        # A new idea or persona only takes effect in a freshly generated storyboard.
+        force_storyboard=args.force_storyboard or bool(args.idea) or bool(args.persona),
         regen=args.regen,
         no_voice=args.no_voice,
         no_overlay=args.no_overlay,

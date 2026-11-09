@@ -28,11 +28,21 @@ STYLES.register(
     ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov"),
     lambda ctx: build_faceless_pov_scenes(social_proof_title=ctx.social_proof_title, **_features(ctx)),
 )
-STYLES.register(("problem_solution", "drama"), lambda ctx: build_problem_solution_scenes(**_features(ctx)))
-STYLES.register(("lifestyle_edc", "lifestyle"), lambda ctx: build_lifestyle_edc_scenes(**_features(ctx)))
+STYLES.register(
+    ("problem_solution", "drama"),
+    lambda ctx: build_problem_solution_scenes(custom_persona=ctx.custom_persona, **_features(ctx)),
+)
+STYLES.register(
+    ("lifestyle_edc", "lifestyle"),
+    lambda ctx: build_lifestyle_edc_scenes(custom_persona=ctx.custom_persona, **_features(ctx)),
+)
 STYLES.register(
     ("flow_cinematic", "flow", "tech_minimal"),
-    lambda ctx: build_flow_cinematic_scenes(social_proof_title=ctx.social_proof_title, **_features(ctx)),
+    lambda ctx: build_flow_cinematic_scenes(
+        social_proof_title=ctx.social_proof_title,
+        custom_persona=ctx.custom_persona,
+        **_features(ctx),
+    ),
 )
 STYLES.register(("hybrid",), build_hybrid_scenes)
 STYLES.register(("local",), build_local_scenes)

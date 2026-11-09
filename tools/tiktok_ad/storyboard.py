@@ -231,6 +231,7 @@ def generate_dynamic_storyboard(
     cta_mode: str = "yellow_cart",
     custom_idea: Optional[str] = None,
     channel_name: str = DEFAULT_CHANNEL_NAME,
+    custom_persona: Optional[str] = None,
 ) -> List[SceneDefinition]:
     """Generate high-CTR TikTok storyboard tailored to product and style."""
     clean_title = clean_product_title(product.name)
@@ -261,6 +262,7 @@ def generate_dynamic_storyboard(
         feat2_desc=feat2_desc,
         social_proof_title=social_proof_title,
         custom_idea=custom_idea,
+        custom_persona=custom_persona,
     )
     scenes = STYLES.build(style, ctx)
 
@@ -275,6 +277,7 @@ def load_or_create_storyboard(
     force: bool = False,
     custom_idea: Optional[str] = None,
     channel_name: str = DEFAULT_CHANNEL_NAME,
+    custom_persona: Optional[str] = None,
 ) -> List[SceneDefinition]:
     """Load existing storyboard JSON or generate a fresh one."""
     return storyboard_io.load_or_create(
@@ -285,6 +288,7 @@ def load_or_create_storyboard(
             cta_mode=cta_mode,
             custom_idea=custom_idea,
             channel_name=channel_name,
+            custom_persona=custom_persona,
         ),
         force=force,
         metadata={"product_name": product.name, "slug": product.slug, "style": style, "cta_mode": cta_mode},

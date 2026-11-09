@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 def load_storyboard(hooks: PlatformHooks, workspace: ProductWorkspace, opts: RunOptions) -> list[SceneDefinition]:
     """Load (or build) the storyboard and refresh any ``--scene`` targets from the builders."""
     path = workspace.storyboard_path(opts.style)
+    extra = {"custom_persona": opts.custom_persona} if opts.custom_persona else {}
     scenes = hooks.load_storyboard(
         workspace.product,
         path,
@@ -29,6 +30,7 @@ def load_storyboard(hooks: PlatformHooks, workspace: ProductWorkspace, opts: Run
         force=opts.force_storyboard,
         custom_idea=opts.custom_idea,
         channel_name=opts.channel_name,
+        **extra,
     )
     selection = opts.selection
     warn_unknown_scene_ids(selection, (s.id for s in scenes))
@@ -42,6 +44,7 @@ def load_storyboard(hooks: PlatformHooks, workspace: ProductWorkspace, opts: Run
             cta_mode=opts.cta_mode,
             custom_idea=opts.custom_idea,
             channel_name=opts.channel_name,
+            **extra,
         ),
     )
     return scenes

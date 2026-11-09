@@ -21,6 +21,7 @@ class StoryContext:
     feat2_desc: str
     social_proof_title: str
     custom_idea: Optional[str] = None
+    custom_persona: Optional[str] = None
 
     @property
     def has_video(self) -> bool:

@@ -256,6 +256,7 @@ def generate_default_storyboard(
     cta_mode: str = "none",
     custom_idea: Optional[str] = None,
     channel_name: Optional[str] = None,
+    custom_persona: Optional[str] = None,
 ) -> List[SceneDefinition]:
     """
     Generate a smart, data-driven ad template tailored to ANY product and category.
@@ -311,6 +312,7 @@ def generate_default_storyboard(
         feat2_desc=feat2_desc,
         social_proof_title=social_proof_title,
         custom_idea=custom_idea,
+        custom_persona=custom_persona,
     )
     scenes = STYLES.build(style, ctx)
 
@@ -324,6 +326,7 @@ def generate_default_storyboard(
         channel_name=channel_name,
         is_local=(style == "local"),
         has_video=has_video,
+        custom_persona=custom_persona,
     )
     if cta_scene:
         scenes.append(cta_scene)
@@ -339,6 +342,7 @@ def load_or_create_storyboard(
     force: bool = False,
     custom_idea: Optional[str] = None,
     channel_name: Optional[str] = None,
+    custom_persona: Optional[str] = None,
 ) -> List[SceneDefinition]:
     """
     Load an existing storyboard.json or create a new one from ProductInfo.
@@ -347,7 +351,12 @@ def load_or_create_storyboard(
     return storyboard_io.load_or_create(
         json_path,
         generate=lambda: generate_default_storyboard(
-            info, style=style, cta_mode=cta_mode, custom_idea=custom_idea, channel_name=channel_name
+            info,
+            style=style,
+            cta_mode=cta_mode,
+            custom_idea=custom_idea,
+            channel_name=channel_name,
+            custom_persona=custom_persona,
         ),
         force=force,
         metadata={"product_name": info.name, "slug": info.slug, "style": style, "cta_mode": cta_mode},

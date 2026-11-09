@@ -15,11 +15,12 @@ def build_cta_scene(
     channel_name: Optional[str] = None,
     is_local: bool = False,
     has_video: bool = False,
+    custom_persona: Optional[str] = None,
 ) -> Optional[SceneDefinition]:
     """Build CTA / Outro scene tailored to platform and style."""
     is_faceless = style in ("faceless_pov", "faceless", "hands_on_demo", "pov_demo", "pov")
     kind = "FLOW_AI" if not is_local else ("REAL_FOOTAGE" if has_video else "IMAGE_SLIDE")
-    persona = character_persona(category)
+    persona = character_persona(category, seed=clean_title, custom_persona=custom_persona)
 
     if cta_mode == "follow":
         overlay_t = f"FOLLOW {channel_name.upper()}" if channel_name else "BẤM FOLLOW KÊNH"

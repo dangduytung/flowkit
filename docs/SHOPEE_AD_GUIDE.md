@@ -82,6 +82,11 @@ Hệ thống hoạt động theo cơ chế **Dynamic Universal** (tự động t
   * `shopee` (5 cảnh): Cảnh cuối kêu gọi bấm vào link giỏ hàng hoặc xem bình luận ghim.
   * `tiktok` (5 cảnh): Cảnh cuối kêu gọi bấm vào giỏ hàng màu vàng ở góc dưới bên trái màn hình (lời kêu gọi nằm ở giọng đọc + chữ; hình ảnh chỉ là cầm sản phẩm hướng về máy, không chỉ tay vào góc màn hình).
 * **`--idea "nội dung"`**: Thêm ý tưởng/bối cảnh riêng (ví dụ: `--idea "bàn làm việc tone gỗ sồi ấm cúng"`).
+* **`--persona "mô tả"`** (hoặc `--character "mô tả"`): Tùy chỉnh nhân vật xuất hiện trong video (tự động tạo lại storyboard):
+  * Hỗ trợ **60+ hồ sơ nhân vật** dựng sẵn (10 nhân vật/ngành hàng) tự động xoay vòng theo tên sản phẩm.
+  * Truyền `--persona random`: Tổ hợp ngẫu nhiên hàng nghìn biến thể nhân vật (tuổi, giới tính, kiểu tóc, kính, trang phục).
+  * Truyền `--persona male` / `--persona female` hoặc số thứ tự `--persona 0` .. `9`.
+  * Truyền **prompt tùy ý bằng tiếng Việt hoặc tiếng Anh** (ví dụ: `--persona "cô gái 22 tuổi tóc ngắn ngang vai, đeo kính tròn, mặc áo cardigan màu kem"` hoặc `--persona "30-year-old Vietnamese man with round glasses, wearing a navy sweater"`). Hệ thống tự dịch sang tiếng Anh chuẩn để tránh lỗi in chữ tiếng Việt lên bao bì.
 * **`--speed <float>`**: Tốc độ đọc OmniVoice (mặc định: `1.03` chuẩn KOC đàm thoại tự nhiên).
 
 ---
@@ -145,6 +150,22 @@ python -m tools.shopee_ad.orchestrator --zip "path/to/shopee_product_file.zip" -
   python -m tools.shopee_ad.orchestrator --mode flow --style problem_solution --bgm "assets/bgm/01_Cheerful_Glow_general_household_ad.mp3"
   ```
 
+### 👤 Trường hợp 8: Đa dạng hóa & Tùy chỉnh nhân vật tùy ý (`--persona` / `--character`)
+*(Mặc định mỗi ngành hàng có 10 nhân vật khác nhau tự động xoay vòng theo tên sản phẩm. Bạn cũng có thể đổi nhân vật tùy ý)*
+* **Prompt nhân vật tùy ý bằng tiếng Việt (tự động dịch sang tiếng Anh chuẩn cho Flow)**:
+  ```powershell
+  python -m tools.shopee_ad.orchestrator --mode flow --style flow_cinematic --persona "cô gái 22 tuổi tóc ngắn ngang vai, đeo kính tròn, mặc áo cardigan màu kem" --tag p1
+  ```
+* **Prompt nhân vật tùy ý bằng tiếng Anh**:
+  ```powershell
+  python -m tools.shopee_ad.orchestrator --mode flow --style flow_cinematic --persona "30-year-old Vietnamese man with round glasses and short wavy hair, wearing an oatmeal knit sweater" --tag p2
+  ```
+* **Sinh nhân vật tổ hợp ngẫu nhiên hoàn toàn mới (`random`) hoặc chọn giới tính (`male` / `female`) / số thứ tự (`0..9`)**:
+  ```powershell
+  python -m tools.shopee_ad.orchestrator --mode flow --style flow_cinematic --persona random --tag p3
+  python -m tools.shopee_ad.orchestrator --mode flow --style flow_cinematic --persona male --tag p4
+  ```
+
 ---
 
 ## 6. Hướng Dẫn Giao Tiếp Với AI Agent (Nhắn Bằng Tiếng Việt Tự Nhiên)
@@ -162,6 +183,7 @@ Khi làm việc với AI Agent (như Antigravity), bạn **không cần phải g
 | **Sinh Video AI Google Flow đầy đủ** | *"Tạo video Google Flow cho khay giấu dây, có voice đọc đầy đủ"* | Tự động kích hoạt: `--mode flow --style flow_cinematic` |
 | **Làm video drama giải cứu** | *"Làm video kịch bản drama cứu nguy cho khay giấu dây, thêm đoạn cuối kêu gọi follow kênh nhé"* | Tự động kích hoạt: `--style problem_solution --cta follow` |
 | **Tạo video có ý tưởng bối cảnh riêng** | *"Tạo video AI cho ghế kê chân, kiểu POV bàn tay, bối cảnh phòng làm việc tone màu tối decor đèn led"* | Tự động kích hoạt: `--style faceless_pov --idea "..." --no-voice` |
+| **Đổi nhân vật tùy ý hoặc ngẫu nhiên** | *"Tạo video với nhân vật là cô gái 22 tuổi tóc ngắn đeo kính tròn mặc áo len kem nhé"* hoặc *"Đổi nhân vật ngẫu nhiên cho tôi"* | Tự động kích hoạt: `--persona "cô gái 22 tuổi..."` hoặc `--persona random` |
 | **Xem lại danh sách file ZIP có sẵn** | *"Xem trong thư mục Downloads có những file sản phẩm nào rồi"* | Tự động quét và liệt kê danh sách file ZIP kèm dung lượng |
 | **Kiểm tra hoặc tùy chỉnh kịch bản trước khi dựng** | *"Cho tôi xem kịch bản phân cảnh của sản phẩm trước khi sinh video"* | Tự động đọc hoặc tạo `storyboard_<style>.json` và trình bày cho bạn duyệt |
 

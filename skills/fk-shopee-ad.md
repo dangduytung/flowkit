@@ -53,9 +53,10 @@ python -m tools.shopee_ad.orchestrator --style problem_solution --bgm path/to/mu
   - `shopee`: Calls to check pinned comment / Shopee store.
   - `tiktok`: Calls to tap the yellow cart icon on bottom-left.
 - `--idea "..."`: Custom creative context injection into prompts.
+- `--persona "..."` / `--character "..."`: Tùy chỉnh nhân vật xuất hiện trong video (hỗ trợ kho 60+ nhân vật tự động theo tên sản phẩm, `--persona random`, `--persona male`/`female`, số `0..9`, hoặc mô tả tự do bằng tiếng Việt/tiếng Anh). Tự động tạo lại storyboard.
 - `--scene <id> [<id> ...]`: Re-render only these scenes (their prompts/copy are refreshed from the builders; every other scene keeps its narration and clips). After a Flow failure the run prints the exact `--scene ...` command to retry.
 - `--regen`: Re-render all Flow AI clips; the storyboard (including hand edits) is kept.
-- `--force-storyboard`: Rebuild `storyboard_{style}.json` from scratch (discards hand edits). `--idea` implies it.
+- `--force-storyboard`: Rebuild `storyboard_{style}.json` from scratch (discards hand edits). `--idea` and `--persona` imply it.
 - `--zip <path>`: Specify target ZIP (defaults to newest in `SHOPEE_DOWNLOADS_DIR`).
 - Output root: `output/shopee_ads/` unless `SHOPEE_OUTPUT_DIR` is set in `.env`.
 
