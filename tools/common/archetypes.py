@@ -20,6 +20,7 @@ class ProductArchetype(str, Enum):
     STORAGE_DEVICE = "storage_device"
     DESK_ORGANIZER = "desk_organizer"
     FOOTREST = "footrest"
+    WRIST_WATCH = "wrist_watch"
     GENERIC = "generic"
 
 
@@ -62,6 +63,7 @@ ARCHETYPE_KEYWORDS: dict[ProductArchetype, tuple[str, ...]] = {
     ),
     ProductArchetype.STORAGE_DEVICE: ("usb", "ổ đĩa", "flash drive", "thẻ nhớ", "ổ cứng", "ssd"),
     ProductArchetype.FOOTREST: ("kê chân", "ke chan", "footrest"),
+    ProductArchetype.WRIST_WATCH: ("đồng hồ", "dong ho", "smartwatch"),
     ProductArchetype.DESK_ORGANIZER: ("khay", "giấu dây", "kẹp bàn", "kệ", "giá đỡ", "cáp", "đi dây"),
 }
 

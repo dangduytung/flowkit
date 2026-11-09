@@ -136,8 +136,10 @@ _ARCHETYPE_NOUNS: dict[ProductArchetype, str] = {
     ProductArchetype.SKINCARE: "small skincare bottle",
     ProductArchetype.STORAGE_DEVICE: "small metal USB flash drive",
     ProductArchetype.FOOTREST: "under-desk footrest",
+    ProductArchetype.WRIST_WATCH: "wrist watch",
 }
 _KEYWORD_NOUNS: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("đồng hồ", "dong ho", "smartwatch"), "wrist watch"),
     (("bình giữ nhiệt", "ly giữ nhiệt", "cốc giữ nhiệt"), "insulated steel bottle"),
     (("giá đỡ điện thoại", "kẹp điện thoại"), "phone stand"),
     (("tai nghe",), "pair of wireless earbuds"),

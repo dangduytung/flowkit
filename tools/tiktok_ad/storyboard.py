@@ -101,6 +101,7 @@ CATEGORY_RULES: CategoryRules = (
     )),
     (Category.FASHION_APPAREL, (
         "áo thun", "áo sơ mi", "quần kaki", "quần jean", "váy", "giày", "dép", "túi xách", "ví",
+        "đồng hồ", "dong ho", "đồng hồ đeo tay", "đồng hồ thể thao",
     )),
 )
 

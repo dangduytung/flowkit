@@ -70,15 +70,18 @@ def clean_product_title(raw_name: str) -> str:
     words = short.split()
     if len(words) > 5:
         brand = None
-        for w in words[3:7]:
-            if (w.isupper() and len(w) >= 3 and w not in ["NAM", "NỮ", "PRO", "MAX"]) or any(c.isupper() for c in w[1:]):
+        for w in words[2:]:
+            if (w.isupper() and len(w) >= 2 and w not in ["NAM", "NỮ", "PRO", "MAX", "CHO", "DÀNH", "SIZE", "LED", "LCD", "USB", "SSD", "HDD"]) or any(c.isupper() for c in w[1:]):
                 brand = w
                 break
         if brand:
-            core_words = [w for w in words[:3] if w.upper() != brand.upper()]
-            short = " ".join(core_words) + " " + brand
+            core_words = [w for w in words[:4] if w.lower() not in ["thời", "trang", "nam", "nữ", "cho", "dành"] and w.upper() != brand.upper()]
+            short = " ".join(core_words[:3]) + " " + brand
         else:
-            short = " ".join(words[:5])
+            if len(words) > 5 and words[4].lower() in ["thể", "chống", "đa", "siêu", "không", "thông"]:
+                short = " ".join(words[:6])
+            else:
+                short = " ".join(words[:5])
 
     # Capitalize brand nicely if all-caps
     res_words = []
@@ -225,7 +228,8 @@ CATEGORY_RULES: CategoryRules = (
         "polo", "croptop", "quần jean", "quần bò", "quần jogger", "quần âu", "quần short", "quần đùi",
         "váy", "đầm", "chân váy", "jumpsuit", "giày sneaker", "giày thể thao", "giày cao gót",
         "giày lười", "dép", "sandal", "túi xách", "túi đeo chéo", "ví da", "balo", "thắt lưng",
-        "dây nịt", "kính mát", "kính râm", "nón", "mũ", "đồng hồ đeo tay", "trang sức", "vòng tay",
+        "dây nịt", "kính mát", "kính râm", "nón", "mũ", "đồng hồ", "dong ho", "đồng hồ đeo tay",
+        "đồng hồ thời trang", "đồng hồ nam", "đồng hồ nữ", "đồng hồ thể thao", "trang sức", "vòng tay",
     )),
     (Category.HEALTH_FITNESS, (
         "súng massage", "máy massage", "đệm massage", "gối massage", "thảm tập", "yoga", "tạ tay",

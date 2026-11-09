@@ -167,6 +167,63 @@ def build_flow_cinematic_scenes(
         ]
 
     elif category == "FASHION_APPAREL":
+        is_watch = title_matches(clean_title, ProductArchetype.WRIST_WATCH)
+        if is_watch:
+            return [
+                SceneDefinition(
+                    id=1,
+                    name="Hook - Phụ kiện nâng tầm phong cách",
+                    kind="FLOW_AI",
+                    narrator_text=f"Tìm một chiếc đồng hồ đeo hàng ngày vừa ngầu vừa bền mà giá lại cực kỳ học sinh sinh viên? Coi thử {short_name} này nè.",
+                    overlay_title="ĐỒNG HỒ ĐEO HÀNG NGÀY?",
+                    overlay_subtitle=clean_title,
+                    image_index=0,
+                    prompt=(
+                        f"First-person POV looking down at a wrist wearing the {noun}, seated at an outdoor coffee table by a street. "
+                        f"Natural daylight, casual everyday look. Hands only, not talking."
+                    ),
+                ),
+                SceneDefinition(
+                    id=2,
+                    name="Hero Action - Cận cảnh thiết kế sắc nét",
+                    kind="FLOW_AI",
+                    narrator_text="Mặt số thiết kế thể thao sắc nét, kim số rõ ràng. Dây đeo ôm tay êm ái, đeo cả ngày không bị cấn.",
+                    overlay_title="THIẾT KẾ THỂ THAO",
+                    overlay_subtitle="Mặt số sắc nét - Ôm tay",
+                    image_index=0,
+                    prompt=(
+                        f"Macro close-up shot of the {noun} on a wrist, daylight catching the reflective glass dial and bezel details. "
+                        f"Slight natural wrist angle change to catch the light, high detail on strap texture. Hands only."
+                    ),
+                ),
+                SceneDefinition(
+                    id=3,
+                    name="Feature - Bền bỉ chống nước sinh hoạt",
+                    kind="FLOW_AI",
+                    narrator_text=feature_line(feat1_title, feat1_desc, "Mặt kính chống trầy, đi mưa rửa tay thoải mái."),
+                    overlay_title=feat1_title,
+                    overlay_subtitle="Mặt kính bền bỉ - Chống nước",
+                    image_index=0,
+                    prompt=(
+                        f"Close-up of a hand with the {noun} under light running tap water in a bathroom sink, water droplets beading off the glass surface and strap. "
+                        f"Natural room lighting, no face, hands only."
+                    ),
+                ),
+                SceneDefinition(
+                    id=4,
+                    name="Lifestyle - Đa phong cách tự tin",
+                    kind="FLOW_AI",
+                    narrator_text="Phối đồ đi học, đi làm hay đi cà phê dạo phố đều hợp. Đeo lên tay nhìn xịn xò hẳn luôn.",
+                    overlay_title=social_proof_title or "DỄ PHỐI MỌI OUTFIT",
+                    overlay_subtitle="Năng động & Tự tin mỗi ngày",
+                    image_index=0,
+                    prompt=(
+                        f"Handheld smartphone shot at chest height: {persona['cont']}, wearing the {noun}, walks along a lively street in daylight and glances at their wrist. "
+                        f"Natural walking pace, not talking."
+                    ),
+                ),
+            ]
+
         return [
             SceneDefinition(
                 id=1,
