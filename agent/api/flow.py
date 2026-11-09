@@ -12,6 +12,7 @@ from agent.config import (
     FLOW_UNUSUAL_ACTIVITY_COOLDOWN_S,
 )
 from agent.services.flow_client import get_flow_client
+from agent.api.debug_gate import DEBUG
 from agent.services.flow_project_session import current_session_project, ensure_session_project
 from agent.services.omni_flash import (
     check_omni_flash_status,
@@ -201,19 +202,15 @@ async def extension_status():
 
 @router.post("/clear-hijack")
 async def clear_hijack_cooldown():
-    """Reset the generation cooldown triggered by extension_hijack_detected.
+    """Lift the generation hold (hijack or unusual-activity) by hand, including
+    the copy on disk.
 
-    Call this after deploying the bypass fix to immediately resume generation
-    without waiting for the cooldown to expire.
+    Only do this once the account generates normally in the Flow UI again:
+    submitting into an active unusual-activity block may prolong it.
     """
-    import time as _time
-    client = get_flow_client()
-    old_until = client._generation_unusual_until
-    client._generation_unusual_until = 0.0
-    was_active = old_until > 0.0 and old_until > _time.monotonic()
     return {
         "cleared": True,
-        "was_active": was_active,
+        "was_active": get_flow_client().clear_generation_hold(),
     }
 
 
@@ -708,7 +705,7 @@ async def upload_image_file(
     )
 
 
-@router.get("/debug-cache")
+@router.get("/debug-cache", dependencies=DEBUG)
 async def debug_cache():
     client = get_flow_client()
     return {
@@ -718,7 +715,7 @@ async def debug_cache():
     }
 
 
-@router.get("/debug-listing/{operation_id}")
+@router.get("/debug-listing/{operation_id}", dependencies=DEBUG)
 async def debug_listing(operation_id: str, project_id: str = "594758cc-11f5-4f92-8b3c-1213686591f4"):
     import agent.services.flow_batch as fb
     client = get_flow_client()
@@ -737,7 +734,7 @@ async def debug_listing(operation_id: str, project_id: str = "594758cc-11f5-4f92
     }
 
 
-@router.get("/debug-project-media")
+@router.get("/debug-project-media", dependencies=DEBUG)
 async def debug_project_media(project_id: str = "594758cc-11f5-4f92-8b3c-1213686591f4"):
     import re
     import agent.services.flow_batch as fb

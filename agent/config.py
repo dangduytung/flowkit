@@ -10,6 +10,14 @@ DB_PATH = BASE_DIR / "flow_agent.db"
 # ─── API Server ──────────────────────────────────────────────
 API_HOST = os.environ.get("API_HOST", "127.0.0.1")
 API_PORT = int(os.environ.get("API_PORT", "8100"))
+# Debug/experiment routes under /api/ext/* and /api/test-direct (eval in the
+# Flow tab, raw RPCs, reCAPTCHA mints). Off unless explicitly turned on.
+FLOWKIT_DEBUG_ENDPOINTS = os.environ.get("FLOWKIT_DEBUG_ENDPOINTS", "0") == "1"
+# Extra Host header names the API answers to besides localhost / 127.0.0.1 /
+# API_HOST (e.g. a tunnel hostname for the Suno callback). Comma-separated.
+FLOWKIT_ALLOWED_HOSTS = [
+    h.strip().lower() for h in os.environ.get("FLOWKIT_ALLOWED_HOSTS", "").split(",") if h.strip()
+]
 
 # ─── WebSocket Server (extension connects here) ─────────────
 WS_HOST = os.environ.get("WS_HOST", "127.0.0.1")
@@ -41,9 +49,13 @@ FLOW_GENERATION_MIN_INTERVAL_S = max(
 FLOW_GENERATION_MAX_CONCURRENT = max(
     1, int(os.environ.get("FLOW_GENERATION_MAX_CONCURRENT", "1"))
 )
+# After Google answers PUBLIC_ERROR_UNUSUAL_ACTIVITY, no generation is submitted
+# for this long. The hold is written to FLOW_GENERATION_HOLD_PATH so a restart
+# does not lift it (#67): retrying into the block may be what prolongs it.
 FLOW_UNUSUAL_ACTIVITY_COOLDOWN_S = max(
-    0.0, float(os.environ.get("FLOW_UNUSUAL_ACTIVITY_COOLDOWN_S", "120"))
+    0.0, float(os.environ.get("FLOW_UNUSUAL_ACTIVITY_COOLDOWN_S", "3600"))
 )
+FLOW_GENERATION_HOLD_PATH = BASE_DIR / "flow_generation_hold.json"
 FLOW_SESSION_PROJECT_IDLE_S = max(
     300.0, float(os.environ.get("FLOW_SESSION_PROJECT_IDLE_S", "7200"))
 )
