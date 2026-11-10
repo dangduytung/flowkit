@@ -81,7 +81,18 @@ function resolveSitekey() {
       const c = clients[k];
       if (c && c.sitekey) return c.sitekey;
     }
-  } catch (e) { /* fall through to the constant */ }
+  } catch (e) { /* fall through */ }
+
+  try {
+    const script = document.querySelector('script[src*="recaptcha"][src*="render="]');
+    if (script) {
+      const m = script.src.match(/[?&]render=([^&]+)/);
+      if (m && m[1] && m[1] !== 'explicit') {
+        return decodeURIComponent(m[1]);
+      }
+    }
+  } catch (e) { /* fall through */ }
+
   return SITE_KEY;
 }
 
