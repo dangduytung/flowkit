@@ -148,6 +148,7 @@ async function executeWithAssignNeuter(sitekey, action) {
 async function executeWithPristine(sitekey, action) {
   const pristine = getHijack()?.pristine;
   if (typeof pristine !== 'function') return null;
+  await waitReady(2500);
   const token = await Promise.race([
     pristine(sitekey, { action }),
     new Promise((_, rej) => setTimeout(() => rej(new Error('execute_hang')), 8000)),
