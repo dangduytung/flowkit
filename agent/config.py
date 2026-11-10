@@ -101,6 +101,14 @@ MUSE2API_COOLDOWN_S = float(os.environ.get("MUSE2API_COOLDOWN_S", "0"))
 # frame and r2v renders as i2v; off, both fail loudly (same rule as Flow).
 MUSE2API_ALLOW_DEGRADED = os.environ.get("MUSE2API_ALLOW_DEGRADED", "0") == "1"
 
+# ─── Flow MCP Worker ──────────────────────────────────────────
+_default_flow_mcp_cli = BASE_DIR.parent / "google-flow-mcp" / "dist" / "cli.js"
+FLOW_MCP_CLI = os.environ.get("FLOW_MCP_CLI", str(_default_flow_mcp_cli) if _default_flow_mcp_cli.exists() else "")
+FLOW_MCP_ACCOUNT = os.environ.get("FLOW_MCP_ACCOUNT", "chromium")
+FLOW_MCP_PROJECT = os.environ.get("FLOW_MCP_PROJECT", "")
+FLOW_MCP_IMAGE_MODEL = os.environ.get("FLOW_MCP_IMAGE_MODEL", "ui-default")
+FLOW_MCP_VIDEO_MODEL = os.environ.get("FLOW_MCP_VIDEO_MODEL", "omni-1-2-flash")
+
 # ─── Worker ──────────────────────────────────────────────────
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", "5"))
 VIDEO_POLL_INTERVAL = int(os.environ.get("VIDEO_POLL_INTERVAL", "10"))  # polling interval for video/upscale status
