@@ -341,6 +341,8 @@ function connectToAgent() {
                 atLen: (wiz.SNlM0e || '').length,
                 sid: wiz.FdrFJe,
                 bl: wiz.cfb2h,
+                wizSitekey: wiz.xZbWve,
+                client0Sitekey: window.___grecaptcha_cfg?.clients?.['0']?.sitekey,
                 hasGrecaptcha: !!window.grecaptcha?.enterprise?.execute,
                 executeString: window.grecaptcha?.enterprise?.execute?.toString(),
                 hasHijack: !!(window[Symbol.for('__fk_hijack_vault__')] || window.__fk_hijack),
