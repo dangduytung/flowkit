@@ -25,24 +25,46 @@ const SITE_KEY = '6LdsFiUsAAAAAIjVDZcuLhaHiDn5nnHVXVRQGeMV';
 // Fresh signed GCS URLs are extracted and forwarded to the agent.
 
 const _originalFetch = window.fetch;
-window.fetch = async function (...args) {
-  const response = await _originalFetch.apply(this, args);
+if (typeof _originalFetch === 'function') {
+  const _patchedFetch = async function (...args) {
+    const response = await _originalFetch.apply(this, args);
+    try {
+      const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
+      // Only intercept TRPC calls on labs.google that return project/flow data
+      if (url.includes('/fx/api/trpc/') && response.ok) {
+        const clone = response.clone();
+        clone.text().then(text => {
+          if (text.includes('storage.googleapis.com/ai-sandbox-videofx/')) {
+            window.dispatchEvent(new CustomEvent('TRPC_MEDIA_URLS', {
+              detail: { url, body: text },
+            }));
+          }
+        }).catch(() => {});
+      }
+    } catch {}
+    return response;
+  };
+
+  // Stealth: Mask toString to match native browser fetch
   try {
-    const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-    // Only intercept TRPC calls on labs.google that return project/flow data
-    if (url.includes('/fx/api/trpc/') && response.ok) {
-      const clone = response.clone();
-      clone.text().then(text => {
-        if (text.includes('storage.googleapis.com/ai-sandbox-videofx/')) {
-          window.dispatchEvent(new CustomEvent('TRPC_MEDIA_URLS', {
-            detail: { url, body: text },
-          }));
-        }
-      }).catch(() => {});
-    }
-  } catch {}
-  return response;
-};
+    Object.defineProperty(_patchedFetch, 'toString', {
+      value: function () { return _originalFetch.toString(); },
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(_patchedFetch, 'name', {
+      value: 'fetch',
+      configurable: true,
+    });
+  } catch (e) {}
+
+  window.fetch = _patchedFetch;
+}
+
+const VAULT_KEY = Symbol.for('__fk_hijack_vault__');
+function getHijack() {
+  return window[VAULT_KEY] || window.__fk_hijack || null;
+}
 
 
 let captchaMintTail = Promise.resolve();
@@ -60,17 +82,6 @@ function resolveSitekey() {
       if (c && c.sitekey) return c.sitekey;
     }
   } catch (e) { /* fall through to the constant */ }
-
-  try {
-    const script = document.querySelector('script[src*="recaptcha"][src*="render="]');
-    if (script) {
-      const m = script.src.match(/[?&]render=([^&]+)/);
-      if (m && m[1] && m[1] !== 'explicit') {
-        return decodeURIComponent(m[1]);
-      }
-    }
-  } catch (e) { /* fall through */ }
-
   return SITE_KEY;
 }
 
@@ -106,12 +117,8 @@ async function executeWithAssignNeuter(sitekey, action) {
 
   try {
     await waitReady(2500);
-    let target = sitekey;
-    try {
-      target = await ensureWidget(sitekey);
-    } catch (e) { /* ignore */ }
     const token = await Promise.race([
-      window.grecaptcha.enterprise.execute(target, { action }),
+      window.grecaptcha.enterprise.execute(sitekey, { action }),
       new Promise((_, rej) => setTimeout(() => rej(new Error('execute_hang')), 8000)),
     ]);
     return token ? String(token) : null;
@@ -123,14 +130,10 @@ async function executeWithAssignNeuter(sitekey, action) {
 // ─── Bypass: pristine execute (primary path) ────────────────
 
 async function executeWithPristine(sitekey, action) {
-  const pristine = window.__fk_hijack?.pristine;
+  const pristine = getHijack()?.pristine;
   if (typeof pristine !== 'function') return null;
-  let target = sitekey;
-  try {
-    target = await ensureWidget(sitekey);
-  } catch (e) { /* ignore */ }
   const token = await Promise.race([
-    pristine(target, { action }),
+    pristine(sitekey, { action }),
     new Promise((_, rej) => setTimeout(() => rej(new Error('execute_hang')), 8000)),
   ]);
   return token ? String(token) : null;
@@ -143,10 +146,10 @@ function ensureWidget(sitekey) {
   if (_widgetPromise) return _widgetPromise;
   _widgetPromise = (async () => {
     await waitReady(5000);
-    let host = document.getElementById('flowkit-recaptcha-host');
+    let host = document.getElementById('_grecaptcha_host_');
     if (!host) {
       host = document.createElement('div');
-      host.id = 'flowkit-recaptcha-host';
+      host.id = '_grecaptcha_host_';
       host.style.cssText = 'position:fixed;left:-9999px;top:0;width:1px;height:1px;';
       document.documentElement.appendChild(host);
     }
@@ -171,7 +174,7 @@ function ensureWidget(sitekey) {
 
 async function executeWithRetry(sitekey, action, attempts = 2) {
   let lastErr = null;
-  const hijack = window.__fk_hijack;
+  const hijack = getHijack();
   const hasPristine = typeof hijack?.pristine === 'function';
   const knownTrapped = !!hijack?.trapped;
 
@@ -227,7 +230,7 @@ window.addEventListener('GET_CAPTCHA', async ({ detail }) => {
   const { requestId, pageAction } = detail;
   try {
     const token = await mintCaptcha(pageAction);
-    const hijack = window.__fk_hijack;
+    const hijack = getHijack();
     window.dispatchEvent(new CustomEvent('CAPTCHA_RESULT', {
       detail: {
         requestId,
@@ -250,7 +253,7 @@ function waitForGrecaptcha(timeout = 22000) {
     const start = Date.now();
     const check = () => {
       // If we have pristine, grecaptcha is ready regardless of public state
-      if (window.__fk_hijack?.pristine) return resolve();
+      if (getHijack()?.pristine) return resolve();
       if (window.grecaptcha?.enterprise?.execute) return resolve();
       if (Date.now() - start > timeout) return reject(new Error('grecaptcha not available'));
       setTimeout(check, 200);

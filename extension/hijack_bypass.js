@@ -191,27 +191,15 @@
 
   installCapture();
 
-  // ── Expose to injected.js ─────────────────────────────────────────────────
-  // Non-enumerable property so page code won't stumble on it in for..in loops.
-  // The getters read closure variables so the value tracks capture state live.
-
+  // ── Expose to injected.js via private Symbol ──────────────────────────────
+  // Symbol properties are completely invisible to 'key' in window, Object.keys(),
+  // Object.getOwnPropertyNames(), for..in, etc.
+  const VAULT_KEY = Symbol.for('__fk_hijack_vault__');
   try {
-    Object.defineProperty(window, '__fk_hijack', {
-      value: Object.freeze({
-        get pristine() { return _pristineExecute; },
-        get trapped() { return _capturedTrapped; },
-        get source()  { return _captureSource; },
-      }),
-      writable: false,
-      configurable: false,
-      enumerable: false,
-    });
-  } catch (e) {
-    // If defineProperty fails (already defined), assign directly
-    window.__fk_hijack = {
+    window[VAULT_KEY] = Object.freeze({
       get pristine() { return _pristineExecute; },
       get trapped() { return _capturedTrapped; },
       get source()  { return _captureSource; },
-    };
-  }
+    });
+  } catch (e) {}
 })();
